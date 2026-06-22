@@ -1,0 +1,173 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Municipality {
+  id        Int     @id @default(autoincrement())
+  name      String  @unique
+  code      String  @unique
+  createdAt DateTime @default(now())
+
+  users     User[]
+  reports   Report[]
+  incidents Incident[]
+  dailyReportEntries DailyReportEntry[]
+
+  @@map("municipalities")
+}
+
+model User {
+  id        Int     @id @default(autoincrement())
+  name      String
+  email     String  @unique
+  passwordHash String
+  role      String  // Role: INVESTIGATOR, CHIEF_INVESTIGATOR_IIS, MARSHAL, PIO, VIEWER, etc.
+  rank      String?
+  isActive  Boolean @default(true)
+  permissions String? // JSON array of permissions based on role
+
+  municipalityId Int?
+  municipality   Municipality? @relation(fields: [municipalityId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reportsSubmitted     Report[] @relation("SubmittedBy")
+  reportsReviewed      Report[] @relation("ReviewedBy")
+  reportsPassedTo      Report[] @relation("PassedTo")
+  incidentsCreated     Incident[] @relation("CreatedBy")
+  notifications        Notification[]
+
+  @@map("users")
+}
+
+model Incident {
+  id                    Int     @id @default(autoincrement())
+  referenceNumber       String  @unique
+  municipalityId        Int
+  municipality          Municipality @relation(fields: [municipalityId], references: [id])
+
+  dateOfIncident        DateTime
+  timeOfIncident        String?
+  barangay              String?
+  address               String?
+  generalCategory       String  // "RESIDENTIAL", "NON_RESIDENTIAL", "NON_STRUCTURAL", "TRANSPORT"
+  subCategory           String?
+  description           String?
+  estimatedAffectedArea String?
+
+  status                String  @default("ONGOING") // "ONGOING", "CONTROLLED", "EXTINGUISHED"
+  casualtiesInjured     Int @default(0)
+  casualtiesFatalities  Int @default(0)
+  estimatedDamage       Decimal?
+  causeOfFire           String?
+  fireInvestigationFindings String?
+
+  createdById           Int
+  createdBy             User @relation("CreatedBy", fields: [createdById], references: [id])
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  reports               Report[] @relation("IncidentReports")
+
+  @@map("incidents")
+}
+
+model Report {
+  id                Int     @id @default(autoincrement())
+  reportType        String  // "SPOT_INVESTIGATION", "PROGRESS_INVESTIGATION", "FINAL_INVESTIGATION", "DAILY"
+  status            String  @default("DRAFT") // "DRAFT", "SUBMITTED", "APPROVED", "RETURNED"
+
+  municipalityId    Int
+  municipality      Municipality @relation(fields: [municipalityId], references: [id])
+
+  incidentId        Int?
+  incident          Incident? @relation("IncidentReports", fields: [incidentId], references: [id], onDelete: SetNull)
+
+  reportDate        DateTime
+  content           String  // JSON stored as string
+
+  respondingUnits   String?
+  respondingOfficer String?
+  reportingOfficerRank String?
+  stationCommanderName String?
+  remarks           String?
+
+  passedToRole      String?  // "CHIEF_INVESTIGATOR_IIS" or "MARSHAL" - role the report is passed to
+  passedToId        Int?     // ID of the specific user receiving the report
+  passedTo          User? @relation("PassedTo", fields: [passedToId], references: [id], onDelete: SetNull)
+
+  submittedAt       DateTime @default(now())
+  reviewedAt        DateTime?
+  reviewedById      Int?
+  reviewedBy        User? @relation("ReviewedBy", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  submittedById      Int
+  submittedBy        User @relation("SubmittedBy", fields: [submittedById], references: [id])
+
+  attachments       String?  // JSON array stored as string
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  notifications     Notification[]
+
+  @@map("reports")
+}
+
+model DailyReportEntry {
+  id                      Int     @id @default(autoincrement())
+  reportId                Int
+  municipalityId          Int
+  municipality            Municipality @relation(fields: [municipalityId], references: [id])
+
+  reportDate              DateTime
+  residentialCount        Int @default(0)
+  nonResidentialCount     Int @default(0)
+  nonStructuralCount      Int @default(0)
+  transportCount          Int @default(0)
+  totalCount              Int @default(0)
+
+  reportingOfficer        String
+
+  createdAt               DateTime @default(now())
+
+  @@map("daily_report_entries")
+}
+
+model Notification {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  message   String
+  type      String  // "REPORT_SUBMITTED", "APPROVED", "RETURNED", "OVERDUE", etc.
+  isRead    Boolean @default(false)
+
+  reportId  Int?
+  report    Report? @relation(fields: [reportId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id        Int     @id @default(autoincrement())
+  action    String  // "SUBMIT_REPORT", "APPROVE_REPORT", "RETURN_REPORT", etc.
+  userId    Int
+  reportId  Int?
+  changes   String? // JSON stored as string
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
