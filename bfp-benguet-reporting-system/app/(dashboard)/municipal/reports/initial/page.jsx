@@ -73,12 +73,25 @@ export default function InitialReportForm() {
 
     try {
       const token = localStorage.getItem('token');
+      let effectiveUser = user;
+      if (!effectiveUser) {
+        try {
+          const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+          if (meRes.ok) {
+            const meJson = await meRes.json();
+            effectiveUser = meJson.user;
+            localStorage.setItem('user', JSON.stringify(effectiveUser));
+            setUser(effectiveUser);
+          }
+        } catch (e) {}
+      }
+      if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
 
       // Create incident
       const incidentResponse = await axios.post(
         '/api/incidents',
         {
-          municipalityId: user.municipalityId,
+          municipalityId: effectiveUser.municipalityId,
           dateOfIncident: new Date(formData.dateOfIncident),
           timeOfIncident: formData.timeOfIncident,
           barangay: formData.barangay,
@@ -102,7 +115,7 @@ export default function InitialReportForm() {
         '/api/reports',
         {
           reportType: 'INITIAL',
-          municipalityId: user.municipalityId,
+          municipalityId: effectiveUser.municipalityId,
           incidentId,
           reportDate: new Date(formData.dateOfIncident),
           respondingUnits: formData.respondingUnits,

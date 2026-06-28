@@ -1,8 +1,116 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { ROLES, REPORT_STATUS } from '@/lib/constants';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
+import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '@/lib/constants';
 import generateIncidentReference from '@/lib/incident-reference';
+
+const INVESTIGATION_REPORT_TYPES = [
+  'MDFIR',
+  'SPOT_INVESTIGATION',
+  'PROGRESS_INVESTIGATION',
+  'FINAL_INVESTIGATION',
+];
+
+const MUNICIPAL_REVIEWER_ROLES = [
+  ROLES.MUNICIPAL_CHIEF_IIS,
+  ROLES.MUNICIPAL_CHIEF_OPERATION,
+  ROLES.MUNICIPAL_FIRE_MARSHAL,
+];
+
+const PROVINCIAL_REVIEWER_ROLES = [
+  ROLES.PROVINCIAL_CHIEF_IIS,
+  ROLES.MARSHAL,
+  ROLES.CHIEF_INVESTIGATOR_IIS,
+];
+
+const canReceiveRoleInMunicipality = (user, reportMunicipalityId) => {
+  if (PROVINCIAL_REVIEWER_ROLES.includes(user.role)) return true;
+  return user.municipalityId === reportMunicipalityId;
+};
+
+const parseJsonField = (value, fallback = {}) => {
+  if (!value) return fallback;
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+};
+
+const sanitizeFileName = (fileName) =>
+  fileName.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_+/g, '_');
+
+const saveReportAttachments = async (files) => {
+  const validFiles = files.filter((file) => file && file.size > 0);
+  if (!validFiles.length) return [];
+
+  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'reports');
+  await mkdir(uploadDir, { recursive: true });
+
+  return Promise.all(
+    validFiles.map(async (file) => {
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+      const storedName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${sanitizeFileName(file.name)}`;
+      const filePath = path.join(uploadDir, storedName);
+
+      await writeFile(filePath, buffer);
+
+      return {
+        name: file.name,
+        type: file.type || 'application/octet-stream',
+        size: file.size,
+        url: `/uploads/reports/${storedName}`,
+      };
+    })
+  );
+};
+
+const getInvestigationRecipientWhere = (municipalityId) => ({
+  isActive: true,
+  OR: [
+    { role: ROLES.PROVINCIAL_CHIEF_IIS },
+    { role: ROLES.MARSHAL },
+    { role: ROLES.MUNICIPAL_CHIEF_IIS, municipalityId },
+    { role: ROLES.MUNICIPAL_FIRE_MARSHAL, municipalityId },
+    { role: ROLES.MUNICIPAL_CHIEF_OPERATION, municipalityId },
+  ].filter((condition) => condition.role),
+});
+
+const resolveRecipientByRole = async (role, municipalityId) => {
+  if (MUNICIPAL_REVIEWER_ROLES.includes(role)) {
+    return prisma.user.findFirst({
+      where: {
+        role,
+        municipalityId,
+        isActive: true,
+      },
+    });
+  }
+
+  if (role === ROLES.PROVINCIAL_CHIEF_IIS) {
+    return prisma.user.findFirst({
+      where: {
+        role: ROLES.PROVINCIAL_CHIEF_IIS,
+        isActive: true,
+      },
+    });
+  }
+
+  if (role === ROLES.MARSHAL || role === ROLES.CHIEF_INVESTIGATOR_IIS) {
+    return prisma.user.findFirst({
+      where: {
+        role,
+        isActive: true,
+      },
+    });
+  }
+
+  return null;
+};
 
 export async function GET(request) {
   try {
@@ -19,21 +127,46 @@ export async function GET(request) {
     const reportType = searchParams.get('reportType');
     const status = searchParams.get('status');
     const municipalityId = searchParams.get('municipalityId');
+    const view = searchParams.get('view'); // incoming | outgoing | all
 
     let whereCondition = {};
 
-    // RBAC: Investigators can only see their own reports, Marshals can see all reports they received
+    // RBAC: Investigators can only see their own reports
     if (user.role === ROLES.INVESTIGATOR) {
       whereCondition.submittedById = user.id;
-    } else if (user.role === ROLES.MARSHAL) {
-      // Marshal can see all reports
-      whereCondition = {};
+    } else if (MUNICIPAL_REVIEWER_ROLES.includes(user.role)) {
+      // Municipal reviewers: show outgoing reports they reviewed, or incoming reports assigned to
+      // their account/role in their municipality.
+      if (view === 'outgoing') {
+        whereCondition.reviewedById = user.id;
+      } else {
+        whereCondition.OR = [
+          { passedToId: user.id },
+          { passedToRole: user.role },
+        ];
+      }
+      whereCondition.municipalityId = user.municipalityId;
+    } else if (PROVINCIAL_REVIEWER_ROLES.includes(user.role)) {
+      // Provincial/legacy reviewers: show outgoing or reports passed to them by id OR passed to their role
+      if (view === 'outgoing') {
+        whereCondition.reviewedById = user.id;
+      } else {
+        whereCondition.OR = [
+          { passedToId: user.id },
+          { passedToRole: user.role },
+        ];
+      }
+    } else {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      );
     }
 
     // Optional filters
     if (reportType) whereCondition.reportType = reportType;
     if (status) whereCondition.status = status;
-    if (municipalityId && user.role === ROLES.MARSHAL) {
+    if (municipalityId && PROVINCIAL_REVIEWER_ROLES.includes(user.role)) {
       whereCondition.municipalityId = parseInt(municipalityId);
     }
 
@@ -92,15 +225,21 @@ export async function POST(request) {
       );
     }
 
-    // Only allow INVESTIGATOR and MARSHAL to create reports
-    if (![ROLES.INVESTIGATOR, ROLES.MARSHAL].includes(user.role)) {
+    // Allowed workflow submitters
+    if (![ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.PROVINCIAL_CHIEF_IIS, ROLES.MARSHAL].includes(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
       );
     }
 
-    const body = await request.json();
+    const contentType = request.headers.get('content-type') || '';
+    const isMultipart = contentType.includes('multipart/form-data');
+    const formData = isMultipart ? await request.formData() : null;
+    const body = isMultipart
+      ? Object.fromEntries(formData.entries())
+      : await request.json();
+
     const {
       reportType,
       municipalityId,
@@ -111,9 +250,16 @@ export async function POST(request) {
       respondingOfficer,
       reportingOfficerRank,
       stationCommanderName,
-      passedToRole,
-      passedToId,
+      passedToRole: requestedPassedToRole,
+      passedToId: requestedPassedToId,
     } = body;
+
+    const parsedMunicipalityId = parseInt(municipalityId);
+    const parsedIncidentId = incidentId ? parseInt(incidentId) : null;
+    const parsedContent = parseJsonField(content, {});
+    const attachments = isMultipart
+      ? await saveReportAttachments(formData.getAll('attachments'))
+      : parseJsonField(body.attachments, []);
 
     // Validate required fields
     if (!reportType || !municipalityId || !reportDate) {
@@ -123,44 +269,52 @@ export async function POST(request) {
       );
     }
 
-    // Investigators must specify who to pass the report to
-    if (user.role === ROLES.INVESTIGATOR && (!passedToRole || (passedToRole && !passedToId))) {
-      return NextResponse.json(
-        { error: 'Investigators must specify passedToRole and passedToId' },
-        { status: 400 }
-      );
-    }
-
-    // Validate that passedToRole is valid if provided
-    if (passedToRole && ![ROLES.CHIEF_INVESTIGATOR_IIS, ROLES.MARSHAL].includes(passedToRole)) {
-      return NextResponse.json(
-        { error: 'Invalid passedToRole. Must be CHIEF_INVESTIGATOR_IIS or MARSHAL' },
-        { status: 400 }
-      );
-    }
-
-    // RBAC: Investigator can only submit to their own municipality
-    if (user.role === ROLES.INVESTIGATOR && user.municipalityId !== parseInt(municipalityId)) {
+    // Municipal roles can only submit for their own municipality
+    if (
+      [ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) &&
+      user.municipalityId !== parsedMunicipalityId
+    ) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
       );
     }
 
+    let passedToRole = requestedPassedToRole || null;
+    let passedToId = requestedPassedToId ? parseInt(requestedPassedToId) : null;
+
+    const defaultRecipientRole = user.role === ROLES.INVESTIGATOR ? ROLES.MUNICIPAL_CHIEF_IIS : null;
+    const targetRecipientRole = requestedPassedToRole || defaultRecipientRole;
+
+    if (targetRecipientRole) {
+      const recipient = await resolveRecipientByRole(targetRecipientRole, parsedMunicipalityId);
+
+      if (!recipient || !canReceiveRoleInMunicipality(recipient, parsedMunicipalityId)) {
+        return NextResponse.json(
+          { error: `No ${targetRecipientRole} account is available for this report` },
+          { status: 400 }
+        );
+      }
+
+      passedToRole = targetRecipientRole;
+      passedToId = recipient.id;
+    }
+
     const report = await prisma.report.create({
       data: {
         reportType,
-        municipalityId: parseInt(municipalityId),
-        incidentId: incidentId ? parseInt(incidentId) : null,
+        municipalityId: parsedMunicipalityId,
+        incidentId: parsedIncidentId,
         reportDate: new Date(reportDate),
-        content: content || {},
+        content: JSON.stringify(parsedContent),
         respondingUnits,
         respondingOfficer,
         reportingOfficerRank,
         stationCommanderName,
+        attachments: attachments.length ? JSON.stringify(attachments) : null,
         passedToRole,
-        passedToId: passedToId ? parseInt(passedToId) : null,
-        status: REPORT_STATUS.DRAFT,
+        passedToId,
+        status: REPORT_STATUS.SUBMITTED,
         submittedById: user.id,
       },
       include: {
@@ -171,16 +325,32 @@ export async function POST(request) {
       },
     });
 
-    // Create notification for the recipient if report is being passed
     if (passedToId) {
       await prisma.notification.create({
         data: {
           userId: parseInt(passedToId),
           message: `New ${reportType} report submitted by ${user.name}`,
-          type: 'REPORT_SUBMITTED',
+          type: NOTIFICATION_TYPES.REPORT_SUBMITTED,
           reportId: report.id,
         },
       });
+    } else if (user.role === ROLES.INVESTIGATOR && INVESTIGATION_REPORT_TYPES.includes(reportType)) {
+        const recipients = await prisma.user.findMany({
+          where: getInvestigationRecipientWhere(parsedMunicipalityId),
+          select: { id: true },
+        });
+        const uniqueRecipientIds = [...new Set(recipients.map((recipient) => recipient.id))];
+
+        if (uniqueRecipientIds.length) {
+          await prisma.notification.createMany({
+            data: uniqueRecipientIds.map((userId) => ({
+              userId,
+              message: `New ${reportType} report submitted by ${user.name}`,
+              type: NOTIFICATION_TYPES.REPORT_SUBMITTED,
+              reportId: report.id,
+            })),
+          });
+        }
     }
 
     return NextResponse.json(

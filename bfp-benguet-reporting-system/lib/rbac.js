@@ -103,7 +103,7 @@ export function canAccessMunicipality(user, municipalityId) {
   if (user.role === 'SUPER_ADMIN') return true;
 
   // PIO and high-level roles can access all
-  if (['PIO', 'PROVINCIAL_CHIEF_INVESTIGATOR', 'REGION_IIS', 'REGIONAL_CHIEF_OPERATION'].includes(user.role)) {
+  if (['PIO', 'PROVINCIAL_CHIEF_INVESTIGATOR', 'PROVINCIAL_CHIEF_IIS', 'MARSHAL', 'REGION_IIS', 'REGIONAL_CHIEF_OPERATION'].includes(user.role)) {
     return true;
   }
 

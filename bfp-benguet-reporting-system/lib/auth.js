@@ -54,7 +54,7 @@ export async function getUserFromRequest(request) {
   if (!token) return null;
   
   try {
-    return verifyToken(token);
+    return await verifyToken(token);
   } catch (error) {
     return null;
   }

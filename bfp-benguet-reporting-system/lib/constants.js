@@ -47,6 +47,7 @@ export const SUB_CATEGORIES = {
 
 export const REPORT_TYPES = {
   DAILY: 'DAILY',
+  MDFIR: 'MDFIR',
   SPOT_INVESTIGATION: 'SPOT_INVESTIGATION',
   PROGRESS_INVESTIGATION: 'PROGRESS_INVESTIGATION',
   FINAL_INVESTIGATION: 'FINAL_INVESTIGATION',
@@ -67,20 +68,97 @@ export const INCIDENT_STATUS = {
 
 export const ROLES = {
   MARSHAL: 'MARSHAL',
+  MUNICIPAL_FIRE_MARSHAL: 'MUNICIPAL_FIRE_MARSHAL',
   INVESTIGATOR: 'INVESTIGATOR',
+  MUNICIPAL_CHIEF_IIS: 'MUNICIPAL_CHIEF_IIS',
+  MUNICIPAL_CHIEF_OPERATION: 'MUNICIPAL_CHIEF_OPERATION',
   CHIEF_INVESTIGATOR_IIS: 'CHIEF_INVESTIGATOR_IIS',
+  PROVINCIAL_CHIEF_IIS: 'PROVINCIAL_CHIEF_IIS',
   CHIEF_SPECIAL_OPERATION_SECTION: 'CHIEF_SPECIAL_OPERATION_SECTION',
   PROVINCIAL_CHIEF_INVESTIGATOR: 'PROVINCIAL_CHIEF_INVESTIGATOR',
   REGION_IIS: 'REGION_IIS',
   REGIONAL_CHIEF_OPERATION: 'REGIONAL_CHIEF_OPERATION',
+  SUPER_ADMIN: 'SUPER_ADMIN',
   PIO: 'PIO',
   VIEWER: 'VIEWER',
 };
 
 // Role-based permissions and functions
 export const ROLE_PERMISSIONS = {
+  SUPER_ADMIN: {
+    description: 'System administrator with full access',
+    level: 120,
+    permissions: [
+      'CREATE_REPORT',
+      'REVIEW_REPORT',
+      'APPROVE_REPORT',
+      'REJECT_REPORT',
+      'VIEW_ALL_REPORTS',
+      'MANAGE_USERS',
+      'MANAGE_MUNICIPALITIES',
+      'VIEW_STATISTICS',
+      'EXPORT_DATA',
+      'MANAGE_INCIDENTS',
+      'RECEIVE_NOTIFICATIONS',
+    ],
+  },
   MARSHAL: {
-    description: 'Fire Marshal - Reviews and approves investigation reports',
+    description: 'Legacy Provincial role (kept for compatibility)',
+    level: 55,
+    permissions: [
+      'CREATE_REPORT',
+      'REVIEW_REPORT',
+      'APPROVE_REPORT',
+      'REJECT_REPORT',
+      'VIEW_ALL_REPORTS',
+      'VIEW_STATISTICS',
+      'EXPORT_DATA',
+      'MANAGE_INCIDENTS',
+      'RECEIVE_NOTIFICATIONS',
+    ],
+  },
+  MUNICIPAL_FIRE_MARSHAL: {
+    description: 'Municipal Fire Marshal - final municipal reviewer before provincial routing',
+    level: 40,
+    permissions: [
+      'CREATE_REPORT',
+      'REVIEW_REPORT',
+      'APPROVE_REPORT',
+      'REJECT_REPORT',
+      'VIEW_MUNICIPALITY_REPORTS',
+      'VIEW_STATISTICS',
+      'MANAGE_INCIDENTS',
+      'RECEIVE_NOTIFICATIONS',
+    ],
+  },
+  MUNICIPAL_CHIEF_IIS: {
+    description: 'Municipal Chief IIS - reviews investigator submissions and requests corrections',
+    level: 30,
+    permissions: [
+      'CREATE_REPORT',
+      'VIEW_MUNICIPALITY_REPORTS',
+      'REVIEW_REPORT',
+      'APPROVE_REPORT',
+      'REJECT_REPORT',
+      'ADD_COMMENTS',
+      'REQUEST_REVISIONS',
+      'RECEIVE_NOTIFICATIONS',
+    ],
+  },
+  MUNICIPAL_CHIEF_OPERATION: {
+    description: 'Municipal Chief Operation - receives municipal investigation reports',
+    level: 35,
+    permissions: [
+      'VIEW_MUNICIPALITY_REPORTS',
+      'REVIEW_REPORT',
+      'APPROVE_REPORT',
+      'REJECT_REPORT',
+      'ADD_COMMENTS',
+      'RECEIVE_NOTIFICATIONS',
+    ],
+  },
+  PROVINCIAL_CHIEF_IIS: {
+    description: 'Provincial Chief IIS - provincial reviewer for municipal endorsed reports',
     level: 100,
     permissions: [
       'CREATE_REPORT',
@@ -107,7 +185,7 @@ export const ROLE_PERMISSIONS = {
     ],
   },
   CHIEF_INVESTIGATOR_IIS: {
-    description: 'Checks and reviews investigation reports from investigators',
+    description: 'Legacy/alternate IIS role for compatibility',
     level: 30,
     permissions: [
       'CREATE_REPORT',

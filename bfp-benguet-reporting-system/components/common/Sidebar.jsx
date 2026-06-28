@@ -14,7 +14,11 @@ export default function Sidebar({ isOpen, user }) {
   };
 
   const isMarshal = user?.role === 'MARSHAL';
+  const isProvincialChiefIIS = user?.role === 'PROVINCIAL_CHIEF_IIS';
   const isInvestigator = user?.role === 'INVESTIGATOR';
+  const isMunicipalChiefIIS = user?.role === 'MUNICIPAL_CHIEF_IIS';
+  const isMunicipalChiefOperation = user?.role === 'MUNICIPAL_CHIEF_OPERATION';
+  const isMunicipalFireMarshal = user?.role === 'MUNICIPAL_FIRE_MARSHAL';
   const isViewer = user?.role === 'VIEWER';
 
   return (
@@ -45,7 +49,7 @@ export default function Sidebar({ isOpen, user }) {
           {/* Navigation */}
           <nav className="flex-1 p-4">
             <div className="space-y-2">
-              {/* Provincial Dashboard (MARSHAL & VIEWER) */}
+              {/* Provincial Dashboard — MARSHAL & VIEWER */}
               {(isMarshal || isViewer) && (
                 <>
                   <Link
@@ -58,7 +62,25 @@ export default function Sidebar({ isOpen, user }) {
                     href="/provincial/reports"
                     className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
                   >
-                    📋 All Reports
+                    📋 Reports for Review
+                  </Link>
+                </>
+              )}
+
+              {/* Provincial Chief IIS */}
+              {isProvincialChiefIIS && (
+                <>
+                  <Link
+                    href="/provincial"
+                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    📊 Dashboard
+                  </Link>
+                  <Link
+                    href="/provincial/reports"
+                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    📋 Reports for Review
                   </Link>
                 </>
               )}
@@ -85,6 +107,12 @@ export default function Sidebar({ isOpen, user }) {
                     </p>
                     <div className="space-y-2">
                       <Link
+                        href="/municipal/reports/mdfir"
+                        className="block px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                      >
+                        📝 MDFIR
+                      </Link>
+                      <Link
                         href="/municipal/reports/spot"
                         className="block px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
                       >
@@ -104,6 +132,28 @@ export default function Sidebar({ isOpen, user }) {
                       </Link>
                     </div>
                   </div>
+                </>
+              )}
+
+              {(isMunicipalChiefIIS || isMunicipalChiefOperation) && (
+                <>
+                  <Link
+                    href="/municipal/chief"
+                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    📊 Chief IIS Dashboard
+                  </Link>
+                </>
+              )}
+
+              {isMunicipalFireMarshal && (
+                <>
+                  <Link
+                    href="/municipal/marshal"
+                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    📊 Fire Marshal Dashboard
+                  </Link>
                 </>
               )}
             </div>

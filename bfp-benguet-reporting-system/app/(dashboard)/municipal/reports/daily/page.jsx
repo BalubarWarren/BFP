@@ -115,10 +115,23 @@ export default function DailyReportForm() {
       setLoading(false);
     }
   };
-
-  const totalIncidents = formData.residentialCount +
-    formData.nonResidentialCount +
-    formData.nonStructuralCount +
+        const token = localStorage.getItem('token');
+        let effectiveUser = user;
+        if (!effectiveUser) {
+          try {
+            const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+            if (meRes.ok) {
+              const meJson = await meRes.json();
+              effectiveUser = meJson.user;
+              localStorage.setItem('user', JSON.stringify(effectiveUser));
+              setUser(effectiveUser);
+            }
+          } catch (e) {}
+        }
+        if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
+        const payload = new FormData();
+        payload.append('reportType', 'DAILY_REPORT');
+        payload.append('municipalityId', String(effectiveUser.municipalityId));
     formData.transportCount;
 
   return (

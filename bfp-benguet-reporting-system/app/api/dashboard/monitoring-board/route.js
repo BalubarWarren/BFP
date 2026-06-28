@@ -14,8 +14,8 @@ export async function GET(request) {
       );
     }
 
-    // Only MARSHAL and VIEWER can access dashboard
-    if (![ROLES.MARSHAL, ROLES.VIEWER].includes(user.role)) {
+    // Allow provincial, municipal workflow viewers, and admins
+    if (![ROLES.MARSHAL, ROLES.PROVINCIAL_CHIEF_IIS, ROLES.CHIEF_INVESTIGATOR_IIS, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.VIEWER, ROLES.SUPER_ADMIN].includes(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -26,12 +26,21 @@ export async function GET(request) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    const now = new Date();
     let dateFilter = {};
     if (startDate && endDate) {
       dateFilter = {
         reportDate: {
           gte: new Date(startDate),
           lte: new Date(endDate),
+        },
+      };
+    } else {
+      // Default: current calendar month only
+      dateFilter = {
+        reportDate: {
+          gte: new Date(now.getFullYear(), now.getMonth(), 1),
+          lte: new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59),
         },
       };
     }

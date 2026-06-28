@@ -31,7 +31,11 @@ export default function LoginPage() {
       // Redirect based on role
       const roleRedirects = {
         MARSHAL: '/provincial',
+        PROVINCIAL_CHIEF_IIS: '/provincial',
         INVESTIGATOR: '/municipal',
+        MUNICIPAL_CHIEF_IIS: '/municipal/chief',
+        MUNICIPAL_CHIEF_OPERATION: '/municipal/chief',
+        MUNICIPAL_FIRE_MARSHAL: '/municipal/marshal',
         CHIEF_INVESTIGATOR_IIS: '/provincial',
         CHIEF_SPECIAL_OPERATION_SECTION: '/provincial',
         PROVINCIAL_CHIEF_INVESTIGATOR: '/provincial',
@@ -108,8 +112,10 @@ export default function LoginPage() {
 
           <div className="border-t pt-4 text-sm text-gray-600">
             <p className="mb-2 font-semibold">Test Credentials:</p>
-            <p><strong>MARSHAL:</strong> marshal@bfp-benguet.gov.ph / marshal@123</p>
+            <p><strong>Provincial Chief IIS:</strong> provincial.chief.iis@bfp-benguet.gov.ph / provchiefiis@123</p>
             <p><strong>Investigator:</strong> investigator.atok@bfp-benguet.gov.ph / investigator@123</p>
+            <p><strong>Municipal Chief IIS:</strong> chief.iis.atok@bfp-benguet.gov.ph / chiefiis@123</p>
+            <p><strong>Municipal Fire Marshal:</strong> marshal.atok@bfp-benguet.gov.ph / marshal@123</p>
             <p><strong>Viewer:</strong> viewer@bfp-benguet.gov.ph / viewer@123</p>
           </div>
         </div>

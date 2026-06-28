@@ -60,6 +60,9 @@ export default function MunicipalReportsPage() {
         <div className="bg-gray-100 rounded-lg p-8 text-center">
           <p className="text-gray-600 mb-4">No reports found</p>
           <div className="flex gap-4 justify-center">
+            <Link href="/municipal/reports/mdfir" className="btn btn-primary">
+              Submit MDFIR
+            </Link>
             <Link href="/municipal/reports/daily" className="btn btn-primary">
               Submit Daily Report
             </Link>

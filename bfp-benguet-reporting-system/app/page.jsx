@@ -17,7 +17,11 @@ export default function Home() {
       // Redirect based on role
       const roleRedirects = {
         MARSHAL: '/provincial',
+        PROVINCIAL_CHIEF_IIS: '/provincial',
         INVESTIGATOR: '/municipal',
+        MUNICIPAL_CHIEF_IIS: '/municipal/chief',
+        MUNICIPAL_CHIEF_OPERATION: '/municipal/chief',
+        MUNICIPAL_FIRE_MARSHAL: '/municipal/marshal',
         CHIEF_INVESTIGATOR_IIS: '/provincial',
         CHIEF_SPECIAL_OPERATION_SECTION: '/provincial',
         PROVINCIAL_CHIEF_INVESTIGATOR: '/provincial',

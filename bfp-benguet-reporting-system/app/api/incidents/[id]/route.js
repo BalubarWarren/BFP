@@ -30,9 +30,9 @@ export async function GET(request, { params }) {
       );
     }
 
-    // RBAC: Municipal officers can only view their own incidents
+    // Municipal roles can only view incidents within their municipality
     if (
-      user.role === ROLES.MUNICIPAL_OFFICER &&
+      [ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) &&
       incident.municipalityId !== user.municipalityId
     ) {
       return NextResponse.json(
@@ -73,9 +73,9 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // RBAC: Only creator or SUPER_ADMIN can update
+    // RBAC: Only creator can update for municipal workflow roles
     if (
-      user.role === ROLES.MUNICIPAL_OFFICER &&
+      [ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) &&
       incident.createdById !== user.id
     ) {
       return NextResponse.json(

@@ -61,8 +61,8 @@ export async function POST(request) {
       );
     }
 
-    // Only allow MUNICIPAL_OFFICER to create incidents
-    if (![ROLES.MUNICIPAL_OFFICER, ROLES.SUPER_ADMIN].includes(user.role)) {
+    // Allow workflow roles to create incidents
+    if (![ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.PROVINCIAL_CHIEF_IIS, ROLES.MARSHAL, ROLES.SUPER_ADMIN].includes(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -94,8 +94,8 @@ export async function POST(request) {
       );
     }
 
-    // RBAC: Municipal officer can only create incidents in their municipality
-    if (user.role === ROLES.MUNICIPAL_OFFICER && user.municipalityId !== parseInt(municipalityId)) {
+    // Municipal roles can only create incidents in their municipality
+    if ([ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) && user.municipalityId !== parseInt(municipalityId)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
