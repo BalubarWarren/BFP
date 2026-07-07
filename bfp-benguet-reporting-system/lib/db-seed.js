@@ -1,6 +1,15 @@
 import prisma from './prisma.js';
 import { hashPassword } from './auth.js';
-import { MUNICIPALITIES, ROLES, ROLE_PERMISSIONS } from './constants.js';
+import {
+  GENERAL_CATEGORIES,
+  INCIDENT_STATUS,
+  MUNICIPALITIES,
+  NOTIFICATION_TYPES,
+  REPORT_STATUS,
+  REPORT_TYPES,
+  ROLES,
+  ROLE_PERMISSIONS,
+} from './constants.js';
 
 async function createUser({ name, email, password, role, rank, municipalityId }) {
   return prisma.user.create({
@@ -60,6 +69,7 @@ async function main() {
 
   const investigators = [];
   const municipalChiefs = [];
+  const municipalChiefOperations = [];
   const municipalMarshals = [];
 
   for (const mun of createdMunicipalities) {
@@ -87,15 +97,16 @@ async function main() {
       })
     );
 
-    // Create Municipal Chief Operation account for each municipality
-    await createUser({
-      name: `${mun.name} Municipal Chief Operation`,
-      email: `chief.operation.${code}@bfp-benguet.gov.ph`,
-      password: 'chiefop@123',
-      role: ROLES.MUNICIPAL_CHIEF_OPERATION,
-      rank: 'Senior Fire Officer',
-      municipalityId: mun.id,
-    });
+    municipalChiefOperations.push(
+      await createUser({
+        name: `${mun.name} Municipal Chief Operation`,
+        email: `chief.operation.${code}@bfp-benguet.gov.ph`,
+        password: 'chiefop@123',
+        role: ROLES.MUNICIPAL_CHIEF_OPERATION,
+        rank: 'Senior Fire Officer',
+        municipalityId: mun.id,
+      })
+    );
 
     municipalMarshals.push(
       await createUser({
@@ -108,6 +119,523 @@ async function main() {
       })
     );
   }
+
+  const getSeedUsers = (code) => {
+    const municipality = createdMunicipalities.find((m) => m.code === code);
+
+    return {
+      municipality,
+      investigator: investigators.find((user) => user.municipalityId === municipality?.id),
+      chiefIis: municipalChiefs.find((user) => user.municipalityId === municipality?.id),
+      chiefOperation: municipalChiefOperations.find((user) => user.municipalityId === municipality?.id),
+      marshal: municipalMarshals.find((user) => user.municipalityId === municipality?.id),
+    };
+  };
+
+  const sampleAttachment = JSON.stringify([
+    {
+      name: 'Dummy Fire Investigation Report.pdf',
+      type: 'application/pdf',
+      size: 245760,
+      url: '/uploads/reports/1782798103285-7336s65dm6-Classpin.pdf',
+    },
+  ]);
+
+  const createSeedIncident = async ({
+    referenceNumber,
+    municipality,
+    investigator,
+    dateOfIncident,
+    timeOfIncident,
+    barangay,
+    address,
+    generalCategory,
+    subCategory,
+    description,
+    estimatedAffectedArea,
+    status,
+    casualtiesInjured = 0,
+    casualtiesFatalities = 0,
+    estimatedDamage,
+    causeOfFire,
+    fireInvestigationFindings,
+  }) =>
+    prisma.incident.create({
+      data: {
+        referenceNumber,
+        municipalityId: municipality.id,
+        dateOfIncident: new Date(dateOfIncident),
+        timeOfIncident,
+        barangay,
+        address,
+        generalCategory,
+        subCategory,
+        description,
+        estimatedAffectedArea,
+        status,
+        casualtiesInjured,
+        casualtiesFatalities,
+        estimatedDamage,
+        causeOfFire,
+        fireInvestigationFindings,
+        createdById: investigator.id,
+      },
+    });
+
+  const createSeedReport = async ({
+    reportType,
+    status,
+    municipality,
+    incident,
+    reportDate,
+    submittedBy,
+    passedToRole,
+    passedTo,
+    reviewedBy,
+    reviewedAt,
+    remarks,
+    content,
+    respondingUnits,
+    respondingOfficer,
+    reportingOfficerRank,
+    stationCommanderName,
+    attachment = sampleAttachment,
+    submittedAt,
+  }) => {
+    const report = await prisma.report.create({
+      data: {
+        reportType,
+        status,
+        municipalityId: municipality.id,
+        incidentId: incident?.id || null,
+        reportDate: new Date(reportDate),
+        content: JSON.stringify(content),
+        respondingUnits,
+        respondingOfficer,
+        reportingOfficerRank,
+        stationCommanderName,
+        remarks,
+        passedToRole: passedToRole || null,
+        passedToId: passedTo?.id || null,
+        submittedAt: submittedAt ? new Date(submittedAt) : new Date(reportDate),
+        reviewedAt: reviewedAt ? new Date(reviewedAt) : null,
+        reviewedById: reviewedBy?.id || null,
+        submittedById: submittedBy.id,
+        attachments: attachment,
+      },
+    });
+
+    if (passedTo?.id) {
+      await prisma.notification.create({
+        data: {
+          userId: passedTo.id,
+          message: `Seed report: ${reportType} from ${municipality.name} is ready to open and review.`,
+          type: NOTIFICATION_TYPES.REPORT_SUBMITTED,
+          reportId: report.id,
+        },
+      });
+    }
+
+    if (status === REPORT_STATUS.APPROVED || status === REPORT_STATUS.RETURNED) {
+      await prisma.notification.create({
+        data: {
+          userId: submittedBy.id,
+          message:
+            status === REPORT_STATUS.APPROVED
+              ? `Seed report from ${municipality.name} has been approved.`
+              : `Seed report from ${municipality.name} was returned for revision.`,
+          type:
+            status === REPORT_STATUS.APPROVED
+              ? NOTIFICATION_TYPES.REPORT_APPROVED
+              : NOTIFICATION_TYPES.REPORT_RETURNED,
+          reportId: report.id,
+        },
+      });
+    }
+
+    return report;
+  };
+
+  const atokUsers = getSeedUsers('ATOK');
+  const ltUsers = getSeedUsers('LT');
+  const itogonUsers = getSeedUsers('ITOGON');
+  const tubaUsers = getSeedUsers('TUBA');
+
+  const ltMarketIncident = await createSeedIncident({
+    referenceNumber: 'BFP-BEN-2026-SEED-001',
+    municipality: ltUsers.municipality,
+    investigator: ltUsers.investigator,
+    dateOfIncident: '2026-06-24T10:25:00',
+    timeOfIncident: '10:25 AM',
+    barangay: 'Poblacion',
+    address: 'Public Market Extension, Km. 5, La Trinidad, Benguet',
+    generalCategory: GENERAL_CATEGORIES.NON_RESIDENTIAL,
+    subCategory: 'Business',
+    description: 'Small fire observed at a dry goods stall storage area. Responders contained the fire before spread to adjacent stalls.',
+    estimatedAffectedArea: '18 square meters',
+    status: INCIDENT_STATUS.EXTINGUISHED,
+    estimatedDamage: 85000,
+    causeOfFire: 'Overheated extension cord',
+    fireInvestigationFindings: 'Combustible packaging was stored beside an overloaded outlet. No casualties reported.',
+  });
+
+  const ltResidentialIncident = await createSeedIncident({
+    referenceNumber: 'BFP-BEN-2026-SEED-002',
+    municipality: ltUsers.municipality,
+    investigator: ltUsers.investigator,
+    dateOfIncident: '2026-06-25T19:40:00',
+    timeOfIncident: '7:40 PM',
+    barangay: 'Balili',
+    address: 'Purok 3, Balili, La Trinidad, Benguet',
+    generalCategory: GENERAL_CATEGORIES.RESIDENTIAL,
+    subCategory: 'Single and Two-Family Dwelling',
+    description: 'Residential kitchen fire reported by neighbors. First arriving unit declared fire under control within eight minutes.',
+    estimatedAffectedArea: '12 square meters',
+    status: INCIDENT_STATUS.EXTINGUISHED,
+    casualtiesInjured: 1,
+    estimatedDamage: 45000,
+    causeOfFire: 'Unattended cooking',
+    fireInvestigationFindings: 'Fire originated near the cooking area. One occupant sustained minor burns.',
+  });
+
+  const itogonGrassIncident = await createSeedIncident({
+    referenceNumber: 'BFP-BEN-2026-SEED-003',
+    municipality: itogonUsers.municipality,
+    investigator: itogonUsers.investigator,
+    dateOfIncident: '2026-06-26T14:15:00',
+    timeOfIncident: '2:15 PM',
+    barangay: 'Ucab',
+    address: 'Hillside footpath near Sitio Keystone, Itogon, Benguet',
+    generalCategory: GENERAL_CATEGORIES.NON_STRUCTURAL,
+    subCategory: 'Grass Fire',
+    description: 'Grass fire along a hillside trail. The incident was contained with no damage to nearby homes.',
+    estimatedAffectedArea: '0.3 hectare',
+    status: INCIDENT_STATUS.EXTINGUISHED,
+    estimatedDamage: 12000,
+    causeOfFire: 'Discarded smoking material',
+    fireInvestigationFindings: 'Burn pattern indicates ignition near the footpath before wind-driven spread upslope.',
+  });
+
+  const tubaTransportIncident = await createSeedIncident({
+    referenceNumber: 'BFP-BEN-2026-SEED-004',
+    municipality: tubaUsers.municipality,
+    investigator: tubaUsers.investigator,
+    dateOfIncident: '2026-06-27T06:05:00',
+    timeOfIncident: '6:05 AM',
+    barangay: 'Camp 6',
+    address: 'Kennon Road shoulder, Camp 6, Tuba, Benguet',
+    generalCategory: GENERAL_CATEGORIES.TRANSPORT,
+    subCategory: 'Truck',
+    description: 'Smoke and flame reported from a delivery truck engine compartment. Fire was extinguished before cargo involvement.',
+    estimatedAffectedArea: 'Engine compartment only',
+    status: INCIDENT_STATUS.EXTINGUISHED,
+    estimatedDamage: 175000,
+    causeOfFire: 'Electrical short circuit',
+    fireInvestigationFindings: 'Battery cable insulation showed thermal damage consistent with short circuit ignition.',
+  });
+
+  const atokResidentialIncident = await createSeedIncident({
+    referenceNumber: 'BFP-BEN-2026-SEED-005',
+    municipality: atokUsers.municipality,
+    investigator: atokUsers.investigator,
+    dateOfIncident: '2026-06-29T05:40:00',
+    timeOfIncident: '5:40 AM',
+    barangay: 'Paoay',
+    address: 'Sitio Sayangan, Paoay, Atok, Benguet',
+    generalCategory: GENERAL_CATEGORIES.RESIDENTIAL,
+    subCategory: 'Single and Two-Family Dwelling',
+    description: 'Kitchen-area fire in a residential structure. The fire was contained before spreading to adjacent rooms.',
+    estimatedAffectedArea: '10 square meters',
+    status: INCIDENT_STATUS.EXTINGUISHED,
+    estimatedDamage: 38000,
+    causeOfFire: 'Unattended cooking appliance',
+    fireInvestigationFindings: 'Burn marks and witness statements point to the cooking area as the origin.',
+  });
+
+  const atokGrassIncident = await createSeedIncident({
+    referenceNumber: 'BFP-BEN-2026-SEED-006',
+    municipality: atokUsers.municipality,
+    investigator: atokUsers.investigator,
+    dateOfIncident: '2026-06-30T13:20:00',
+    timeOfIncident: '1:20 PM',
+    barangay: 'Cattubo',
+    address: 'Farm access road, Cattubo, Atok, Benguet',
+    generalCategory: GENERAL_CATEGORIES.NON_STRUCTURAL,
+    subCategory: 'Grass Fire',
+    description: 'Grass fire near a farm access road. Responding personnel completed mop-up and perimeter checking.',
+    estimatedAffectedArea: '0.15 hectare',
+    status: INCIDENT_STATUS.EXTINGUISHED,
+    estimatedDamage: 9000,
+    causeOfFire: 'Open flame from roadside burning',
+    fireInvestigationFindings: 'Fire spread from roadside vegetation toward a cleared farm boundary.',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.MDFIR,
+    status: REPORT_STATUS.SUBMITTED,
+    municipality: atokUsers.municipality,
+    incident: atokResidentialIncident,
+    reportDate: '2026-06-29T07:15:00',
+    submittedAt: '2026-06-29T07:45:00',
+    submittedBy: atokUsers.investigator,
+    passedToRole: ROLES.MUNICIPAL_CHIEF_IIS,
+    passedTo: atokUsers.chiefIis,
+    content: {
+      incidentReference: atokResidentialIncident.referenceNumber,
+      location: 'Sitio Sayangan, Paoay',
+      occupancyType: 'Residential dwelling',
+      estimatedDamage: 'PHP 38,000',
+      actionTaken: 'Scene documented, occupant interviewed, and appliance area photographed',
+      recommendation: 'For Municipal Chief IIS review',
+    },
+    respondingUnits: 'Atok FS Engine 1',
+    respondingOfficer: 'FO3 Carlo Bay-an',
+    reportingOfficerRank: 'Fire Officer III',
+    stationCommanderName: 'SINSP Elena Fianza',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.PROGRESS_INVESTIGATION,
+    status: REPORT_STATUS.SUBMITTED,
+    municipality: atokUsers.municipality,
+    incident: atokResidentialIncident,
+    reportDate: '2026-06-29T10:30:00',
+    submittedAt: '2026-06-29T10:50:00',
+    submittedBy: atokUsers.investigator,
+    passedToRole: ROLES.MUNICIPAL_CHIEF_OPERATION,
+    passedTo: atokUsers.chiefOperation,
+    content: {
+      incidentReference: atokResidentialIncident.referenceNumber,
+      operationalConcern: 'Steep access road delayed positioning of the first responding apparatus.',
+      resourcesUsed: 'One engine company and local barangay responders',
+      coordinationNeeded: 'Operations review requested for access-route notes',
+      currentStatus: 'Submitted to Municipal Chief Operation',
+    },
+    respondingUnits: 'Atok FS Engine 1, Barangay Paoay responders',
+    respondingOfficer: 'FO3 Carlo Bay-an',
+    reportingOfficerRank: 'Fire Officer III',
+    stationCommanderName: 'SINSP Elena Fianza',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.SPOT_INVESTIGATION,
+    status: REPORT_STATUS.APPROVED,
+    municipality: atokUsers.municipality,
+    incident: atokGrassIncident,
+    reportDate: '2026-06-30T15:00:00',
+    submittedAt: '2026-06-30T15:25:00',
+    submittedBy: atokUsers.investigator,
+    passedToRole: ROLES.INVESTIGATOR,
+    passedTo: atokUsers.investigator,
+    reviewedBy: atokUsers.chiefIis,
+    reviewedAt: '2026-06-30T16:10:00',
+    remarks: 'Approved — ready to pass to the Municipal Fire Marshal.',
+    content: {
+      incidentReference: atokGrassIncident.referenceNumber,
+      pointOfOrigin: 'Roadside vegetation beside the farm access road',
+      witnessStatement: 'Farm worker noticed smoke after roadside burning activity.',
+      preliminaryCause: 'Open flame from roadside burning',
+      investigationStatus: 'Spot investigation complete',
+    },
+    respondingUnits: 'Atok FS Engine 1',
+    respondingOfficer: 'FO2 Mara Baucas',
+    reportingOfficerRank: 'Fire Officer II',
+    stationCommanderName: 'SINSP Elena Fianza',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.FINAL_INVESTIGATION,
+    status: REPORT_STATUS.APPROVED,
+    municipality: atokUsers.municipality,
+    incident: atokResidentialIncident,
+    reportDate: '2026-06-30T09:00:00',
+    submittedAt: '2026-06-30T09:30:00',
+    submittedBy: atokUsers.investigator,
+    reviewedBy: provincialChiefIIS,
+    reviewedAt: '2026-06-30T17:20:00',
+    remarks: 'Approved for filing. Include access-route observation in municipal readiness review.',
+    content: {
+      incidentReference: atokResidentialIncident.referenceNumber,
+      finalCause: 'Unattended cooking appliance',
+      damageAssessment: 'PHP 38,000',
+      casualties: 'None',
+      disposition: 'Final report approved',
+    },
+    respondingUnits: 'Atok FS Engine 1',
+    respondingOfficer: 'FO3 Carlo Bay-an',
+    reportingOfficerRank: 'Fire Officer III',
+    stationCommanderName: 'SINSP Elena Fianza',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.SPOT_INVESTIGATION,
+    status: REPORT_STATUS.RETURNED,
+    municipality: atokUsers.municipality,
+    incident: atokGrassIncident,
+    reportDate: '2026-06-30T14:15:00',
+    submittedAt: '2026-06-30T14:40:00',
+    submittedBy: atokUsers.investigator,
+    passedToRole: ROLES.INVESTIGATOR,
+    passedTo: atokUsers.investigator,
+    reviewedBy: atokUsers.chiefIis,
+    reviewedAt: '2026-06-30T15:05:00',
+    remarks: 'Add wider scene photos and clarify the estimated burned area before resubmission.',
+    content: {
+      incidentReference: atokGrassIncident.referenceNumber,
+      correctionNeeded: 'Wider scene photos and estimated burned area need revision.',
+      currentStatus: 'Returned for revision',
+    },
+    respondingUnits: 'Atok FS Engine 1',
+    respondingOfficer: 'FO2 Mara Baucas',
+    reportingOfficerRank: 'Fire Officer II',
+    stationCommanderName: 'SINSP Elena Fianza',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.MDFIR,
+    status: REPORT_STATUS.SUBMITTED,
+    municipality: ltUsers.municipality,
+    incident: ltMarketIncident,
+    reportDate: '2026-06-24T11:30:00',
+    submittedAt: '2026-06-24T12:10:00',
+    submittedBy: ltUsers.investigator,
+    passedToRole: ROLES.MUNICIPAL_CHIEF_IIS,
+    passedTo: ltUsers.chiefIis,
+    content: {
+      incidentReference: ltMarketIncident.referenceNumber,
+      location: 'Public Market Extension, Km. 5',
+      occupancyType: 'Business stall storage',
+      estimatedDamage: 'PHP 85,000',
+      actionTaken: 'Fire extinguished, scene documented, owner interviewed',
+      recommendation: 'For review by Municipal Chief IIS',
+    },
+    respondingUnits: 'La Trinidad FS Engine 1, Ambulance 1',
+    respondingOfficer: 'FO3 Miguel Torres',
+    reportingOfficerRank: 'Fire Officer III',
+    stationCommanderName: 'SINSP Andrea Ramos',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.PROGRESS_INVESTIGATION,
+    status: REPORT_STATUS.SUBMITTED,
+    municipality: ltUsers.municipality,
+    incident: ltMarketIncident,
+    reportDate: '2026-06-24T15:30:00',
+    submittedAt: '2026-06-24T15:45:00',
+    submittedBy: ltUsers.investigator,
+    passedToRole: ROLES.MUNICIPAL_CHIEF_OPERATION,
+    passedTo: ltUsers.chiefOperation,
+    content: {
+      incidentReference: ltMarketIncident.referenceNumber,
+      operationalConcern: 'Market aisle access was partially blocked by stored goods.',
+      resourcesUsed: 'One engine company, one ambulance, and two investigators',
+      coordinationNeeded: 'Operations review requested for access and hydrant approach notes',
+      currentStatus: 'Submitted to Municipal Chief Operation',
+    },
+    respondingUnits: 'La Trinidad FS Engine 1, Ambulance 1',
+    respondingOfficer: 'FO3 Miguel Torres',
+    reportingOfficerRank: 'Fire Officer III',
+    stationCommanderName: 'SINSP Andrea Ramos',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.SPOT_INVESTIGATION,
+    status: REPORT_STATUS.APPROVED,
+    municipality: ltUsers.municipality,
+    incident: ltResidentialIncident,
+    reportDate: '2026-06-25T21:00:00',
+    submittedAt: '2026-06-25T21:45:00',
+    submittedBy: ltUsers.investigator,
+    passedToRole: ROLES.INVESTIGATOR,
+    passedTo: ltUsers.investigator,
+    reviewedBy: ltUsers.chiefIis,
+    reviewedAt: '2026-06-26T08:20:00',
+    remarks: 'Approved — ready to pass to the Municipal Fire Marshal.',
+    content: {
+      incidentReference: ltResidentialIncident.referenceNumber,
+      pointOfOrigin: 'Kitchen counter near LPG stove',
+      witnessStatement: 'Neighbor reported smoke from rear window at approximately 7:38 PM.',
+      preliminaryCause: 'Unattended cooking',
+      investigationStatus: 'Spot investigation complete',
+    },
+    respondingUnits: 'La Trinidad FS Engine 2',
+    respondingOfficer: 'FO2 Clarisse Dangan',
+    reportingOfficerRank: 'Fire Officer II',
+    stationCommanderName: 'SINSP Andrea Ramos',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.PROGRESS_INVESTIGATION,
+    status: REPORT_STATUS.APPROVED,
+    municipality: itogonUsers.municipality,
+    incident: itogonGrassIncident,
+    reportDate: '2026-06-26T16:30:00',
+    submittedAt: '2026-06-26T17:05:00',
+    submittedBy: itogonUsers.investigator,
+    passedToRole: ROLES.INVESTIGATOR,
+    passedTo: itogonUsers.investigator,
+    reviewedBy: itogonUsers.marshal,
+    reviewedAt: '2026-06-27T09:10:00',
+    remarks: 'Approved — ready to pass to the Provincial Chief IIS.',
+    content: {
+      incidentReference: itogonGrassIncident.referenceNumber,
+      containmentSummary: 'Perimeter checked and no rekindling observed after mop-up.',
+      evidenceCollected: 'Scene photographs, witness notes, and GPS-marked burn area',
+      nextAction: 'Provincial validation of findings',
+    },
+    respondingUnits: 'Itogon FS Engine 1, Barangay response team',
+    respondingOfficer: 'FO3 Hanna Baniaga',
+    reportingOfficerRank: 'Fire Officer III',
+    stationCommanderName: 'INSP Paolo Dominguez',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.FINAL_INVESTIGATION,
+    status: REPORT_STATUS.APPROVED,
+    municipality: tubaUsers.municipality,
+    incident: tubaTransportIncident,
+    reportDate: '2026-06-28T09:00:00',
+    submittedAt: '2026-06-28T10:00:00',
+    submittedBy: tubaUsers.investigator,
+    reviewedBy: provincialChiefIIS,
+    reviewedAt: '2026-06-29T15:30:00',
+    remarks: 'Approved for filing. Notify operations for trend monitoring of vehicle electrical fires.',
+    content: {
+      incidentReference: tubaTransportIncident.referenceNumber,
+      finalCause: 'Electrical short circuit in engine compartment',
+      damageAssessment: 'PHP 175,000',
+      casualties: 'None',
+      disposition: 'Final report approved and archived',
+    },
+    respondingUnits: 'Tuba FS Engine 1',
+    respondingOfficer: 'FO2 Liza Cabading',
+    reportingOfficerRank: 'Fire Officer II',
+    stationCommanderName: 'SINSP Noel Castro',
+  });
+
+  await createSeedReport({
+    reportType: REPORT_TYPES.SPOT_INVESTIGATION,
+    status: REPORT_STATUS.RETURNED,
+    municipality: ltUsers.municipality,
+    incident: ltMarketIncident,
+    reportDate: '2026-06-24T13:00:00',
+    submittedAt: '2026-06-24T13:20:00',
+    submittedBy: ltUsers.investigator,
+    passedToRole: ROLES.INVESTIGATOR,
+    passedTo: ltUsers.investigator,
+    reviewedBy: ltUsers.chiefIis,
+    reviewedAt: '2026-06-24T16:05:00',
+    remarks: 'Please attach clearer photos of the origin area and add the stall owner interview summary.',
+    content: {
+      incidentReference: ltMarketIncident.referenceNumber,
+      correctionNeeded: 'Missing owner interview summary and clearer origin-area photo.',
+      currentStatus: 'Returned for revision',
+    },
+    respondingUnits: 'La Trinidad FS Engine 1',
+    respondingOfficer: 'FO3 Miguel Torres',
+    reportingOfficerRank: 'Fire Officer III',
+    stationCommanderName: 'SINSP Andrea Ramos',
+  });
 
   // ── Historical fire incident data (dailyReportEntry per municipality per month) ──
   // Format: [code, residential, nonResidential, nonStructural, transport]
@@ -201,6 +729,7 @@ async function main() {
   console.log(`INVESTIGATOR (sample): ${investigators[0]?.email} / investigator@123`);
   console.log(`MUNICIPAL_CHIEF_IIS (sample): ${municipalChiefs[0]?.email} / chiefiis@123`);
   console.log(`MUNICIPAL_FIRE_MARSHAL (sample): ${municipalMarshals[0]?.email} / marshal@123`);
+  console.log(`CHIEF_OPERATION (sample): ${municipalChiefOperations[0]?.email} / chiefop@123`);
 }
 
 main()

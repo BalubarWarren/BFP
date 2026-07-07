@@ -3,10 +3,13 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { AlertTriangle } from 'lucide-react';
+import { useToast } from '@/components/common/ToastProvider';
 import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '@/lib/constants';
 
 export default function InitialReportForm() {
   const router = useRouter();
+  const toast = useToast();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,7 +34,7 @@ export default function InitialReportForm() {
   });
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
+    const userData = sessionStorage.getItem('user');
     if (userData) {
       setUser(JSON.parse(userData));
     }
@@ -72,7 +75,7 @@ export default function InitialReportForm() {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       let effectiveUser = user;
       if (!effectiveUser) {
         try {
@@ -80,7 +83,7 @@ export default function InitialReportForm() {
           if (meRes.ok) {
             const meJson = await meRes.json();
             effectiveUser = meJson.user;
-            localStorage.setItem('user', JSON.stringify(effectiveUser));
+            sessionStorage.setItem('user', JSON.stringify(effectiveUser));
             setUser(effectiveUser);
           }
         } catch (e) {}
@@ -129,7 +132,7 @@ export default function InitialReportForm() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert(`Initial report submitted successfully!\nIncident Reference: ${referenceNumber}`);
+      toast.success(`Initial report submitted successfully! Incident Reference: ${referenceNumber}`);
       router.push('/municipal/reports');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit report');
@@ -146,7 +149,7 @@ export default function InitialReportForm() {
   return (
     <div className="p-8">
       <div className="max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold text-bfp-navy mb-2">🚨 Initial Fire Incident Report</h1>
+        <h1 className="flex items-center gap-2 text-3xl font-bold text-bfp-navy mb-2"><AlertTriangle className="w-7 h-7" /> Initial Fire Incident Report</h1>
         <p className="text-gray-600 mb-8">
           Submit this form as soon as possible after an incident occurs
         </p>
@@ -173,32 +176,6 @@ export default function InitialReportForm() {
         <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-md p-8">
           {step === 1 && (
             <>
-              {/* Date & Time */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                <div className="form-group">
-                  <label className="form-label">Date of Incident *</label>
-                  <input
-                    type="date"
-                    className="form-input"
-                    name="dateOfIncident"
-                    value={formData.dateOfIncident}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Time of Incident *</label>
-                  <input
-                    type="time"
-                    className="form-input"
-                    name="timeOfIncident"
-                    value={formData.timeOfIncident}
-                    onChange={handleInputChange}
-                    required
-                  />
-                </div>
-              </div>
-
               {/* Location */}
               <div className="form-group">
                 <label className="form-label">Barangay *</label>
@@ -375,10 +352,9 @@ export default function InitialReportForm() {
               </div>
 
               {/* Summary */}
-              <div className="bg-blue-50 p-6 rounded-lg">
+              <div className="bg-bfp-navy/5 p-6 rounded-lg">
                 <h3 className="font-bold mb-4">Report Summary</h3>
                 <div className="space-y-2 text-sm">
-                  <p><strong>Date/Time:</strong> {new Date(formData.dateOfIncident).toLocaleDateString()} at {formData.timeOfIncident}</p>
                   <p><strong>Location:</strong> {formData.barangay}, {formData.address}</p>
                   <p><strong>Category:</strong> {formData.generalCategory} - {formData.subCategory}</p>
                   <p><strong>Status:</strong> {formData.status}</p>

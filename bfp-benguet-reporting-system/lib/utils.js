@@ -21,16 +21,21 @@ export function formatDateTime(date) {
   });
 }
 
+export function isAuthError(err) {
+  const status = err?.response?.status;
+  return status === 401 || status === 403;
+}
+
 export function getStatusColor(status) {
   const colors = {
     DRAFT: 'bg-gray-100 text-gray-800',
-    SUBMITTED: 'bg-blue-100 text-blue-800',
-    APPROVED: 'bg-green-100 text-green-800',
-    RETURNED: 'bg-red-100 text-red-800',
-    PENDING: 'bg-yellow-100 text-yellow-800',
+    SUBMITTED: 'bg-bfp-amber/20 text-amber-800',
+    APPROVED: 'bg-bfp-green/15 text-bfp-green',
+    RETURNED: 'bg-bfp-red/10 text-bfp-red',
+    PENDING: 'bg-bfp-amber/20 text-amber-800',
     ONGOING: 'bg-orange-100 text-orange-800',
-    CONTROLLED: 'bg-yellow-100 text-yellow-800',
-    EXTINGUISHED: 'bg-green-100 text-green-800',
+    CONTROLLED: 'bg-bfp-amber/20 text-amber-800',
+    EXTINGUISHED: 'bg-bfp-green/15 text-bfp-green',
   };
   return colors[status] || 'bg-gray-100 text-gray-800';
 }

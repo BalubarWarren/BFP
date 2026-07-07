@@ -3,13 +3,18 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import {
+  LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
+  Clock, CheckCircle2, ShieldCheck, LogOut,
+} from 'lucide-react';
+import BFPCrest from './BFPCrest';
 
 export default function Sidebar({ isOpen, user }) {
   const router = useRouter();
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     router.push('/login');
   };
 
@@ -19,7 +24,7 @@ export default function Sidebar({ isOpen, user }) {
   const isMunicipalChiefIIS = user?.role === 'MUNICIPAL_CHIEF_IIS';
   const isMunicipalChiefOperation = user?.role === 'MUNICIPAL_CHIEF_OPERATION';
   const isMunicipalFireMarshal = user?.role === 'MUNICIPAL_FIRE_MARSHAL';
-  const isViewer = user?.role === 'VIEWER';
+  const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
 
   return (
     <>
@@ -36,12 +41,12 @@ export default function Sidebar({ isOpen, user }) {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b border-blue-700">
+          <div className="p-6 border-b-2 border-bfp-gold">
             <div className="flex items-center gap-3">
-              <span className="text-3xl">🚒</span>
+              <BFPCrest size={44} className="flex-shrink-0" />
               <div>
-                <h1 className="font-bold text-lg">BFP Benguet</h1>
-                <p className="text-xs text-blue-200">Incident Reporting</p>
+                <h1 className="font-bold text-lg leading-tight tracking-wide">BFP Benguet</h1>
+                <p className="text-xs text-bfp-gold tracking-wide uppercase">Incident Reporting</p>
               </div>
             </div>
           </div>
@@ -49,20 +54,20 @@ export default function Sidebar({ isOpen, user }) {
           {/* Navigation */}
           <nav className="flex-1 p-4">
             <div className="space-y-2">
-              {/* Provincial Dashboard — MARSHAL & VIEWER */}
-              {(isMarshal || isViewer) && (
+              {/* Provincial Dashboard — MARSHAL */}
+              {isMarshal && (
                 <>
                   <Link
                     href="/provincial"
-                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                   >
-                    📊 Dashboard
+                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
                   </Link>
                   <Link
                     href="/provincial/reports"
-                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                   >
-                    📋 Reports for Review
+                    <FileText className="w-4 h-4 flex-shrink-0" /> Fire Incident Reports
                   </Link>
                 </>
               )}
@@ -72,15 +77,15 @@ export default function Sidebar({ isOpen, user }) {
                 <>
                   <Link
                     href="/provincial"
-                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                   >
-                    📊 Dashboard
+                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
                   </Link>
                   <Link
                     href="/provincial/reports"
-                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                   >
-                    📋 Reports for Review
+                    <FileText className="w-4 h-4 flex-shrink-0" /> Fire Incident Reports
                   </Link>
                 </>
               )}
@@ -90,45 +95,45 @@ export default function Sidebar({ isOpen, user }) {
                 <>
                   <Link
                     href="/municipal"
-                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                   >
-                    📊 Dashboard
+                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
                   </Link>
                   <Link
                     href="/municipal/reports"
-                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                   >
-                    📋 My Reports
+                    <ClipboardList className="w-4 h-4 flex-shrink-0" /> My Reports
                   </Link>
 
-                  <div className="mt-4 pt-4 border-t border-blue-700">
-                    <p className="text-xs font-semibold uppercase text-blue-200 mb-2">
+                  <div className="mt-4 pt-4 border-t border-bfp-gold/30">
+                    <p className="text-xs font-semibold uppercase text-white/60 mb-2">
                       Submit Investigation Report
                     </p>
                     <div className="space-y-2">
                       <Link
                         href="/municipal/reports/mdfir"
-                        className="block px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                        className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                       >
-                        📝 MDFIR
+                        <FilePlus className="w-4 h-4 flex-shrink-0" /> MDFIR
                       </Link>
                       <Link
                         href="/municipal/reports/spot"
-                        className="block px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                        className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                       >
-                        🔍 Spot Investigation
+                        <Search className="w-4 h-4 flex-shrink-0" /> Spot Investigation
                       </Link>
                       <Link
                         href="/municipal/reports/progress"
-                        className="block px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                        className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                       >
-                        ⏳ Progress Investigation
+                        <Clock className="w-4 h-4 flex-shrink-0" /> Progress Investigation
                       </Link>
                       <Link
                         href="/municipal/reports/final"
-                        className="block px-4 py-2 bg-blue-700 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium"
+                        className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                       >
-                        ✅ Final Investigation
+                        <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Final Investigation
                       </Link>
                     </div>
                   </div>
@@ -139,9 +144,9 @@ export default function Sidebar({ isOpen, user }) {
                 <>
                   <Link
                     href="/municipal/chief"
-                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                   >
-                    📊 Chief IIS Dashboard
+                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Chief IIS Dashboard
                   </Link>
                 </>
               )}
@@ -150,9 +155,27 @@ export default function Sidebar({ isOpen, user }) {
                 <>
                   <Link
                     href="/municipal/marshal"
-                    className="block px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
                   >
-                    📊 Fire Marshal Dashboard
+                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Fire Marshal Dashboard
+                  </Link>
+                </>
+              )}
+
+              {/* Admin — same dashboard as Provincial Chief IIS, plus Report Tracking */}
+              {isAdmin && (
+                <>
+                  <Link
+                    href="/provincial"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
+                  >
+                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
+                  </Link>
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-red transition-colors text-sm font-medium"
+                  >
+                    <ShieldCheck className="w-4 h-4 flex-shrink-0" /> Report Tracking
                   </Link>
                 </>
               )}
@@ -160,17 +183,17 @@ export default function Sidebar({ isOpen, user }) {
           </nav>
 
           {/* User Info & Logout */}
-          <div className="p-4 border-t border-blue-700">
-            <div className="mb-3 pb-3 border-b border-blue-700">
-              <p className="text-xs text-blue-200">Logged in as</p>
+          <div className="p-4 border-t border-bfp-gold/30">
+            <div className="mb-3 pb-3 border-b border-white/15">
+              <p className="text-xs text-white/60">Logged in as</p>
               <p className="font-semibold text-sm truncate">{user?.name}</p>
-              <p className="text-xs text-blue-300">{user?.municipality?.name || 'Provincial'}</p>
+              <p className="text-xs text-white/50">{user?.municipality?.name || 'Provincial'}</p>
             </div>
             <button
               onClick={handleLogout}
-              className="w-full px-4 py-2 bg-red-600 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-bfp-red rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
             >
-              🚪 Logout
+              <LogOut className="w-4 h-4 flex-shrink-0" /> Logout
             </button>
           </div>
         </div>

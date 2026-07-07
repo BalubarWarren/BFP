@@ -18,27 +18,17 @@ export default function ProgressInvestigationForm() {
   const [formData, setFormData] = useState({
     reportDate: new Date().toISOString().split('T')[0],
     incidentId: '',
-    investigationStatus: 'ONGOING',
-    currentFindings: '',
-    witnessStatements: '',
-    evidenceCollected: '',
-    suspectedCause: '',
-    furtherActionsNeeded: '',
-    respondingUnits: '',
-    respondingOfficer: '',
-    reportingOfficerRank: '',
-    stationCommanderName: '',
   });
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
+    const userData = sessionStorage.getItem('user');
     if (userData) setUser(JSON.parse(userData));
     fetchIncidents();
   }, []);
 
   const fetchIncidents = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const res = await axios.get('/api/incidents', { headers: { Authorization: `Bearer ${token}` } });
       setIncidents(res.data.incidents || []);
     } catch {
@@ -57,13 +47,11 @@ export default function ProgressInvestigationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.respondingOfficer) { setError('Please enter the reporting officer name.'); return; }
-    if (!formData.currentFindings) { setError('Please enter current investigation findings.'); return; }
 
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       let effectiveUser = user;
       if (!effectiveUser) {
         try {
@@ -71,7 +59,7 @@ export default function ProgressInvestigationForm() {
           if (meRes.ok) {
             const meJson = await meRes.json();
             effectiveUser = meJson.user;
-            localStorage.setItem('user', JSON.stringify(effectiveUser));
+            sessionStorage.setItem('user', JSON.stringify(effectiveUser));
             setUser(effectiveUser);
           }
         } catch (e) {}
@@ -82,18 +70,7 @@ export default function ProgressInvestigationForm() {
       payload.append('municipalityId', String(effectiveUser.municipalityId));
       if (formData.incidentId) payload.append('incidentId', formData.incidentId);
       payload.append('reportDate', formData.reportDate);
-      payload.append('respondingUnits', formData.respondingUnits);
-      payload.append('respondingOfficer', formData.respondingOfficer);
-      payload.append('reportingOfficerRank', formData.reportingOfficerRank);
-      payload.append('stationCommanderName', formData.stationCommanderName);
-      payload.append('content', JSON.stringify({
-        investigationStatus: formData.investigationStatus,
-        currentFindings: formData.currentFindings,
-        witnessStatements: formData.witnessStatements,
-        evidenceCollected: formData.evidenceCollected,
-        suspectedCause: formData.suspectedCause,
-        furtherActionsNeeded: formData.furtherActionsNeeded,
-      }));
+      payload.append('content', JSON.stringify({}));
       attachments.forEach((file) => payload.append('attachments', file));
       payload.append('passedToRole', recipientRole);
 
@@ -144,43 +121,9 @@ export default function ProgressInvestigationForm() {
                 ))}
               </select>
             </div>
-            <div className="md:col-span-2">
-              <label className="form-label">Investigation Status</label>
-              <select name="investigationStatus" value={formData.investigationStatus} onChange={handleChange} className="form-input">
-                <option value="ONGOING">Ongoing</option>
-                <option value="PENDING_ADDITIONAL_INFO">Pending Additional Info</option>
-                <option value="NEAR_COMPLETION">Near Completion</option>
-              </select>
-            </div>
           </div>
         </div>
 
-          {/* Findings */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Investigation Findings</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="form-label">Current Findings *</label>
-              <textarea name="currentFindings" value={formData.currentFindings} onChange={handleChange} rows={4} className="form-input" placeholder="Describe the current state of the investigation and findings so far..." required />
-            </div>
-            <div>
-              <label className="form-label">Witness Statements</label>
-              <textarea name="witnessStatements" value={formData.witnessStatements} onChange={handleChange} rows={3} className="form-input" placeholder="Summary of witness accounts..." />
-            </div>
-            <div>
-              <label className="form-label">Evidence Collected</label>
-              <textarea name="evidenceCollected" value={formData.evidenceCollected} onChange={handleChange} rows={3} className="form-input" placeholder="List of physical evidence gathered..." />
-            </div>
-            <div>
-              <label className="form-label">Suspected Cause</label>
-              <input type="text" name="suspectedCause" value={formData.suspectedCause} onChange={handleChange} className="form-input" placeholder="e.g. Electrical fault, open flame, etc." />
-            </div>
-            <div>
-              <label className="form-label">Further Actions Needed</label>
-              <textarea name="furtherActionsNeeded" value={formData.furtherActionsNeeded} onChange={handleChange} rows={2} className="form-input" placeholder="Next steps or pending actions..." />
-            </div>
-          </div>
-        </div>
           <div className="bg-white rounded-lg shadow-md p-6">
             <h2 className="text-lg font-bold text-bfp-navy mb-4">Submit To</h2>
             <div>
@@ -193,29 +136,6 @@ export default function ProgressInvestigationForm() {
               </select>
             </div>
           </div>
-
-          {/* Officer Details */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Officer Details</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="form-label">Responding Units</label>
-              <input type="text" name="respondingUnits" value={formData.respondingUnits} onChange={handleChange} className="form-input" placeholder="Unit names / call signs" />
-            </div>
-            <div>
-              <label className="form-label">Reporting Officer *</label>
-              <input type="text" name="respondingOfficer" value={formData.respondingOfficer} onChange={handleChange} className="form-input" placeholder="Full name" required />
-            </div>
-            <div>
-              <label className="form-label">Officer Rank</label>
-              <input type="text" name="reportingOfficerRank" value={formData.reportingOfficerRank} onChange={handleChange} className="form-input" placeholder="e.g. FO3" />
-            </div>
-            <div>
-              <label className="form-label">Chief Incharge</label>
-              <input type="text" name="stationCommanderName" value={formData.stationCommanderName} onChange={handleChange} className="form-input" placeholder="Full name" />
-            </div>
-          </div>
-        </div>
 
         <AttachmentInput files={attachments} onChange={handleAttachmentChange} />
 

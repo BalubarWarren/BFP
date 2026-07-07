@@ -13,10 +13,7 @@ html {
 }
 
 body {
-  @apply bg-gray-50 text-gray-900;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  @apply bg-gray-50 text-gray-900 font-sans;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -26,30 +23,41 @@ body {
   @apply bg-bfp-navy text-white;
 }
 
+/* Hazard trim — used sparingly as a thin accent stripe, not a background */
+.hazard-trim {
+  @apply bg-hazard-stripe;
+  background-size: 28px 28px;
+}
+
 /* Tables */
 .data-table {
-  @apply border-collapse border border-gray-300 w-full;
+  @apply w-full border-collapse rounded-lg overflow-hidden;
+  box-shadow: 0 0 0 1px theme('colors.gray.200');
 }
 
 .data-table thead {
-  @apply bg-gray-100;
+  @apply bg-bfp-navy;
 }
 
 .data-table th {
-  @apply border border-gray-300 px-4 py-2 text-left font-semibold text-gray-900;
+  @apply px-4 py-3 text-left font-semibold text-white text-xs uppercase tracking-wider;
 }
 
 .data-table td {
-  @apply border border-gray-300 px-4 py-2;
+  @apply border-b border-gray-200 px-4 py-3 text-sm;
+}
+
+.data-table tbody tr:nth-child(even) {
+  @apply bg-gray-50;
 }
 
 .data-table tbody tr:hover {
-  @apply bg-gray-50;
+  @apply bg-bfp-red/5;
 }
 
 /* Status Badge */
 .badge {
-  @apply inline-block px-3 py-1 rounded-full text-sm font-semibold;
+  @apply inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide;
 }
 
 .badge-approved {
@@ -61,7 +69,7 @@ body {
 }
 
 .badge-returned {
-  @apply bg-red-100 text-red-800;
+  @apply bg-bfp-red/10 text-bfp-red;
 }
 
 .badge-draft {
@@ -70,7 +78,7 @@ body {
 
 /* Buttons */
 .btn {
-  @apply px-4 py-2 rounded-lg font-semibold transition-colors;
+  @apply px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm;
 }
 
 .btn-primary {
@@ -82,7 +90,7 @@ body {
 }
 
 .btn-danger {
-  @apply bg-red-600 text-white hover:bg-red-700;
+  @apply bg-bfp-red text-white hover:bg-red-800;
 }
 
 .btn-success {
@@ -92,6 +100,19 @@ body {
 /* Cards */
 .card {
   @apply bg-white rounded-lg shadow-md p-6;
+}
+
+.card-accent-top {
+  @apply border-t-4 border-bfp-red;
+}
+
+.card-accent-gold {
+  @apply border-t-4 border-bfp-gold;
+}
+
+/* Page header — used at the top of each dashboard section */
+.page-header {
+  @apply border-l-4 border-bfp-red pl-4;
 }
 
 /* Forms */

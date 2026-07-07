@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
-import { ROLES, REPORT_STATUS } from '@/lib/constants';
+import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS } from '@/lib/constants';
+import { getDemoReportById, isDemoReportId } from '@/lib/demo-reports';
 
 const MUNICIPAL_REVIEWER_ROLES = [
   ROLES.MUNICIPAL_CHIEF_IIS,
@@ -36,6 +37,16 @@ export async function GET(request, { params }) {
       );
     }
 
+    if (isDemoReportId(params.id)) {
+      const demoReport = getDemoReportById(user, params.id);
+
+      if (!demoReport) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+
+      return NextResponse.json({ report: demoReport });
+    }
+
     const report = await prisma.report.findUnique({
       where: { id: parseInt(params.id) },
       include: {
@@ -63,8 +74,18 @@ export async function GET(request, { params }) {
     const isSubmitter = report.submittedById === user.id;
     const isRecipient = isReportRecipient(report, user);
     const isSuperAdmin = user.role === ROLES.SUPER_ADMIN;
+    const hasTextBlastAccess = await prisma.notification.findFirst({
+      where: {
+        userId: user.id,
+        reportId: report.id,
+        type: NOTIFICATION_TYPES.REPORT_TEXT_BLAST,
+      },
+      select: {
+        id: true,
+      },
+    });
 
-    if (!isSubmitter && !isRecipient && !isSuperAdmin) {
+    if (!isSubmitter && !isRecipient && !isSuperAdmin && !hasTextBlastAccess) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -109,11 +130,12 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json();
-    const { content, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName, status, passedToRole: requestedPassedToRole, passedToId: requestedPassedToId } = body;
+    const { content, category, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName, status, passedToRole: requestedPassedToRole, passedToId: requestedPassedToId } = body;
 
     // Allow submitter to re-submit a returned report and optionally forward to a specific municipal role
     let updateData = {
       ...(content && { content }),
+      ...(category && { category }),
       ...(respondingUnits && { respondingUnits }),
       ...(respondingOfficer && { respondingOfficer }),
       ...(reportingOfficerRank && { reportingOfficerRank }),
@@ -121,38 +143,89 @@ export async function PATCH(request, { params }) {
       ...(status && { status }),
     };
 
-    // If investigator is re-submitting a previously returned report and requests forwarding
+    // Investigator re-submitting a RETURNED report → auto-route back to whoever returned it
     if (
       user.role === ROLES.INVESTIGATOR &&
       report.status === REPORT_STATUS.RETURNED &&
-      status === REPORT_STATUS.SUBMITTED &&
-      requestedPassedToRole
+      status === REPORT_STATUS.SUBMITTED
     ) {
-      // Only allow forwarding to MUNICIPAL_CHIEF_OPERATION for now
-      if (requestedPassedToRole === ROLES.MUNICIPAL_CHIEF_OPERATION) {
-        const munChiefOp = await prisma.user.findFirst({
+      if (report.reviewedById) {
+        const lastReviewer = await prisma.user.findUnique({
+          where: { id: report.reviewedById },
+          select: { id: true, role: true, isActive: true },
+        });
+        if (lastReviewer && lastReviewer.isActive) {
+          updateData.passedToRole = lastReviewer.role;
+          updateData.passedToId = lastReviewer.id;
+        }
+      }
+    }
+
+    // Investigator forwarding an approved (but not yet finally approved) report → determine next level from last reviewer
+    if (
+      user.role === ROLES.INVESTIGATOR &&
+      report.status === REPORT_STATUS.APPROVED &&
+      status === REPORT_STATUS.SUBMITTED
+    ) {
+      if (!report.reviewedById) {
+        return NextResponse.json(
+          { error: 'Cannot determine next step: report has no reviewer on record' },
+          { status: 400 }
+        );
+      }
+
+      const lastReviewer = await prisma.user.findUnique({
+        where: { id: report.reviewedById },
+        select: { role: true },
+      });
+
+      // Investigator may explicitly choose the next recipient; otherwise fall back
+      // to the automatic escalation path based on who last reviewed the report.
+      const allowedNextRoles = [ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.PROVINCIAL_CHIEF_IIS];
+      let targetRole = allowedNextRoles.includes(requestedPassedToRole) ? requestedPassedToRole : null;
+
+      if (!targetRole) {
+        if (lastReviewer?.role === ROLES.MUNICIPAL_CHIEF_IIS || lastReviewer?.role === ROLES.MUNICIPAL_CHIEF_OPERATION) {
+          targetRole = ROLES.MUNICIPAL_FIRE_MARSHAL;
+        } else if (lastReviewer?.role === ROLES.MUNICIPAL_FIRE_MARSHAL) {
+          targetRole = ROLES.PROVINCIAL_CHIEF_IIS;
+        } else {
+          return NextResponse.json(
+            { error: 'Invalid report state: cannot determine next forwarding step' },
+            { status: 400 }
+          );
+        }
+      }
+
+      if (targetRole === ROLES.MUNICIPAL_FIRE_MARSHAL) {
+        const marshal = await prisma.user.findFirst({
           where: {
-            role: ROLES.MUNICIPAL_CHIEF_OPERATION,
+            role: ROLES.MUNICIPAL_FIRE_MARSHAL,
             municipalityId: report.municipalityId,
             isActive: true,
           },
         });
-
-        if (!munChiefOp) {
+        if (!marshal) {
           return NextResponse.json(
-            { error: 'No Municipal Chief Operation account found for this municipality' },
+            { error: 'No Municipal Fire Marshal account found for this municipality' },
             { status: 400 }
           );
         }
-
-        updateData.passedToRole = ROLES.MUNICIPAL_CHIEF_OPERATION;
-        updateData.passedToId = munChiefOp.id;
+        updateData.passedToRole = ROLES.MUNICIPAL_FIRE_MARSHAL;
+        updateData.passedToId = marshal.id;
+      } else {
+        const provChief = await prisma.user.findFirst({
+          where: { role: ROLES.PROVINCIAL_CHIEF_IIS, isActive: true },
+        });
+        if (!provChief) {
+          return NextResponse.json(
+            { error: 'No Provincial Chief IIS account found' },
+            { status: 400 }
+          );
+        }
+        updateData.passedToRole = ROLES.PROVINCIAL_CHIEF_IIS;
+        updateData.passedToId = provChief.id;
       }
-    }
-
-    // If a specific passedToId was provided (and user is allowed to set it), include it
-    if (requestedPassedToId && Number.isInteger(requestedPassedToId)) {
-      updateData.passedToId = requestedPassedToId;
     }
 
     const updatedReport = await prisma.report.update({
@@ -171,7 +244,7 @@ export async function PATCH(request, { params }) {
         await prisma.notification.create({
           data: {
             userId: updatedReport.passedToId,
-            message: `A ${updatedReport.reportType} report from ${updatedReport.municipality.name} is awaiting your review.`,
+            message: `A ${updatedReport.reportType} report from ${updatedReport.municipality?.name} is awaiting your review.`,
             type: 'REPORT_SUBMITTED',
             reportId: updatedReport.id,
           },

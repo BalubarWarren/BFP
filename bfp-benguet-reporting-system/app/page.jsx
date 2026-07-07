@@ -2,37 +2,19 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { ROLE_HOME_PATH } from '@/lib/constants';
 
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Check if user is logged in by checking localStorage
-    const token = localStorage.getItem('token');
-    const user = localStorage.getItem('user');
+    // Check if user is logged in by checking sessionStorage
+    const token = sessionStorage.getItem('token');
+    const user = sessionStorage.getItem('user');
 
     if (token && user) {
       const userData = JSON.parse(user);
-      
-      // Redirect based on role
-      const roleRedirects = {
-        MARSHAL: '/provincial',
-        PROVINCIAL_CHIEF_IIS: '/provincial',
-        INVESTIGATOR: '/municipal',
-        MUNICIPAL_CHIEF_IIS: '/municipal/chief',
-        MUNICIPAL_CHIEF_OPERATION: '/municipal/chief',
-        MUNICIPAL_FIRE_MARSHAL: '/municipal/marshal',
-        CHIEF_INVESTIGATOR_IIS: '/provincial',
-        CHIEF_SPECIAL_OPERATION_SECTION: '/provincial',
-        PROVINCIAL_CHIEF_INVESTIGATOR: '/provincial',
-        REGION_IIS: '/provincial',
-        REGIONAL_CHIEF_OPERATION: '/provincial',
-        PIO: '/provincial',
-        VIEWER: '/provincial',
-      };
-
-      const redirectPath = roleRedirects[userData.role] || '/provincial';
-      router.push(redirectPath);
+      router.push(ROLE_HOME_PATH[userData.role] || '/provincial');
     } else {
       // Redirect to login if not logged in
       router.push('/login');

@@ -3,20 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { GENERAL_CATEGORIES } from '@/lib/constants';
+import { CheckCircle2 } from 'lucide-react';
 import AttachmentInput from '@/components/reports/AttachmentInput';
-
-const CAUSE_OPTIONS = [
-  'Electrical fault / short circuit',
-  'Careless use of fire / matches / smoking',
-  'Arson',
-  'Faulty / defective equipment',
-  'Open flame (candles, lamps)',
-  'Children playing with fire',
-  'Natural causes (lightning)',
-  'Undetermined',
-  'Others',
-];
 
 export default function FinalInvestigationForm() {
   const router = useRouter();
@@ -24,26 +12,11 @@ export default function FinalInvestigationForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [incidents, setIncidents] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
 
   const [formData, setFormData] = useState({
     reportDate: new Date().toISOString().split('T')[0],
-    incidentId: '',
-    generalCategory: '',
-    dateOfIncident: '',
-    barangay: '',
-    address: '',
-    causeOfFire: '',
-    causeDetails: '',
-    fireInvestigationFindings: '',
-    estimatedDamage: '',
-    casualtiesInjured: 0,
-    casualtiesFatalities: 0,
-    finalStatus: 'EXTINGUISHED',
-    conclusion: '',
-    recommendations: '',
     respondingUnits: '',
     respondingOfficer: '',
     reportingOfficerRank: '',
@@ -51,29 +24,13 @@ export default function FinalInvestigationForm() {
   });
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
+    const userData = sessionStorage.getItem('user');
     if (userData) setUser(JSON.parse(userData));
-    fetchIncidents();
   }, []);
-
-  const fetchIncidents = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await axios.get('/api/incidents', { headers: { Authorization: `Bearer ${token}` } });
-      setIncidents(res.data.incidents || []);
-    } catch {
-      // incidents list is optional
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: ['casualtiesInjured', 'casualtiesFatalities'].includes(name)
-        ? parseInt(value) || 0
-        : value,
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleAttachmentChange = (e) => {
@@ -82,14 +39,12 @@ export default function FinalInvestigationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.causeOfFire) { setError('Please select the cause of fire.'); return; }
-    if (!formData.fireInvestigationFindings) { setError('Please enter investigation findings.'); return; }
     if (!formData.respondingOfficer) { setError('Please enter the reporting officer name.'); return; }
 
     setLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       let effectiveUser = user;
       if (!effectiveUser) {
         try {
@@ -97,7 +52,7 @@ export default function FinalInvestigationForm() {
           if (meRes.ok) {
             const meJson = await meRes.json();
             effectiveUser = meJson.user;
-            localStorage.setItem('user', JSON.stringify(effectiveUser));
+            sessionStorage.setItem('user', JSON.stringify(effectiveUser));
             setUser(effectiveUser);
           }
         } catch (e) {}
@@ -106,27 +61,12 @@ export default function FinalInvestigationForm() {
       const payload = new FormData();
       payload.append('reportType', 'FINAL_INVESTIGATION');
       payload.append('municipalityId', String(effectiveUser.municipalityId));
-      if (formData.incidentId) payload.append('incidentId', formData.incidentId);
       payload.append('reportDate', formData.reportDate);
       payload.append('respondingUnits', formData.respondingUnits);
       payload.append('respondingOfficer', formData.respondingOfficer);
       payload.append('reportingOfficerRank', formData.reportingOfficerRank);
       payload.append('stationCommanderName', formData.stationCommanderName);
-      payload.append('content', JSON.stringify({
-        generalCategory: formData.generalCategory,
-        dateOfIncident: formData.dateOfIncident,
-        barangay: formData.barangay,
-        address: formData.address,
-        causeOfFire: formData.causeOfFire,
-        causeDetails: formData.causeDetails,
-        fireInvestigationFindings: formData.fireInvestigationFindings,
-        estimatedDamage: formData.estimatedDamage,
-        casualtiesInjured: formData.casualtiesInjured,
-        casualtiesFatalities: formData.casualtiesFatalities,
-        finalStatus: formData.finalStatus,
-        conclusion: formData.conclusion,
-        recommendations: formData.recommendations,
-      }));
+      payload.append('content', JSON.stringify({}));
       attachments.forEach((file) => payload.append('attachments', file));
       payload.append('passedToRole', recipientRole);
 
@@ -150,7 +90,7 @@ export default function FinalInvestigationForm() {
         <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-bfp-navy mb-2 flex items-center gap-1">
           ← Back
         </button>
-        <h1 className="text-2xl font-bold text-bfp-navy">✅ Final Investigation Report</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-bfp-navy"><CheckCircle2 className="w-6 h-6" /> Final Investigation Report</h1>
         <p className="text-gray-500 text-sm mt-1">Completed investigation report with cause of fire and final findings.</p>
       </div>
 
@@ -165,87 +105,6 @@ export default function FinalInvestigationForm() {
             <div>
               <label className="form-label">Report Date *</label>
               <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input" required />
-            </div>
-            <div>
-              <label className="form-label">Linked Incident (optional)</label>
-              <select name="incidentId" value={formData.incidentId} onChange={handleChange} className="form-input">
-                <option value="">— None / Not linked —</option>
-                {incidents.map((inc) => (
-                  <option key={inc.id} value={inc.id}>
-                    {inc.referenceNumber} — {inc.generalCategory} ({new Date(inc.dateOfIncident).toLocaleDateString()})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="form-label">General Category</label>
-              <select name="generalCategory" value={formData.generalCategory} onChange={handleChange} className="form-input">
-                <option value="">— Select —</option>
-                {Object.keys(GENERAL_CATEGORIES).map((k) => (
-                  <option key={k} value={k}>{k.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="form-label">Date of Incident</label>
-              <input type="date" name="dateOfIncident" value={formData.dateOfIncident} onChange={handleChange} className="form-input" />
-            </div>
-            <div>
-              <label className="form-label">Barangay</label>
-              <input type="text" name="barangay" value={formData.barangay} onChange={handleChange} className="form-input" placeholder="Barangay name" />
-            </div>
-            <div>
-              <label className="form-label">Address</label>
-              <input type="text" name="address" value={formData.address} onChange={handleChange} className="form-input" placeholder="Street / building address" />
-            </div>
-            <div>
-              <label className="form-label">Final Status</label>
-              <select name="finalStatus" value={formData.finalStatus} onChange={handleChange} className="form-input">
-                <option value="EXTINGUISHED">Extinguished</option>
-                <option value="CONTROLLED">Controlled</option>
-              </select>
-            </div>
-            <div>
-              <label className="form-label">Estimated Damage (₱)</label>
-              <input type="text" name="estimatedDamage" value={formData.estimatedDamage} onChange={handleChange} className="form-input" placeholder="e.g. 1,200,000" />
-            </div>
-            <div>
-              <label className="form-label">Casualties — Injured</label>
-              <input type="number" name="casualtiesInjured" value={formData.casualtiesInjured} onChange={handleChange} min="0" className="form-input" />
-            </div>
-            <div>
-              <label className="form-label">Casualties — Fatalities</label>
-              <input type="number" name="casualtiesFatalities" value={formData.casualtiesFatalities} onChange={handleChange} min="0" className="form-input" />
-            </div>
-          </div>
-        </div>
-
-        {/* Cause & Findings */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Cause &amp; Findings</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="form-label">Cause of Fire *</label>
-              <select name="causeOfFire" value={formData.causeOfFire} onChange={handleChange} className="form-input" required>
-                <option value="">— Select cause —</option>
-                {CAUSE_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="form-label">Cause Details</label>
-              <textarea name="causeDetails" value={formData.causeDetails} onChange={handleChange} rows={2} className="form-input" placeholder="Additional details about the cause..." />
-            </div>
-            <div>
-              <label className="form-label">Fire Investigation Findings *</label>
-              <textarea name="fireInvestigationFindings" value={formData.fireInvestigationFindings} onChange={handleChange} rows={5} className="form-input" placeholder="Complete findings of the fire investigation..." required />
-            </div>
-            <div>
-              <label className="form-label">Conclusion</label>
-              <textarea name="conclusion" value={formData.conclusion} onChange={handleChange} rows={3} className="form-input" placeholder="Investigator's conclusion..." />
-            </div>
-            <div>
-              <label className="form-label">Recommendations</label>
-              <textarea name="recommendations" value={formData.recommendations} onChange={handleChange} rows={2} className="form-input" placeholder="Preventive measures or action recommendations..." />
             </div>
           </div>
         </div>

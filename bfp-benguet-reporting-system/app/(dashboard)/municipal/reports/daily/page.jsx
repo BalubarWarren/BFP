@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '@/lib/constants';
+import { Home, Building2, Trees, Car } from 'lucide-react';
+import { useToast } from '@/components/common/ToastProvider';
 
 export default function DailyReportForm() {
   const router = useRouter();
+  const toast = useToast();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,10 +24,20 @@ export default function DailyReportForm() {
     respondingUnits: '',
   });
 
+  const totalIncidents =
+    formData.residentialCount +
+    formData.nonResidentialCount +
+    formData.nonStructuralCount +
+    formData.transportCount;
+
   useEffect(() => {
-    const userData = localStorage.getItem('user');
+    const userData = sessionStorage.getItem('user');
     if (userData) {
-      setUser(JSON.parse(userData));
+      try {
+        setUser(JSON.parse(userData));
+      } catch {
+        setUser(null);
+      }
     }
   }, []);
 
@@ -57,13 +69,28 @@ export default function DailyReportForm() {
     setError('');
 
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
+      let effectiveUser = user;
+
+      if (!effectiveUser) {
+        const meResponse = await axios.get('/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        effectiveUser = meResponse.data.user;
+        sessionStorage.setItem('user', JSON.stringify(effectiveUser));
+        setUser(effectiveUser);
+      }
+
+      if (!effectiveUser?.municipalityId) {
+        throw new Error('Not authenticated. Please sign in again.');
+      }
 
       // Create incident for daily report context
       const incidentResponse = await axios.post(
         '/api/incidents',
         {
-          municipalityId: user.municipalityId,
+          municipalityId: effectiveUser.municipalityId,
           dateOfIncident: formData.reportDate,
           generalCategory: 'NON_STRUCTURAL', // Daily reports are administrative
           status: 'EXTINGUISHED',
@@ -76,7 +103,8 @@ export default function DailyReportForm() {
         '/api/reports',
         {
           reportType: 'DAILY',
-          municipalityId: user.municipalityId,
+          municipalityId: effectiveUser.municipalityId,
+          incidentId: incidentResponse.data.incident.id,
           reportDate: new Date(formData.reportDate),
           respondingOfficer: formData.reportingOfficer,
           respondingUnits: formData.respondingUnits,
@@ -95,7 +123,7 @@ export default function DailyReportForm() {
         '/api/daily-report-entries',
         {
           reportId: reportResponse.data.report.id,
-          municipalityId: user.municipalityId,
+          municipalityId: effectiveUser.municipalityId,
           reportDate: new Date(formData.reportDate),
           residentialCount: formData.residentialCount,
           nonResidentialCount: formData.nonResidentialCount,
@@ -106,33 +134,15 @@ export default function DailyReportForm() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      alert('Daily report submitted successfully!');
+      toast.success('Daily report submitted successfully!');
       router.push('/municipal/reports');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to submit report');
+      setError(err.response?.data?.error || err.message || 'Failed to submit report');
       console.error('Error submitting report:', err);
     } finally {
       setLoading(false);
     }
   };
-        const token = localStorage.getItem('token');
-        let effectiveUser = user;
-        if (!effectiveUser) {
-          try {
-            const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-            if (meRes.ok) {
-              const meJson = await meRes.json();
-              effectiveUser = meJson.user;
-              localStorage.setItem('user', JSON.stringify(effectiveUser));
-              setUser(effectiveUser);
-            }
-          } catch (e) {}
-        }
-        if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
-        const payload = new FormData();
-        payload.append('reportType', 'DAILY_REPORT');
-        payload.append('municipalityId', String(effectiveUser.municipalityId));
-    formData.transportCount;
 
   return (
     <div className="p-8">
@@ -178,7 +188,7 @@ export default function DailyReportForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 p-6 bg-gray-50 rounded-lg">
                 <div>
                   <div className="text-center p-4 bg-white rounded-lg border-2 border-blue-200">
-                    <div className="text-3xl mb-2">🏘️</div>
+                    <Home className="w-7 h-7 mb-2 mx-auto text-blue-600" />
                     <label className="form-label">Residential</label>
                     <input
                       type="number"
@@ -192,7 +202,7 @@ export default function DailyReportForm() {
                 </div>
                 <div>
                   <div className="text-center p-4 bg-white rounded-lg border-2 border-green-200">
-                    <div className="text-3xl mb-2">🏢</div>
+                    <Building2 className="w-7 h-7 mb-2 mx-auto text-green-600" />
                     <label className="form-label">Non-Residential</label>
                     <input
                       type="number"
@@ -206,7 +216,7 @@ export default function DailyReportForm() {
                 </div>
                 <div>
                   <div className="text-center p-4 bg-white rounded-lg border-2 border-yellow-200">
-                    <div className="text-3xl mb-2">🌳</div>
+                    <Trees className="w-7 h-7 mb-2 mx-auto text-yellow-600" />
                     <label className="form-label">Non-Structural</label>
                     <input
                       type="number"
@@ -220,7 +230,7 @@ export default function DailyReportForm() {
                 </div>
                 <div>
                   <div className="text-center p-4 bg-white rounded-lg border-2 border-purple-200">
-                    <div className="text-3xl mb-2">🚗</div>
+                    <Car className="w-7 h-7 mb-2 mx-auto text-purple-600" />
                     <label className="form-label">Transport</label>
                     <input
                       type="number"
@@ -245,7 +255,7 @@ export default function DailyReportForm() {
           {step === 2 && (
             <>
               {/* Summary */}
-              <div className="bg-blue-50 p-6 rounded-lg mb-8">
+              <div className="bg-bfp-navy/5 p-6 rounded-lg mb-8">
                 <h3 className="font-bold text-lg mb-4">Report Summary</h3>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>

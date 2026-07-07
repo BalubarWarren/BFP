@@ -11,13 +11,12 @@ export default function EditReturnedReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [corrections, setCorrections] = useState('');
-  const [forwardTo, setForwardTo] = useState('MUNICIPAL_CHIEF_IIS');
 
   useEffect(() => {
     const fetchReport = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem('token');
+        const token = sessionStorage.getItem('token');
         const parts = window.location.pathname.split('/');
         const id = parts[parts.length - 2];
         const res = await axios.get(`/api/reports/${id}`, { headers: { Authorization: `Bearer ${token}` } });
@@ -34,23 +33,34 @@ export default function EditReturnedReportPage() {
     fetchReport();
   }, []);
 
+  // Determine where the corrected report will be re-submitted (for display only)
+  const getResubmitDestination = () => {
+    if (!report?.reviewedBy?.role) return 'the reviewer';
+    const role = report.reviewedBy.role;
+    if (role === 'MUNICIPAL_CHIEF_IIS') return 'Municipal Chief IIS';
+    if (role === 'MUNICIPAL_CHIEF_OPERATION') return 'Municipal Chief Operation';
+    if (role === 'MUNICIPAL_FIRE_MARSHAL') return 'Municipal Fire Marshal';
+    if (role === 'PROVINCIAL_CHIEF_IIS') return 'Provincial Chief IIS';
+    return role.replace(/_/g, ' ');
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
       setError('');
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       const parts = window.location.pathname.split('/');
       const id = parts[parts.length - 2];
 
       const existingContent = report?.content ? JSON.parse(report.content) : {};
       const newContent = { ...existingContent, corrections };
 
+      // Server auto-routes back to whoever returned the report
       await axios.patch(
         `/api/reports/${id}`,
         {
           content: JSON.stringify(newContent),
           status: 'SUBMITTED',
-          passedToRole: forwardTo,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -74,11 +84,11 @@ export default function EditReturnedReportPage() {
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
       <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-bold mb-4">Corrections / Response</h2>
+        <h2 className="text-lg font-bold mb-4">Address Corrections</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="form-label">Original Remarks</label>
-            <div className="p-3 bg-gray-50 rounded text-sm text-gray-700">{report.remarks || '—'}</div>
+            <label className="form-label">Original Remarks from Reviewer</label>
+            <div className="p-3 bg-red-50 border-l-4 border-red-400 rounded text-sm text-red-700">{report.remarks || '—'}</div>
           </div>
 
           <div>
@@ -86,12 +96,8 @@ export default function EditReturnedReportPage() {
             <textarea value={corrections} onChange={(e) => setCorrections(e.target.value)} rows={6} className="form-input" />
           </div>
 
-          <div>
-            <label className="form-label">Forward corrected report to</label>
-            <select value={forwardTo} onChange={(e) => setForwardTo(e.target.value)} className="form-select max-w-xs">
-              <option value="MUNICIPAL_CHIEF_IIS">Municipal Chief IIS</option>
-              <option value="MUNICIPAL_CHIEF_OPERATION">Municipal Chief Operation</option>
-            </select>
+          <div className="p-3 bg-bfp-navy/5 rounded text-sm text-bfp-navy">
+            <strong>Note:</strong> This corrected report will be re-submitted to <strong>{getResubmitDestination()}</strong> for review.
           </div>
 
           <div className="flex gap-3">

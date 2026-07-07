@@ -1,12 +1,195 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { formatDate } from '@/lib/utils';
+import { formatDate, isAuthError } from '@/lib/utils';
+import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
+import { MoreVertical, Printer, Download } from 'lucide-react';
+import { CATEGORY_CHART_COLORS } from '@/lib/constants';
 import {
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
+
+// ── Reusable "⋮" section actions menu (Print / Export) ────────────────────────
+function SectionMenu({ onPrint, onExport }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [open]);
+
+  return (
+    <div className="relative flex-shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center justify-center w-8 h-8 rounded-full border border-gray-300 text-gray-600 hover:border-bfp-navy hover:text-bfp-navy transition-colors"
+        aria-label="Section actions"
+      >
+        <MoreVertical className="w-4 h-4" />
+      </button>
+      {open && (
+        <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-lg shadow-lg z-50 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => { setOpen(false); onPrint(); }}
+            className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+          >
+            <Printer className="w-4 h-4" /> Print
+          </button>
+          {onExport && (
+            <button
+              type="button"
+              onClick={() => { setOpen(false); onExport(); }}
+              className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-100"
+            >
+              <Download className="w-4 h-4" /> Export CSV
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Benguet SVG Fire Rate Map ─────────────────────────────────────────────────
+const BENGUET_MUNICIPALITIES = [
+  { code: 'BAKUN',    name: 'Bakun',        points: '30,95 88,48 188,48 200,98 188,148 148,170 92,162 50,142',                                                                           lx: 108, ly: 112 },
+  { code: 'MANKAYAN', name: 'Mankayan',     points: '188,48 302,46 348,82 366,132 332,156 285,168 248,154 222,126 200,98',                                                               lx: 272, ly: 96  },
+  { code: 'KIBUNGAN', name: 'Kibungan',     points: '30,95 50,142 92,162 148,170 188,148 208,188 210,228 175,252 124,262 70,252 40,224 30,180',                                          lx: 112, ly: 200 },
+  { code: 'BUGUIAS',  name: 'Buguias',      points: '248,154 285,168 332,156 366,132 372,212 345,228 298,238 265,215 252,182',                                                           lx: 310, ly: 186 },
+  { code: 'KABAYAN',  name: 'Kabayan',      points: '265,215 298,238 345,228 372,212 372,318 348,336 300,328 270,298 264,265',                                                           lx: 322, ly: 268 },
+  { code: 'KAPANGAN', name: 'Kapangan',     points: '30,180 40,224 70,252 124,262 136,312 92,332 48,322 30,296',                                                                         lx: 66,  ly: 256 },
+  { code: 'ATOK',     name: 'Atok',         points: '175,252 210,228 208,188 252,182 265,215 264,265 270,298 246,312 204,318 176,308 156,282',                                           lx: 218, ly: 256 },
+  { code: 'TUBLAY',   name: 'Tublay',       points: '136,312 156,282 176,308 204,318 204,352 172,360 146,350',                                                                           lx: 172, ly: 326 },
+  { code: 'LT',       name: 'La Trinidad',  points: '146,350 172,360 204,352 204,386 190,394 158,386 148,368',                                                                           lx: 170, ly: 366 },
+  { code: 'SABLAN',   name: 'Sablan',       points: '30,296 48,322 92,332 136,312 146,350 148,368 130,390 98,400 58,390 30,366',                                                         lx: 72,  ly: 342 },
+  { code: 'BOKOD',    name: 'Bokod',        points: '264,265 270,298 300,328 348,336 372,318 372,415 342,425 298,415 264,378 258,338',                                                   lx: 320, ly: 362 },
+  { code: 'TUBA',     name: 'Tuba',         points: '30,366 58,390 98,400 130,390 148,368 158,386 190,394 190,498 125,498 60,478 30,446',                                                lx: 100, ly: 438 },
+  { code: 'ITOGON',   name: 'Itogon',       points: '190,394 204,386 258,338 264,378 298,415 342,425 322,468 265,498 190,498',                                                           lx: 258, ly: 448 },
+];
+
+function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
+  const [hovered, setHovered] = useState(null);
+
+  const dataMap = {};
+  monitoringBoard.forEach((m) => { dataMap[m.code] = m.total || 0; });
+
+  const values = Object.values(dataMap).filter((v) => v > 0);
+  const maxVal = values.length ? Math.max(...values) : 0;
+
+  const getColor = (code) => {
+    const val = dataMap[code] || 0;
+    if (maxVal === 0 || val === 0) return '#e5e7eb';
+    const ratio = val / maxVal;
+    // green (#16a34a) → yellow (#eab308) → red (#dc2626)
+    let r, g, b;
+    if (ratio <= 0.5) {
+      const t = ratio * 2;
+      r = Math.round(22  + (234 - 22)  * t);
+      g = Math.round(163 + (179 - 163) * t);
+      b = Math.round(74  + (8   - 74)  * t);
+    } else {
+      const t = (ratio - 0.5) * 2;
+      r = Math.round(234 + (220 - 234) * t);
+      g = Math.round(179 + (38  - 179) * t);
+      b = Math.round(8   + (38  - 8)   * t);
+    }
+    return `rgb(${r},${g},${b})`;
+  };
+
+  const sorted = [...monitoringBoard].sort((a, b) => (b.total || 0) - (a.total || 0));
+  const rankMap = {};
+  sorted.forEach((m, i) => { rankMap[m.code] = i + 1; });
+
+  return (
+    <div id="section-fire-map" className="bg-white rounded-lg shadow-md p-6 mb-6">
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h2 className="text-xl font-bold text-bfp-navy">Municipality Fire Incident Rate Map</h2>
+          <p className="text-sm text-gray-500">Color shows relative fire incident rate — green (lowest) to red (highest)</p>
+        </div>
+        {onPrint && <SectionMenu onPrint={onPrint} onExport={onExport} />}
+      </div>
+      <div className="flex flex-wrap gap-6">
+        {/* SVG Map */}
+        <div className="relative flex-shrink-0" style={{ width: 320 }}>
+          <svg viewBox="0 0 402 510" width="320">
+            <text x="201" y="24" textAnchor="middle" style={{ fontSize: 12, fontWeight: 700, fill: '#1a3c6e', letterSpacing: 1 }}>
+              PROVINCE OF BENGUET
+            </text>
+            {BENGUET_MUNICIPALITIES.map((mun) => {
+              const val = dataMap[mun.code] || 0;
+              const fill = getColor(mun.code);
+              const isHov = hovered?.code === mun.code;
+              const small = mun.code === 'LT' || mun.code === 'TUBLAY';
+              return (
+                <g key={mun.code} style={{ cursor: 'pointer' }}
+                  onMouseEnter={() => setHovered(mun)}
+                  onMouseLeave={() => setHovered(null)}>
+                  <polygon points={mun.points} fill={fill}
+                    stroke="white" strokeWidth={isHov ? 3 : 1.5}
+                    style={{ filter: isHov ? 'brightness(1.12)' : 'none', transition: 'filter 0.15s' }} />
+                  <text x={mun.lx} y={mun.ly} textAnchor="middle"
+                    style={{ fontSize: small ? 6.5 : 8.5, fontWeight: 700, fill: val === 0 ? '#9ca3af' : '#fff', pointerEvents: 'none', paintOrder: 'stroke', stroke: val === 0 ? 'none' : 'rgba(0,0,0,0.25)', strokeWidth: 3 }}>
+                    {mun.name}
+                  </text>
+                  {val > 0 && (
+                    <text x={mun.lx} y={mun.ly + (small ? 9 : 11)} textAnchor="middle"
+                      style={{ fontSize: small ? 7 : 10, fontWeight: 800, fill: '#fff', pointerEvents: 'none', paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 3 }}>
+                      {val}
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+          {/* Hover tooltip */}
+          {hovered && (
+            <div className="absolute top-6 left-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm pointer-events-none" style={{ minWidth: 130 }}>
+              <p className="font-bold text-bfp-navy">{hovered.name}</p>
+              <p className="text-gray-600 mt-0.5">Incidents: <span className="font-bold text-bfp-red">{dataMap[hovered.code] || 0}</span></p>
+              {maxVal > 0 && (dataMap[hovered.code] || 0) > 0 && (
+                <p className="text-gray-600">Rank: <span className="font-bold">#{rankMap[hovered.code]}</span> of 13</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Legend + Rankings */}
+        <div className="flex flex-col gap-5 flex-1 min-w-[160px]">
+          {/* Color legend */}
+          <div>
+            <p className="text-xs font-bold uppercase text-gray-500 mb-2">Color Scale</p>
+            <div className="space-y-1.5">
+              {[
+                { color: '#e5e7eb', label: 'No incidents' },
+                { color: '#16a34a', label: 'Lowest' },
+                { color: '#86efac', label: 'Low' },
+                { color: '#eab308', label: 'Medium' },
+                { color: '#f97316', label: 'High' },
+                { color: '#dc2626', label: 'Highest' },
+              ].map((t) => (
+                <div key={t.label} className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded flex-shrink-0 border border-gray-200" style={{ background: t.color }} />
+                  <span className="text-xs text-gray-600">{t.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export default function ProvincialDashboard() {
   const [monitoringBoard, setMonitoringBoard] = useState([]);
@@ -15,17 +198,17 @@ export default function ProvincialDashboard() {
   const [charts, setCharts] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sessionExpired, setSessionExpired] = useState(false);
+  const pollRef = useRef(null);
   const [asOf, setAsOf] = useState(new Date());
-  const [dateRange, setDateRange] = useState({ startDate: '', endDate: '' });
-  const [activeTab, setActiveTab] = useState('monthly');
   const [trendMode, setTrendMode] = useState('years');
   const [selectedTrendYears, setSelectedTrendYears] = useState([]);
   const [selectedTrendYear, setSelectedTrendYear] = useState(new Date().getFullYear());
   const [selectedTrendMonths, setSelectedTrendMonths] = useState([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 
-  // ── Historical view state ──
+  // ── Merged Fire Incident Monitoring Board state (This Month / By Month / By Year) ──
   const _now = new Date();
-  const [histTab, setHistTab] = useState('monthly');
+  const [boardTab, setBoardTab] = useState('current');
   const [histMonthNum, setHistMonthNum] = useState(_now.getMonth() === 0 ? 12 : _now.getMonth());
   const [histMonthYear, setHistMonthYear] = useState(_now.getMonth() === 0 ? _now.getFullYear() - 1 : _now.getFullYear());
   const [histYearNum, setHistYearNum] = useState(_now.getFullYear() - 1);
@@ -34,10 +217,23 @@ export default function ProvincialDashboard() {
   const [histLabel, setHistLabel] = useState('');
   const [histLoading, setHistLoading] = useState(false);
 
-  useEffect(() => { fetchDashboardData(); }, [dateRange]);
+  useEffect(() => {
+    fetchDashboardData();
 
-  // Auto-fetch historical data whenever the selectors change
-  useEffect(() => { fetchHistoricalData(); }, [histTab, histMonthNum, histMonthYear, histYearNum]);
+    pollRef.current = setInterval(() => fetchDashboardData({ silent: true }), 15000);
+    const onFocus = () => fetchDashboardData({ silent: true });
+    window.addEventListener('focus', onFocus);
+    return () => {
+      clearInterval(pollRef.current);
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
+
+  // Auto-fetch By Month / By Year data whenever that tab or its selectors change
+  useEffect(() => {
+    if (boardTab === 'current') return;
+    fetchHistoricalData();
+  }, [boardTab, histMonthNum, histMonthYear, histYearNum]);
 
   useEffect(() => {
     const availableYears = charts.comparison?.availableYears || [];
@@ -53,17 +249,13 @@ export default function ProvincialDashboard() {
     );
   }, [charts.comparison?.availableYears?.join(',')]);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async ({ silent } = {}) => {
     try {
-      setLoading(true);
-      const token = localStorage.getItem('token');
-
-      const boardParams = new URLSearchParams();
-      if (dateRange.startDate) boardParams.append('startDate', dateRange.startDate);
-      if (dateRange.endDate) boardParams.append('endDate', dateRange.endDate);
+      if (!silent) setLoading(true);
+      const token = sessionStorage.getItem('token');
 
       const [boardResponse, analyticsResponse] = await Promise.all([
-        axios.get(`/api/dashboard/monitoring-board?${boardParams}`, {
+        axios.get('/api/dashboard/monitoring-board', {
           headers: { Authorization: `Bearer ${token}` },
         }),
         axios.get('/api/dashboard/analytics', {
@@ -77,20 +269,25 @@ export default function ProvincialDashboard() {
       setKpis(analyticsResponse.data.kpis);
       setCharts(analyticsResponse.data.charts || {});
     } catch (err) {
+      if (isAuthError(err)) {
+        clearInterval(pollRef.current);
+        setSessionExpired(true);
+        return;
+      }
       console.error('Error fetching dashboard:', err);
-      setError('Failed to load dashboard data');
+      if (!silent) setError('Failed to load dashboard data');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   const fetchHistoricalData = async () => {
     try {
       setHistLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token');
       let startDate, endDate, label;
 
-      if (histTab === 'monthly') {
+      if (boardTab === 'monthly') {
         const yr = Number(histMonthYear);
         const mo = Number(histMonthNum);
         const lastDay = new Date(yr, mo, 0).getDate();
@@ -128,6 +325,73 @@ export default function ProvincialDashboard() {
       </div>
     );
   }
+
+  const handlePrint = (sectionId) => {
+    const el = document.getElementById(sectionId);
+    if (!el) return;
+    const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
+      .map((link) => `<link rel="stylesheet" href="${link.href}">`)
+      .join('');
+    const printWin = window.open('', '_blank');
+    printWin.document.write(`<!DOCTYPE html><html><head><title>BFP Benguet Dashboard</title>${stylesheets}<style>body{padding:32px;font-family:sans-serif}button{display:none!important}</style></head><body>${el.outerHTML}</body></html>`);
+    printWin.document.close();
+    printWin.onload = () => { printWin.focus(); printWin.print(); };
+  };
+
+  const downloadCsv = (filename, lines) => {
+    const csv = lines.map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportBoardCsv = (rows, rowTotals, periodLabel) => {
+    const header = ['Municipality', 'Residential', 'Non-Residential', 'Non-Structural', 'Transport', 'Total'];
+    const lines = [
+      [`Fire Incident Monitoring Board - ${periodLabel}`],
+      header,
+      ...rows.map((row) => [row.municipality, row.residential, row.nonResidential, row.nonStructural, row.transport, row.total]),
+      ['TOTAL', rowTotals.residential || 0, rowTotals.nonResidential || 0, rowTotals.nonStructural || 0, rowTotals.transport || 0, rowTotals.total || 0],
+    ];
+    downloadCsv(`bfp-benguet-monitoring-board-${periodLabel.replace(/\s+/g, '-').toLowerCase()}.csv`, lines);
+  };
+
+  const handleExportMonitoringBoard = () => {
+    const rows = boardTab === 'current' ? monitoringBoard : (histData || []);
+    const rowTotals = boardTab === 'current' ? totals : histTotals;
+    const periodLabel = boardTab === 'current'
+      ? new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
+      : histLabel;
+    exportBoardCsv(rows, rowTotals, periodLabel);
+  };
+
+  const handleExportFireMap = () => {
+    const periodLabel = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
+    exportBoardCsv(monitoringBoard, totals, periodLabel);
+  };
+
+  const handleExportComparison = () => {
+    const header = ['Period', 'Residential', 'Non-Residential', 'Non-Structural', 'Transport', 'Total'];
+    const lines = [
+      ['Fire Incident Comparison'],
+      header,
+      ...trendComparisonData.map((row) => [
+        row.period,
+        row.Residential || 0,
+        row['Non-Residential'] || 0,
+        row['Non-Structural'] || 0,
+        row.Transport || 0,
+        row.total || 0,
+      ]),
+    ];
+    downloadCsv('bfp-benguet-fire-incident-comparison.csv', lines);
+  };
 
   const now = new Date();
   const currentMonthName = now.toLocaleString('default', { month: 'long' });
@@ -167,201 +431,125 @@ export default function ProvincialDashboard() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-8" id="provincial-dashboard-content">
       {/* Page Title */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-bfp-navy mb-1">Provincial Dashboard</h1>
         <p className="text-gray-600">Real-time fire incident monitoring for Benguet Province</p>
       </div>
 
-      {error && (
+      {sessionExpired && (
+        <div className="mb-4">
+          <SessionExpiredBanner />
+        </div>
+      )}
+
+      {!sessionExpired && error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
           {error}
         </div>
       )}
 
-      {/* ── 1. MONITORING BOARD — first thing visible ── */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex justify-between items-start mb-4 flex-wrap gap-4">
+      {/* ── 1. Fire Incident Monitoring Board — main dashboard, first thing visible ── */}
+      <div id="section-monitoring-board" className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="flex justify-between items-start mb-1">
           <div>
-            <h2 className="text-2xl font-bold text-bfp-navy">Fire Incident Monitoring Board</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
-              {currentMonthName} {currentYear} &mdash; as of {formatDate(asOf)}
-            </p>
+            <h2 className="text-xl font-bold text-bfp-navy">Fire Incident Monitoring Board</h2>
+            <p className="text-sm text-gray-500 mb-4">Live totals for the current month, or browse a past month or year.</p>
           </div>
-          {/* Date filter inline with the board header */}
-          <div className="flex gap-3 items-end flex-wrap">
-            <div>
-              <label className="form-label text-xs">Start Date</label>
-              <input
-                type="date"
-                className="form-input py-1.5 text-sm"
-                value={dateRange.startDate}
-                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="form-label text-xs">End Date</label>
-              <input
-                type="date"
-                className="form-input py-1.5 text-sm"
-                value={dateRange.endDate}
-                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-              />
-            </div>
-            <button onClick={() => setDateRange({ startDate: '', endDate: '' })} className="btn btn-secondary text-sm py-1.5">
-              Clear
-            </button>
-          </div>
+          <SectionMenu onPrint={() => handlePrint('section-monitoring-board')} onExport={handleExportMonitoringBoard} />
         </div>
-
-        <div className="overflow-x-auto">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Municipality</th>
-                <th className="text-right">Residential</th>
-                <th className="text-right">Non-Residential</th>
-                <th className="text-right">Non-Structural</th>
-                <th className="text-right">Transport</th>
-                <th className="text-right font-bold">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {monitoringBoard.map((row) => (
-                <tr key={row.code}>
-                  <td className="font-semibold">{row.municipality}</td>
-                  <td className="text-right">{row.residential}</td>
-                  <td className="text-right">{row.nonResidential}</td>
-                  <td className="text-right">{row.nonStructural}</td>
-                  <td className="text-right">{row.transport}</td>
-                  <td className="text-right font-bold text-bfp-red">{row.total}</td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="bg-gray-100 font-bold">
-                <td>TOTAL</td>
-                <td className="text-right">{totals.residential || 0}</td>
-                <td className="text-right">{totals.nonResidential || 0}</td>
-                <td className="text-right">{totals.nonStructural || 0}</td>
-                <td className="text-right">{totals.transport || 0}</td>
-                <td className="text-right text-bfp-red text-lg">{totals.total || 0}</td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
-
-      {/* ── 2. KPI Cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div className="kpi-card primary">
-          <div className="kpi-label">This Month</div>
-          <div className="kpi-value">{kpis?.thisMonth || 0}</div>
-        </div>
-        <div className="kpi-card success">
-          <div className="kpi-label">This Year</div>
-          <div className="kpi-value">{kpis?.thisYear || 0}</div>
-        </div>
-        <div className="kpi-card warning">
-          <div className="kpi-label">Most Active Municipality</div>
-          <div className="kpi-value text-lg">{kpis?.mostActiveMunicipality || 'N/A'}</div>
-        </div>
-        <div className="kpi-card primary">
-          <div className="kpi-label">Most Common Category</div>
-          <div className="kpi-value text-lg">{kpis?.mostCommonCategory || 'N/A'}</div>
-        </div>
-        <div className="kpi-card success">
-          <div className="kpi-label">With Casualties</div>
-          <div className="kpi-value">{kpis?.incidentsWithCasualties || 0}</div>
-        </div>
-      </div>
-
-      {/* ── 3. Historical Fire Incidents ── */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-xl font-bold text-bfp-navy mb-1">Historical Fire Incidents</h2>
-        <p className="text-sm text-gray-500 mb-4">View fire incident records for a specific past month or year.</p>
 
         {/* Sub-tabs */}
         <div className="flex gap-2 mb-4">
-          {['monthly', 'yearly'].map((tab) => (
+          {[
+            { key: 'current', label: 'This Month' },
+            { key: 'monthly', label: 'By Month' },
+            { key: 'yearly', label: 'By Year' },
+          ].map((tab) => (
             <button
-              key={tab}
-              onClick={() => { setHistTab(tab); setHistData(null); }}
+              key={tab.key}
+              onClick={() => { setBoardTab(tab.key); if (tab.key !== 'current') setHistData(null); }}
               className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                histTab === tab
+                boardTab === tab.key
                   ? 'bg-bfp-navy text-white border-bfp-navy'
                   : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
               }`}
             >
-              {tab === 'monthly' ? 'By Month' : 'By Year'}
+              {tab.label}
             </button>
           ))}
         </div>
 
         {/* Controls */}
-        <div className="flex gap-3 items-end flex-wrap mb-5">
-          {histTab === 'monthly' ? (
-            <>
-              <div>
-                <label className="form-label text-xs">Month</label>
-                <select
-                  className="form-input py-1.5 text-sm"
-                  value={histMonthNum}
-                  onChange={(e) => setHistMonthNum(Number(e.target.value))}
-                >
-                  {['January','February','March','April','May','June','July','August','September','October','November','December'].map((name, i) => (
-                    <option key={i + 1} value={i + 1}>{name}</option>
-                  ))}
-                </select>
-              </div>
+        {boardTab !== 'current' && (
+          <div className="flex gap-3 items-end flex-wrap mb-5">
+            {boardTab === 'monthly' ? (
+              <>
+                <div>
+                  <label className="form-label text-xs">Month</label>
+                  <select
+                    className="form-input py-1.5 text-sm"
+                    value={histMonthNum}
+                    onChange={(e) => setHistMonthNum(Number(e.target.value))}
+                  >
+                    {['January','February','March','April','May','June','July','August','September','October','November','December'].map((name, i) => (
+                      <option key={i + 1} value={i + 1}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label text-xs">Year</label>
+                  <select
+                    className="form-input py-1.5 text-sm"
+                    value={histMonthYear}
+                    onChange={(e) => setHistMonthYear(Number(e.target.value))}
+                  >
+                    {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4].map((yr) => (
+                      <option key={yr} value={yr}>{yr}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            ) : (
               <div>
                 <label className="form-label text-xs">Year</label>
                 <select
                   className="form-input py-1.5 text-sm"
-                  value={histMonthYear}
-                  onChange={(e) => setHistMonthYear(Number(e.target.value))}
+                  value={histYearNum}
+                  onChange={(e) => setHistYearNum(Number(e.target.value))}
                 >
-                  {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4].map((yr) => (
+                  {[currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4].map((yr) => (
                     <option key={yr} value={yr}>{yr}</option>
                   ))}
                 </select>
               </div>
-            </>
-          ) : (
-            <div>
-              <label className="form-label text-xs">Year</label>
-              <select
-                className="form-input py-1.5 text-sm"
-                value={histYearNum}
-                onChange={(e) => setHistYearNum(Number(e.target.value))}
-              >
-                {[currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4].map((yr) => (
-                  <option key={yr} value={yr}>{yr}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          {histLoading && <span className="text-sm text-gray-500 italic self-end pb-2">Loading…</span>}
-        </div>
+            )}
+            {histLoading && <span className="text-sm text-gray-500 italic self-end pb-2">Loading…</span>}
+          </div>
+        )}
 
         {/* Results */}
-        {histData === null && (
+        {boardTab !== 'current' && histData === null && (
           <p className="text-gray-400 text-sm text-center py-6">Loading data…</p>
         )}
 
-        {histData !== null && (
+        {(boardTab === 'current' || histData !== null) && (
           <>
-            <h3 className="text-lg font-bold text-bfp-navy mb-3">{histLabel} — Fire Incident Summary</h3>
+            <h3 className="text-lg font-bold text-bfp-navy mb-3">
+              {boardTab === 'current'
+                ? `${currentMonthName} ${currentYear} — as of ${formatDate(asOf)}`
+                : `${histLabel} — Fire Incident Summary`}
+            </h3>
 
             {/* Category totals */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
               {[
-                { label: 'Residential',     value: histTotals.residential    || 0, color: 'bg-blue-100 text-blue-800' },
-                { label: 'Non-Residential', value: histTotals.nonResidential  || 0, color: 'bg-red-100 text-red-800' },
-                { label: 'Non-Structural',  value: histTotals.nonStructural   || 0, color: 'bg-orange-100 text-orange-800' },
-                { label: 'Transport',       value: histTotals.transport       || 0, color: 'bg-green-100 text-green-800' },
-                { label: 'TOTAL',           value: histTotals.total           || 0, color: 'bg-bfp-navy text-white' },
+                { label: 'Residential',     value: (boardTab === 'current' ? totals.residential : histTotals.residential) || 0, color: 'bg-blue-100 text-blue-800' },
+                { label: 'Non-Residential', value: (boardTab === 'current' ? totals.nonResidential : histTotals.nonResidential) || 0, color: 'bg-red-100 text-red-800' },
+                { label: 'Non-Structural',  value: (boardTab === 'current' ? totals.nonStructural : histTotals.nonStructural) || 0, color: 'bg-orange-100 text-orange-800' },
+                { label: 'Transport',       value: (boardTab === 'current' ? totals.transport : histTotals.transport) || 0, color: 'bg-green-100 text-green-800' },
+                { label: 'TOTAL',           value: (boardTab === 'current' ? totals.total : histTotals.total) || 0, color: 'bg-bfp-navy text-white' },
               ].map(({ label, value, color }) => (
                 <div key={label} className={`rounded-lg p-3 text-center ${color}`}>
                   <div className="text-xs font-medium opacity-80">{label}</div>
@@ -371,7 +559,7 @@ export default function ProvincialDashboard() {
             </div>
 
             {/* Per-municipality breakdown */}
-            {histData.length === 0 ? (
+            {(boardTab === 'current' ? monitoringBoard : histData).length === 0 ? (
               <p className="text-gray-400 text-center py-6">No incident data recorded for this period.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -387,7 +575,7 @@ export default function ProvincialDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {histData.map((row) => (
+                    {(boardTab === 'current' ? monitoringBoard : histData).map((row) => (
                       <tr key={row.code}>
                         <td className="font-semibold">{row.municipality}</td>
                         <td className="text-right">{row.residential}</td>
@@ -401,11 +589,11 @@ export default function ProvincialDashboard() {
                   <tfoot>
                     <tr className="bg-gray-100 font-bold">
                       <td>TOTAL</td>
-                      <td className="text-right">{histTotals.residential    || 0}</td>
-                      <td className="text-right">{histTotals.nonResidential  || 0}</td>
-                      <td className="text-right">{histTotals.nonStructural   || 0}</td>
-                      <td className="text-right">{histTotals.transport       || 0}</td>
-                      <td className="text-right text-bfp-red text-lg">{histTotals.total || 0}</td>
+                      <td className="text-right">{(boardTab === 'current' ? totals.residential : histTotals.residential) || 0}</td>
+                      <td className="text-right">{(boardTab === 'current' ? totals.nonResidential : histTotals.nonResidential) || 0}</td>
+                      <td className="text-right">{(boardTab === 'current' ? totals.nonStructural : histTotals.nonStructural) || 0}</td>
+                      <td className="text-right">{(boardTab === 'current' ? totals.transport : histTotals.transport) || 0}</td>
+                      <td className="text-right text-bfp-red text-lg">{(boardTab === 'current' ? totals.total : histTotals.total) || 0}</td>
                     </tr>
                   </tfoot>
                 </table>
@@ -415,14 +603,37 @@ export default function ProvincialDashboard() {
         )}
       </div>
 
+      {/* ── 2. KPI Cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="kpi-card primary">
+          <div className="kpi-label">This Month</div>
+          <div className="kpi-value">{kpis?.thisMonth || 0}</div>
+        </div>
+        <div className="kpi-card success">
+          <div className="kpi-label">This Year</div>
+          <div className="kpi-value">{kpis?.thisYear || 0}</div>
+        </div>
+        <div className="kpi-card warning">
+          <div className="kpi-label">Most Active Municipality</div>
+          <div className="kpi-value text-lg">{kpis?.mostActiveMunicipality || 'N/A'}</div>
+        </div>
+        <div className="kpi-card success">
+          <div className="kpi-label">With Casualties</div>
+          <div className="kpi-value">{kpis?.incidentsWithCasualties || 0}</div>
+        </div>
+      </div>
+
+      {/* ── 2b. Municipality Fire Rate SVG Map ── */}
+      <BenguetFireMap monitoringBoard={monitoringBoard} onPrint={() => handlePrint('section-fire-map')} onExport={handleExportFireMap} />
+
       {/* ── 4. Incident Trend Charts ── */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-8">
+      <div id="section-comparison" className="bg-white rounded-lg shadow-md p-6 mb-8">
         <div className="flex justify-between items-start mb-5 flex-wrap gap-4">
           <div>
             <h2 className="text-xl font-bold text-bfp-navy">Fire Incident Comparison</h2>
             <p className="text-sm text-gray-500 mt-1">Compare selected years or months to identify the highest fire incident period.</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center flex-wrap">
             <button
               onClick={() => setTrendMode('years')}
               className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
@@ -443,6 +654,7 @@ export default function ProvincialDashboard() {
             >
               Compare Months
             </button>
+            <SectionMenu onPrint={() => handlePrint('section-comparison')} onExport={handleExportComparison} />
           </div>
         </div>
 
@@ -539,10 +751,10 @@ export default function ProvincialDashboard() {
                 <YAxis allowDecimals={false} />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="Residential" stackId="a" fill="#1a3c6e" />
-                <Bar dataKey="Non-Residential" stackId="a" fill="#c0392b" />
-                <Bar dataKey="Non-Structural" stackId="a" fill="#e67e22" />
-                <Bar dataKey="Transport" stackId="a" fill="#27ae60" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="Residential" stackId="a" fill={CATEGORY_CHART_COLORS.Residential} />
+                <Bar dataKey="Non-Residential" stackId="a" fill={CATEGORY_CHART_COLORS['Non-Residential']} />
+                <Bar dataKey="Non-Structural" stackId="a" fill={CATEGORY_CHART_COLORS['Non-Structural']} />
+                <Bar dataKey="Transport" stackId="a" fill={CATEGORY_CHART_COLORS.Transport} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
             <div className="mt-4 overflow-x-auto">
@@ -580,163 +792,7 @@ export default function ProvincialDashboard() {
         )}
       </div>
 
-      <div className="hidden">
-        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-          <h2 className="text-xl font-bold text-bfp-navy">Fire Incident Trends</h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab('currentMonth')}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                activeTab === 'currentMonth'
-                  ? 'bg-bfp-navy text-white border-bfp-navy'
-                  : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-              }`}
-            >
-              {currentMonthName} {currentYear}
-            </button>
-            <button
-              onClick={() => setActiveTab('monthly')}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                activeTab === 'monthly'
-                  ? 'bg-bfp-navy text-white border-bfp-navy'
-                  : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-              }`}
-            >
-              Monthly ({currentYear})
-            </button>
-            <button
-              onClick={() => setActiveTab('yearly')}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                activeTab === 'yearly'
-                  ? 'bg-bfp-navy text-white border-bfp-navy'
-                  : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-              }`}
-            >
-              Yearly (5 yrs)
-            </button>
-          </div>
-        </div>
-
-        {/* Current Month — by category */}
-        {activeTab === 'currentMonth' && (
-          <>
-            <p className="text-sm text-gray-500 mb-4">
-              Incidents by fire category for <strong>{currentMonthName} {currentYear}</strong>
-            </p>
-            {(charts.currentMonthByCategory || []).length === 0 ? (
-              <p className="text-gray-400 text-center py-12">No incidents recorded this month.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={charts.currentMonthByCategory} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="category" tick={{ fontSize: 12 }} />
-                  <YAxis allowDecimals={false} />
-                  <Tooltip />
-                  <Bar dataKey="count" name="Incidents" fill="#c0392b" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </>
-        )}
-
-        {/* Monthly trend for current year — stacked by category */}
-        {activeTab === 'monthly' && (
-          <>
-            <p className="text-sm text-gray-500 mb-4">
-              Monthly fire incidents by category for <strong>{currentYear}</strong>
-            </p>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={charts.monthlyByCategory || []} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Residential" stackId="a" fill="#1a3c6e" />
-                <Bar dataKey="Non-Residential" stackId="a" fill="#c0392b" />
-                <Bar dataKey="Non-Structural" stackId="a" fill="#e67e22" />
-                <Bar dataKey="Transport" stackId="a" fill="#27ae60" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-2 py-1 text-left border">Month</th>
-                    <th className="px-2 py-1 text-right border">Residential</th>
-                    <th className="px-2 py-1 text-right border">Non-Res.</th>
-                    <th className="px-2 py-1 text-right border">Non-Struct.</th>
-                    <th className="px-2 py-1 text-right border">Transport</th>
-                    <th className="px-2 py-1 text-right border font-bold">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(charts.monthlyByCategory || []).map((m) => (
-                    <tr key={m.month} className="border-t hover:bg-gray-50">
-                      <td className="px-2 py-1 font-medium border">{m.month}</td>
-                      <td className="px-2 py-1 text-right border">{m.Residential}</td>
-                      <td className="px-2 py-1 text-right border">{m['Non-Residential']}</td>
-                      <td className="px-2 py-1 text-right border">{m['Non-Structural']}</td>
-                      <td className="px-2 py-1 text-right border">{m.Transport}</td>
-                      <td className="px-2 py-1 text-right border font-bold text-bfp-red">{m.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-
-        {/* Yearly comparison — stacked by category */}
-        {activeTab === 'yearly' && (
-          <>
-            <p className="text-sm text-gray-500 mb-4">
-              Fire incidents by category — <strong>last 5 years</strong>
-            </p>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={charts.yearlyByCategory || []} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="Residential" stackId="a" fill="#1a3c6e" />
-                <Bar dataKey="Non-Residential" stackId="a" fill="#c0392b" />
-                <Bar dataKey="Non-Structural" stackId="a" fill="#e67e22" />
-                <Bar dataKey="Transport" stackId="a" fill="#27ae60" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-            <div className="mt-4 overflow-x-auto">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-3 py-2 text-left border">Year</th>
-                    <th className="px-3 py-2 text-right border">Residential</th>
-                    <th className="px-3 py-2 text-right border">Non-Residential</th>
-                    <th className="px-3 py-2 text-right border">Non-Structural</th>
-                    <th className="px-3 py-2 text-right border">Transport</th>
-                    <th className="px-3 py-2 text-right border font-bold">Total</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(charts.yearlyByCategory || []).map((y) => (
-                    <tr key={y.year} className={`border-t ${y.year === String(currentYear) ? 'bg-red-50 font-semibold' : 'hover:bg-gray-50'}`}>
-                      <td className="px-3 py-2 font-bold border text-bfp-navy">{y.year}</td>
-                      <td className="px-3 py-2 text-right border">{y.Residential}</td>
-                      <td className="px-3 py-2 text-right border">{y['Non-Residential']}</td>
-                      <td className="px-3 py-2 text-right border">{y['Non-Structural']}</td>
-                      <td className="px-3 py-2 text-right border">{y.Transport}</td>
-                      <td className="px-3 py-2 text-right border font-bold text-bfp-red">{y.total}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </div>
-
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
+      <div className="bg-bfp-navy/5 border-l-4 border-bfp-navy p-4 rounded">
         <p className="text-sm text-gray-700">
           <strong>Note:</strong> The monitoring board displays aggregated incident counts from submitted daily reports.
           Data is populated when municipal officers submit their Daily Reports through the system.

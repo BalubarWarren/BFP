@@ -95,6 +95,7 @@ model Report {
 
   reportDate        DateTime
   content           String  // JSON stored as string
+  category          String? // "RESIDENTIAL", "NON_RESIDENTIAL", "NON_STRUCTURAL", "TRANSPORT" — set on Spot Investigation reports
 
   respondingUnits   String?
   respondingOfficer String?

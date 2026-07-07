@@ -6,6 +6,16 @@ export const GENERAL_CATEGORIES = {
   TRANSPORT: 'TRANSPORT',
 };
 
+// Shared categorical palette for charts (Recharts bars, legends) so every
+// chart on the dashboard colors Residential/Non-Residential/Non-Structural/
+// Transport the same way instead of each chart picking its own hex codes.
+export const CATEGORY_CHART_COLORS = {
+  Residential: '#1a3c6e',
+  'Non-Residential': '#c0392b',
+  'Non-Structural': '#e67e22',
+  Transport: '#27ae60',
+};
+
 export const SUB_CATEGORIES = {
   RESIDENTIAL: [
     'Apartment, Condominium, Dormitory, Hotel, Motel',
@@ -56,7 +66,7 @@ export const REPORT_TYPES = {
 export const REPORT_STATUS = {
   DRAFT: 'DRAFT',
   SUBMITTED: 'SUBMITTED',
-  APPROVED: 'APPROVED',
+  APPROVED: 'APPROVED', // Approved by a reviewer; investigator forwards to the next level unless this was the final (Provincial Chief IIS) approval
   RETURNED: 'RETURNED',
 };
 
@@ -74,13 +84,12 @@ export const ROLES = {
   MUNICIPAL_CHIEF_OPERATION: 'MUNICIPAL_CHIEF_OPERATION',
   CHIEF_INVESTIGATOR_IIS: 'CHIEF_INVESTIGATOR_IIS',
   PROVINCIAL_CHIEF_IIS: 'PROVINCIAL_CHIEF_IIS',
-  CHIEF_SPECIAL_OPERATION_SECTION: 'CHIEF_SPECIAL_OPERATION_SECTION',
   PROVINCIAL_CHIEF_INVESTIGATOR: 'PROVINCIAL_CHIEF_INVESTIGATOR',
   REGION_IIS: 'REGION_IIS',
   REGIONAL_CHIEF_OPERATION: 'REGIONAL_CHIEF_OPERATION',
   SUPER_ADMIN: 'SUPER_ADMIN',
+  ADMIN: 'ADMIN',
   PIO: 'PIO',
-  VIEWER: 'VIEWER',
 };
 
 // Role-based permissions and functions
@@ -198,17 +207,15 @@ export const ROLE_PERMISSIONS = {
       'RECEIVE_NOTIFICATIONS',
     ],
   },
-  CHIEF_SPECIAL_OPERATION_SECTION: {
-    description: 'Checks and validates reports for operational compliance',
-    level: 35,
+  ADMIN: {
+    description: 'System Admin — full report tracking and workflow visibility',
+    level: 115,
     permissions: [
       'VIEW_ALL_REPORTS',
-      'REVIEW_REPORT',
-      'APPROVE_REPORT',
-      'REJECT_REPORT',
-      'ADD_COMMENTS',
-      'REQUEST_REVISIONS',
+      'TRACK_REPORT_WORKFLOW',
       'VIEW_STATISTICS',
+      'MANAGE_USERS',
+      'EXPORT_DATA',
       'RECEIVE_NOTIFICATIONS',
     ],
   },
@@ -267,11 +274,6 @@ export const ROLE_PERMISSIONS = {
       'RECEIVE_NOTIFICATIONS',
     ],
   },
-  VIEWER: {
-    description: 'Read-only access',
-    level: 5,
-    permissions: ['VIEW_APPROVED_REPORTS', 'VIEW_STATISTICS'],
-  },
 };
 
 // Benguet Municipalities
@@ -296,4 +298,50 @@ export const NOTIFICATION_TYPES = {
   REPORT_APPROVED: 'REPORT_APPROVED',
   REPORT_RETURNED: 'REPORT_RETURNED',
   REPORT_OVERDUE: 'REPORT_OVERDUE',
+  REPORT_TEXT_BLAST: 'REPORT_TEXT_BLAST',
 };
+
+// The dashboard each role lands on after login (or after refreshing on a route it doesn't own)
+export const ROLE_HOME_PATH = {
+  MARSHAL: '/provincial',
+  PROVINCIAL_CHIEF_IIS: '/provincial',
+  INVESTIGATOR: '/municipal',
+  MUNICIPAL_CHIEF_IIS: '/municipal/chief',
+  MUNICIPAL_CHIEF_OPERATION: '/municipal/chief',
+  MUNICIPAL_FIRE_MARSHAL: '/municipal/marshal',
+  CHIEF_INVESTIGATOR_IIS: '/provincial',
+  PROVINCIAL_CHIEF_INVESTIGATOR: '/provincial',
+  REGION_IIS: '/provincial',
+  REGIONAL_CHIEF_OPERATION: '/provincial',
+  PIO: '/provincial',
+  ADMIN: '/provincial',
+  SUPER_ADMIN: '/provincial',
+};
+
+// Whether a given pathname belongs to the dashboard section a role is allowed to view.
+// Used to bounce a signed-in user back to their own dashboard if the URL they're on
+// (e.g. left over from a previous session in the same browser) belongs to a different role.
+export function isRouteAllowedForRole(role, pathname) {
+  switch (role) {
+    case 'INVESTIGATOR':
+      return pathname === '/municipal' || pathname.startsWith('/municipal/reports');
+    case 'MUNICIPAL_CHIEF_IIS':
+    case 'MUNICIPAL_CHIEF_OPERATION':
+      return pathname.startsWith('/municipal/chief');
+    case 'MUNICIPAL_FIRE_MARSHAL':
+      return pathname.startsWith('/municipal/marshal');
+    case 'ADMIN':
+    case 'SUPER_ADMIN':
+      return pathname.startsWith('/provincial') || pathname.startsWith('/admin');
+    case 'MARSHAL':
+    case 'PROVINCIAL_CHIEF_IIS':
+    case 'CHIEF_INVESTIGATOR_IIS':
+    case 'PROVINCIAL_CHIEF_INVESTIGATOR':
+    case 'REGION_IIS':
+    case 'REGIONAL_CHIEF_OPERATION':
+    case 'PIO':
+      return pathname.startsWith('/provincial');
+    default:
+      return false;
+  }
+}

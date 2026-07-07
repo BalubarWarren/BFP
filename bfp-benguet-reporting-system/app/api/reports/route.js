@@ -5,6 +5,7 @@ import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '@/lib/constants';
 import generateIncidentReference from '@/lib/incident-reference';
+import { filterDemoReports, getDemoReportsForUser } from '@/lib/demo-reports';
 
 const INVESTIGATION_REPORT_TYPES = [
   'MDFIR',
@@ -24,6 +25,8 @@ const PROVINCIAL_REVIEWER_ROLES = [
   ROLES.MARSHAL,
   ROLES.CHIEF_INVESTIGATOR_IIS,
 ];
+
+const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
 const canReceiveRoleInMunicipality = (user, reportMunicipalityId) => {
   if (PROVINCIAL_REVIEWER_ROLES.includes(user.role)) return true;
@@ -134,6 +137,9 @@ export async function GET(request) {
     // RBAC: Investigators can only see their own reports
     if (user.role === ROLES.INVESTIGATOR) {
       whereCondition.submittedById = user.id;
+    } else if (ADMIN_ROLES.includes(user.role)) {
+      // Admins see ALL reports — no where filter (view=all returns everything)
+      whereCondition = {};
     } else if (MUNICIPAL_REVIEWER_ROLES.includes(user.role)) {
       // Municipal reviewers: show outgoing reports they reviewed, or incoming reports assigned to
       // their account/role in their municipality.
@@ -141,11 +147,27 @@ export async function GET(request) {
         whereCondition.reviewedById = user.id;
       } else {
         whereCondition.OR = [
-          { passedToId: user.id },
-          { passedToRole: user.role },
+          {
+            AND: [
+              { municipalityId: user.municipalityId },
+              {
+                OR: [
+                  { passedToId: user.id },
+                  { passedToRole: user.role },
+                ],
+              },
+            ],
+          },
+          {
+            notifications: {
+              some: {
+                userId: user.id,
+                type: NOTIFICATION_TYPES.REPORT_TEXT_BLAST,
+              },
+            },
+          },
         ];
       }
-      whereCondition.municipalityId = user.municipalityId;
     } else if (PROVINCIAL_REVIEWER_ROLES.includes(user.role)) {
       // Provincial/legacy reviewers: show outgoing or reports passed to them by id OR passed to their role
       if (view === 'outgoing') {
@@ -154,6 +176,14 @@ export async function GET(request) {
         whereCondition.OR = [
           { passedToId: user.id },
           { passedToRole: user.role },
+          {
+            notifications: {
+              some: {
+                userId: user.id,
+                type: NOTIFICATION_TYPES.REPORT_TEXT_BLAST,
+              },
+            },
+          },
         ];
       }
     } else {
@@ -166,7 +196,7 @@ export async function GET(request) {
     // Optional filters
     if (reportType) whereCondition.reportType = reportType;
     if (status) whereCondition.status = status;
-    if (municipalityId && PROVINCIAL_REVIEWER_ROLES.includes(user.role)) {
+    if (municipalityId && (PROVINCIAL_REVIEWER_ROLES.includes(user.role) || ADMIN_ROLES.includes(user.role))) {
       whereCondition.municipalityId = parseInt(municipalityId);
     }
 
@@ -186,6 +216,7 @@ export async function GET(request) {
           select: {
             id: true,
             name: true,
+            role: true,
           },
         },
         incident: {
@@ -202,8 +233,13 @@ export async function GET(request) {
       },
     });
 
+    const demoReports = filterDemoReports(
+      getDemoReportsForUser(user),
+      { reportType, status, view }
+    );
+
     return NextResponse.json({
-      reports,
+      reports: [...demoReports, ...reports],
     });
   } catch (error) {
     console.error('Error fetching reports:', error);
@@ -246,6 +282,7 @@ export async function POST(request) {
       incidentId,
       reportDate,
       content,
+      category,
       respondingUnits,
       respondingOfficer,
       reportingOfficerRank,
@@ -307,6 +344,7 @@ export async function POST(request) {
         incidentId: parsedIncidentId,
         reportDate: new Date(reportDate),
         content: JSON.stringify(parsedContent),
+        category: category || null,
         respondingUnits,
         respondingOfficer,
         reportingOfficerRank,

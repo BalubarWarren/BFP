@@ -88,36 +88,6 @@ This document describes all user roles in the BFP Benguet Fire Incident Reportin
 
 ---
 
-### 4. **CHIEF_SPECIAL_OPERATION_SECTION** (Level: 35)
-**Operational Compliance & Validation**
-
-**Responsibilities:**
-- Verify operational compliance and procedures
-- Check reports for procedural adherence
-- Ensure operational standards are met
-- Validate incident classification
-- Monitor special operations procedures
-
-**Permissions:**
-- ✅ VIEW_ALL_REPORTS - Access all reports
-- ✅ REVIEW_REPORT - Review for compliance
-- ✅ APPROVE_REPORT - Approve compliant reports
-- ✅ REJECT_REPORT - Return non-compliant reports
-- ✅ ADD_COMMENTS - Add compliance notes
-- ✅ REQUEST_REVISIONS - Request corrections
-- ✅ VIEW_STATISTICS - View operational metrics
-- ✅ RECEIVE_NOTIFICATIONS - Get notifications
-
-**Access Level:**
-- Reviews all reports for operational compliance
-- Works at provincial level
-- Parallel reviewer with Chief Investigator IIS
-
-**Default Email:** chief.special.ops@bfp-benguet.gov.ph
-**Default Password:** chiefspecops@123
-
----
-
 ### 5. **MUNICIPAL_FIRE_MARSHAL** (Level: 40)
 **Municipal Level Supervision**
 
@@ -264,28 +234,6 @@ This document describes all user roles in the BFP Benguet Fire Incident Reportin
 
 **Default Email:** pio@bfp-benguet.gov.ph
 **Default Password:** pio@123
-
----
-
-### 10. **VIEWER** (Level: 5)
-**Read-Only Access**
-
-**Responsibilities:**
-- Monitor approved reports and statistics
-- View public fire incident information
-- Access general system reports
-
-**Permissions:**
-- ✅ VIEW_APPROVED_REPORTS - View approved reports only
-- ✅ VIEW_STATISTICS - View public statistics
-
-**Access Level:**
-- Minimal read-only access
-- Cannot create or modify any data
-- Monitoring and information access only
-
-**Default Email:** viewer@bfp-benguet.gov.ph
-**Default Password:** viewer@123
 
 ---
 

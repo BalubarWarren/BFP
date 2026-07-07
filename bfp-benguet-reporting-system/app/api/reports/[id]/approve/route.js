@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getUserFromRequest } from '@/lib/auth';
 import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '@/lib/constants';
+import { getDemoReportById, isDemoReportId } from '@/lib/demo-reports';
 
 const MUNICIPAL_REVIEWER_ROLES = [
   ROLES.MUNICIPAL_CHIEF_IIS,
@@ -52,6 +53,48 @@ export async function POST(request, { params }) {
       );
     }
 
+    if (isDemoReportId(params.id)) {
+      const demoReport = getDemoReportById(user, params.id);
+
+      if (!demoReport) {
+        return NextResponse.json(
+          { error: 'This demo report is not assigned to your account or role' },
+          { status: 403 }
+        );
+      }
+
+      const body = await request.json();
+      const { action, remarks } = body;
+
+      if (!['approve', 'reject'].includes(action)) {
+        return NextResponse.json(
+          { error: 'Invalid action' },
+          { status: 400 }
+        );
+      }
+
+      const updatedDemoReport = {
+        ...demoReport,
+        status: action === 'reject' ? REPORT_STATUS.RETURNED : REPORT_STATUS.APPROVED,
+        remarks: remarks || demoReport.remarks,
+        reviewedAt: new Date().toISOString(),
+        reviewedById: user.id,
+        reviewedBy: {
+          id: user.id,
+          name: user.email,
+          role: user.role,
+        },
+      };
+
+      return NextResponse.json({
+        report: updatedDemoReport,
+        message:
+          action === 'reject'
+            ? 'Demo report returned for revision'
+            : 'Demo report approved successfully',
+      });
+    }
+
     const report = await prisma.report.findUnique({
       where: { id: parseInt(params.id) },
       include: {
@@ -88,78 +131,34 @@ export async function POST(request, { params }) {
     let newStatus = REPORT_STATUS.SUBMITTED;
     let nextPassedToRole = null;
     let nextPassedToId = null;
+    let isFinalApproval = false;
 
     if (action === 'reject') {
+      // All reviewers return the report directly to the original investigator with corrections
       newStatus = REPORT_STATUS.RETURNED;
-
-      if (user.role === ROLES.PROVINCIAL_CHIEF_IIS) {
-        // Provincial Chief IIS returns to the Municipal Chief IIS of that municipality
-        const munChiefIIS = await prisma.user.findFirst({
-          where: {
-            role: ROLES.MUNICIPAL_CHIEF_IIS,
-            municipalityId: report.municipalityId,
-            isActive: true,
-          },
-        });
-        nextPassedToRole = munChiefIIS ? ROLES.MUNICIPAL_CHIEF_IIS : report.submittedBy.role;
-        nextPassedToId = munChiefIIS?.id || report.submittedById;
-      } else if (user.role === ROLES.MUNICIPAL_FIRE_MARSHAL && report.reviewedById && report.reviewedById !== user.id) {
-        nextPassedToRole = report.reviewedBy?.role || ROLES.MUNICIPAL_CHIEF_IIS;
-        nextPassedToId = report.reviewedById;
-      } else {
+      nextPassedToRole = report.submittedBy.role;
+      nextPassedToId = report.submittedById;
+    } else {
+      // approve
+      newStatus = REPORT_STATUS.APPROVED;
+      if ([ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role)) {
+        // Municipal reviewers cannot forward — they approve the report and return it to the
+        // investigator. The investigator then decides to submit to the next level.
         nextPassedToRole = report.submittedBy.role;
         nextPassedToId = report.submittedById;
-      }
-    } else {
-      if ([ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION].includes(user.role)) {
-        const municipalMarshal = await prisma.user.findFirst({
-          where: {
-            role: ROLES.MUNICIPAL_FIRE_MARSHAL,
-            municipalityId: report.municipalityId,
-            isActive: true,
-          },
-        });
-
-        if (!municipalMarshal) {
-          return NextResponse.json(
-            { error: 'No Municipal Fire Marshal account found for this municipality' },
-            { status: 400 }
-          );
-        }
-
-        nextPassedToRole = ROLES.MUNICIPAL_FIRE_MARSHAL;
-        nextPassedToId = municipalMarshal.id;
-      } else if (user.role === ROLES.MUNICIPAL_FIRE_MARSHAL) {
-        let provincialChief = await prisma.user.findFirst({
-          where: {
-            role: ROLES.PROVINCIAL_CHIEF_IIS,
-            isActive: true,
-          },
-        });
-
-        if (!provincialChief) {
-          provincialChief = await prisma.user.findFirst({
-            where: {
-              role: ROLES.MARSHAL,
-              isActive: true,
-            },
-          });
-        }
-
-        if (!provincialChief) {
-          return NextResponse.json(
-            { error: 'No Provincial Chief IIS account found' },
-            { status: 400 }
-          );
-        }
-
-        nextPassedToRole = provincialChief.role;
-        nextPassedToId = provincialChief.id;
       } else {
-        // Provincial role is final approver
-        newStatus = REPORT_STATUS.APPROVED;
+        // Provincial Chief IIS / Marshal — final approver, nothing left to forward
+        isFinalApproval = true;
       }
     }
+
+    // Who the investigator should forward this approval to next
+    const nextStepLabel = user.role === ROLES.MUNICIPAL_FIRE_MARSHAL
+      ? 'Provincial Chief IIS'
+      : 'Municipal Fire Marshal';
+    const reviewerLabel = user.role === ROLES.MUNICIPAL_FIRE_MARSHAL
+      ? 'Municipal Fire Marshal'
+      : 'Municipal Chief IIS';
 
     const updatedReport = await prisma.report.update({
       where: { id: parseInt(params.id) },
@@ -177,8 +176,8 @@ export async function POST(request, { params }) {
       },
     });
 
-    // Notify next reviewer when forwarded
-    if (action === 'approve' && nextPassedToId) {
+    // Notify next reviewer when forwarded (only Provincial Chief IIS case now)
+    if (action === 'approve' && nextPassedToId && newStatus === REPORT_STATUS.SUBMITTED) {
       await prisma.notification.create({
         data: {
           userId: nextPassedToId,
@@ -189,8 +188,17 @@ export async function POST(request, { params }) {
       });
     }
 
-    // Notify original submitter for final approval or return
-    if (newStatus === REPORT_STATUS.APPROVED || newStatus === REPORT_STATUS.RETURNED) {
+    // Notify original submitter: approved-pending-forward, finally approved, or returned
+    if (newStatus === REPORT_STATUS.APPROVED && !isFinalApproval) {
+      await prisma.notification.create({
+        data: {
+          userId: report.submittedById,
+          message: `Your ${updatedReport.reportType} report has been approved by ${reviewerLabel}. Please submit it to the ${nextStepLabel}.`,
+          type: NOTIFICATION_TYPES.REPORT_APPROVED,
+          reportId: report.id,
+        },
+      });
+    } else if (newStatus === REPORT_STATUS.APPROVED || newStatus === REPORT_STATUS.RETURNED) {
       await prisma.notification.create({
         data: {
           userId: report.submittedById,
@@ -211,10 +219,10 @@ export async function POST(request, { params }) {
       report: updatedReport,
       message:
         action === 'reject'
-          ? 'Report returned for revision'
-          : newStatus === REPORT_STATUS.APPROVED
+          ? 'Report returned to investigator for revision'
+          : isFinalApproval
             ? 'Report approved successfully'
-            : 'Report reviewed and forwarded successfully',
+            : `Report approved — returned to investigator to forward to the ${nextStepLabel}`,
     });
   } catch (error) {
     console.error('Error approving/rejecting report:', error);
