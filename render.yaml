@@ -15,6 +15,11 @@ services:
     envVarGroups:
       - cron-secret
     envVars:
+      - key: NODE_VERSION
+        value: 20.18.1 # Pinned to a stable LTS — leaving this unset let Render pick whatever
+        # newest Node is currently available (was 26.8.1, a non-LTS version released long after
+        # this Next.js 13 app was built), which caused inexplicable module-resolution build
+        # failures that don't reproduce on any actively-tested Node version.
       - key: DATABASE_URL
         sync: false # Set manually in the Render dashboard to the Supabase Postgres connection string
       - key: JWT_SECRET
