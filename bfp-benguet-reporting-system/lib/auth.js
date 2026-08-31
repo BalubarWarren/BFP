@@ -1,14 +1,19 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-// Fail fast rather than silently signing tokens with a public, guessable fallback secret if
-// JWT_SECRET is ever missing from the environment (e.g. a misconfigured deploy).
-if (!process.env.JWT_SECRET) {
-  throw new Error('JWT_SECRET environment variable is required but not set.');
-}
-
-const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '24h';
+
+// Fail fast rather than silently signing/verifying tokens with a public, guessable fallback
+// secret if JWT_SECRET is ever missing (e.g. a misconfigured deploy) — but only when a token is
+// actually signed or verified, not at module load. Next.js's build imports route modules to
+// collect page data, so throwing at the top level would break `next build` itself whenever the
+// env var isn't available during the build step (only guaranteed at runtime on some platforms).
+function getJwtSecret() {
+  if (!process.env.JWT_SECRET) {
+    throw new Error('JWT_SECRET environment variable is required but not set.');
+  }
+  return process.env.JWT_SECRET;
+}
 
 // Generate JWT token
 export function generateToken(user) {
@@ -20,15 +25,16 @@ export function generateToken(user) {
       role: user.role,
       municipalityId: user.municipalityId,
     },
-    JWT_SECRET,
+    getJwtSecret(),
     { expiresIn: JWT_EXPIRY }
   );
 }
 
 // Verify JWT token
 export async function verifyToken(token) {
+  const secret = getJwtSecret();
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, secret);
     return decoded;
   } catch (error) {
     throw new Error('Invalid token');
