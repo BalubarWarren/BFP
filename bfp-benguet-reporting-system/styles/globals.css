@@ -82,7 +82,7 @@ body {
 }
 
 .btn-primary {
-  @apply bg-bfp-red text-white hover:bg-red-700;
+  @apply bg-bfp-navy text-white hover:bg-bfp-navy-light;
 }
 
 .btn-secondary {
@@ -90,7 +90,7 @@ body {
 }
 
 .btn-danger {
-  @apply bg-bfp-red text-white hover:bg-red-800;
+  @apply bg-bfp-amber text-white hover:bg-amber-600;
 }
 
 .btn-success {
@@ -157,4 +157,20 @@ body {
 
 .kpi-label {
   @apply text-sm text-gray-600 uppercase tracking-wider;
+}
+
+/* Modal entrance */
+@keyframes modal-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.modal-pop-in {
+  animation: modal-pop-in 0.18s ease-out;
 }

@@ -6,6 +6,7 @@ import StatusBadge from '@/components/common/StatusBadge';
 import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
 import { useToast } from '@/components/common/ToastProvider';
 import { formatDateTime, isAuthError } from '@/lib/utils';
+import AttachmentList from '@/components/reports/AttachmentList';
 
 export default function MunicipalChiefDashboardPage() {
   const toast = useToast();
@@ -22,6 +23,7 @@ export default function MunicipalChiefDashboardPage() {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('incoming');
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [search, setSearch] = useState('');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -156,22 +158,11 @@ export default function MunicipalChiefDashboardPage() {
     catch { return []; }
   };
 
-  const renderAttachments = (attachments) => {
-    const files = parseAttachments(attachments);
-    if (!files.length) return '-';
+  const matchesSearch = (report) =>
+    !search || report.incident?.referenceNumber?.toLowerCase().includes(search.toLowerCase());
 
-    return files.map((attachment) => (
-      <a
-        key={attachment.url}
-        href={attachment.url}
-        target="_blank"
-        rel="noreferrer"
-        className="block text-bfp-red hover:underline text-sm"
-      >
-        {attachment.name}
-      </a>
-    ));
-  };
+  const filteredIncoming = incomingReports.filter(matchesSearch);
+  const filteredOutgoing = outgoingReports.filter(matchesSearch);
 
   return (
     <div className="p-8 space-y-8">
@@ -181,6 +172,17 @@ export default function MunicipalChiefDashboardPage() {
       </div>
 
       {sessionExpired && <SessionExpiredBanner />}
+
+      <div className="max-w-xs">
+        <label className="form-label">Search Reference #</label>
+        <input
+          type="text"
+          className="form-input"
+          placeholder="e.g. BFP-BEN-2026-001"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
       {!sessionExpired && error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
@@ -218,14 +220,15 @@ export default function MunicipalChiefDashboardPage() {
           {activeTab === 'incoming' && (
             <section className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-bfp-navy mb-4">{incomingTitle}</h2>
-              {incomingReports.length === 0 ? (
-                <p className="text-gray-600">No pending reports for review.</p>
+              {filteredIncoming.length === 0 ? (
+                <p className="text-gray-600">{search ? 'No reports match that reference number.' : 'No pending reports for review.'}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="data-table">
                     <thead>
                       <tr>
                         <th>Type</th>
+                        <th>Reference #</th>
                         <th>Submitted By</th>
                         <th>Report Date</th>
                         <th>Files</th>
@@ -233,12 +236,13 @@ export default function MunicipalChiefDashboardPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {incomingReports.map((report) => (
+                      {filteredIncoming.map((report) => (
                         <tr key={report.id}>
                           <td className="font-semibold">{report.reportType}</td>
+                          <td>{report.incident?.referenceNumber || '-'}</td>
                           <td>{report.submittedBy?.name}</td>
                           <td>{new Date(report.reportDate).toLocaleDateString()}</td>
-                          <td>{renderAttachments(report.attachments)}</td>
+                          <td><AttachmentList attachments={report.attachments} reportId={report.id} canAnnotate /></td>
                           <td>
                             <div className="flex gap-2">
                               <button onClick={() => openReview(report)} className="btn btn-primary">Open</button>
@@ -256,14 +260,15 @@ export default function MunicipalChiefDashboardPage() {
           {activeTab === 'reviewed' && (
             <section className="bg-white rounded-lg shadow-md p-6">
               <h2 className="text-xl font-bold text-bfp-navy mb-4">Reports You Reviewed</h2>
-              {outgoingReports.length === 0 ? (
-                <p className="text-gray-600">No forwarded reports yet.</p>
+              {filteredOutgoing.length === 0 ? (
+                <p className="text-gray-600">{search ? 'No reports match that reference number.' : 'No forwarded reports yet.'}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="data-table">
                     <thead>
                       <tr>
                         <th>Type</th>
+                        <th>Reference #</th>
                         <th>Municipality</th>
                         <th>Status</th>
                         <th>Returned To</th>
@@ -272,9 +277,10 @@ export default function MunicipalChiefDashboardPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {outgoingReports.map((report) => (
+                      {filteredOutgoing.map((report) => (
                         <tr key={report.id}>
                           <td className="font-semibold">{report.reportType}</td>
+                          <td>{report.incident?.referenceNumber || '-'}</td>
                           <td>{report.municipality?.name}</td>
                           <td><StatusBadge status={report.status} /></td>
                           <td>{['RETURNED', 'APPROVED'].includes(report.status) ? (report.submittedBy?.name || '-') : '-'}</td>
@@ -313,11 +319,15 @@ export default function MunicipalChiefDashboardPage() {
                   {((reportDetail && parseAttachments(reportDetail.attachments)) || parseAttachments(selectedReport?.attachments)).length > 0 && (
                     <div className="bg-gray-50 rounded-lg p-4">
                       <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
-                      <ul className="space-y-2 text-sm">
-                        {(parseAttachments(reportDetail?.attachments).length ? parseAttachments(reportDetail.attachments) : parseAttachments(selectedReport?.attachments)).map((attachment) => (
-                          <li key={attachment.url}><a href={attachment.url} target="_blank" rel="noreferrer" className="text-bfp-red hover:underline">{attachment.name}</a></li>
-                        ))}
-                      </ul>
+                      <AttachmentList
+                        attachments={
+                          parseAttachments(reportDetail?.attachments).length
+                            ? reportDetail.attachments
+                            : selectedReport?.attachments
+                        }
+                        reportId={selectedReport.id}
+                        canAnnotate
+                      />
                     </div>
                   )}
 

@@ -299,6 +299,18 @@ export const NOTIFICATION_TYPES = {
   REPORT_RETURNED: 'REPORT_RETURNED',
   REPORT_OVERDUE: 'REPORT_OVERDUE',
   REPORT_TEXT_BLAST: 'REPORT_TEXT_BLAST',
+  REPORT_SPOT_OVERDUE: 'REPORT_SPOT_OVERDUE',
+  REPORT_PROGRESS_OVERDUE: 'REPORT_PROGRESS_OVERDUE',
+  REPORT_DEADLINE_WARNING: 'REPORT_DEADLINE_WARNING',
+};
+
+// Follow-up SLA windows for the Spot -> Progress/Final case workflow.
+// See lib/check-overdue-reports.js for how these are applied.
+export const DEADLINES = {
+  SPOT_OVERDUE_HOURS: 24,
+  PROGRESS_OVERDUE_DAYS: 7,
+  FINAL_WARNING_DAYS: 30,
+  FINAL_OVERDUE_DAYS: 45,
 };
 
 // The dashboard each role lands on after login (or after refreshing on a route it doesn't own)

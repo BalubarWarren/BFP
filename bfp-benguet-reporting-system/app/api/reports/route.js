@@ -283,6 +283,7 @@ export async function POST(request) {
       reportDate,
       content,
       category,
+      subCategory,
       respondingUnits,
       respondingOfficer,
       reportingOfficerRank,
@@ -337,11 +338,32 @@ export async function POST(request) {
       passedToId = recipient.id;
     }
 
+    // A Spot Investigation is the entry point into a case — auto-create the linked Incident
+    // from the same fields the form already collects, so later Progress/Final reports (and the
+    // overdue-check job) have a stable case to hang off of.
+    let effectiveIncidentId = parsedIncidentId;
+    if (reportType === 'SPOT_INVESTIGATION' && !effectiveIncidentId) {
+      const referenceNumber = await generateIncidentReference();
+      const incident = await prisma.incident.create({
+        data: {
+          referenceNumber,
+          municipalityId: parsedMunicipalityId,
+          dateOfIncident: new Date(parsedContent.dateOfIncident || reportDate),
+          timeOfIncident: parsedContent.timeOfIncident || null,
+          generalCategory: category,
+          subCategory: subCategory || null,
+          description: parsedContent.description || null,
+          createdById: user.id,
+        },
+      });
+      effectiveIncidentId = incident.id;
+    }
+
     const report = await prisma.report.create({
       data: {
         reportType,
         municipalityId: parsedMunicipalityId,
-        incidentId: parsedIncidentId,
+        incidentId: effectiveIncidentId,
         reportDate: new Date(reportDate),
         content: JSON.stringify(parsedContent),
         category: category || null,

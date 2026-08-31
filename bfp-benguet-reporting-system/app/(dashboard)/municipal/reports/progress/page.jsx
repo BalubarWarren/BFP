@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
+import { Clock, FileText, Send } from 'lucide-react';
 import AttachmentInput from '@/components/reports/AttachmentInput';
 
 export default function ProgressInvestigationForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -17,7 +19,7 @@ export default function ProgressInvestigationForm() {
 
   const [formData, setFormData] = useState({
     reportDate: new Date().toISOString().split('T')[0],
-    incidentId: '',
+    incidentId: searchParams.get('incidentId') || '',
   });
 
   useEffect(() => {
@@ -94,7 +96,7 @@ export default function ProgressInvestigationForm() {
         <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-bfp-navy mb-2 flex items-center gap-1">
           ← Back
         </button>
-        <h1 className="text-2xl font-bold text-bfp-navy">⏳ Progress Investigation Report</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-bold text-bfp-navy"><Clock className="w-6 h-6" /> Progress Investigation Report</h1>
         <p className="text-gray-500 text-sm mt-1">Follow-up report on an ongoing fire investigation.</p>
       </div>
 
@@ -104,16 +106,18 @@ export default function ProgressInvestigationForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Report Info */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Report Information</h2>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+            <FileText className="w-5 h-5" /> Report Information
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Report Date *</label>
+              <label className="form-label">Report Date <span className="text-bfp-red">*</span></label>
               <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input" required />
             </div>
             <div>
               <label className="form-label">Linked Incident (optional)</label>
               <select name="incidentId" value={formData.incidentId} onChange={handleChange} className="form-input">
-                <option value="">— None / Not linked —</option>
+                <option value="" className="text-gray-400">— None / Not linked —</option>
                 {incidents.map((inc) => (
                   <option key={inc.id} value={inc.id}>
                     {inc.referenceNumber} — {inc.generalCategory} ({new Date(inc.dateOfIncident).toLocaleDateString()})
@@ -125,7 +129,9 @@ export default function ProgressInvestigationForm() {
         </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-bold text-bfp-navy mb-4">Submit To</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+              <Send className="w-5 h-5" /> Submit To
+            </h2>
             <div>
               <label className="form-label">Recipient</label>
               <select value={recipientRole} onChange={(e) => setRecipientRole(e.target.value)} className="form-select max-w-xs">

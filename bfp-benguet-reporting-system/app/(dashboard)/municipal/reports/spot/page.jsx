@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Search } from 'lucide-react';
-import { GENERAL_CATEGORIES } from '@/lib/constants';
+import { Search, ClipboardList, Send, MessageSquare } from 'lucide-react';
+import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '@/lib/constants';
 import AttachmentInput from '@/components/reports/AttachmentInput';
 
 export default function SpotInvestigationForm() {
@@ -25,6 +25,7 @@ export default function SpotInvestigationForm() {
     dateOfIncident: new Date().toISOString().split('T')[0],
     timeOfIncident: '00:00',
     category: '',
+    subCategory: '',
     description: '',
   });
 
@@ -35,6 +36,10 @@ export default function SpotInvestigationForm() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'category') {
+      setFormData((prev) => ({ ...prev, category: value, subCategory: '' }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -78,6 +83,7 @@ export default function SpotInvestigationForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.category) { setError('Please select a fire category.'); return; }
+    if (!formData.subCategory) { setError('Please select a sub-category.'); return; }
 
     setLoading(true);
     setError('');
@@ -104,6 +110,7 @@ export default function SpotInvestigationForm() {
       payload.append('municipalityId', String(effectiveUser.municipalityId));
       payload.append('reportDate', formData.reportDate);
       payload.append('category', formData.category);
+      payload.append('subCategory', formData.subCategory);
       payload.append('content', JSON.stringify({
         dateOfIncident: formData.dateOfIncident,
         timeOfIncident: formData.timeOfIncident,
@@ -138,21 +145,34 @@ export default function SpotInvestigationForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Incident Details */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Incident Details</h2>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+            <ClipboardList className="w-5 h-5" /> Incident Details
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Report Date *</label>
+              <label className="form-label">Report Date <span className="text-bfp-red">*</span></label>
               <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input" required />
             </div>
             <div>
-              <label className="form-label">Category *</label>
+              <label className="form-label">Category <span className="text-bfp-red">*</span></label>
               <select name="category" value={formData.category} onChange={handleChange} className="form-input" required>
-                <option value="">— Select —</option>
+                <option value="" className="text-gray-400">— Select —</option>
                 {Object.keys(GENERAL_CATEGORIES).map((k) => (
                   <option key={k} value={k}>{k.replace(/_/g, ' ')}</option>
                 ))}
               </select>
             </div>
+            {formData.category && (
+              <div>
+                <label className="form-label">Sub-Category <span className="text-bfp-red">*</span></label>
+                <select name="subCategory" value={formData.subCategory} onChange={handleChange} className="form-input" required>
+                  <option value="" className="text-gray-400">— Select —</option>
+                  {(SUB_CATEGORIES[formData.category] || []).map((sub) => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
           <div className="mt-4">
             <label className="form-label">Description of Incident</label>
@@ -161,7 +181,9 @@ export default function SpotInvestigationForm() {
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Submit To</h2>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+            <Send className="w-5 h-5" /> Submit To
+          </h2>
           <div>
             <label className="form-label">Recipient</label>
             <select value={recipientRole} onChange={(e) => setRecipientRole(e.target.value)} className="form-select max-w-xs">
@@ -176,7 +198,9 @@ export default function SpotInvestigationForm() {
         <AttachmentInput files={attachments} onChange={handleAttachmentChange} />
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Text Blast</h2>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+            <MessageSquare className="w-5 h-5" /> Text Blast
+          </h2>
           <div className="space-y-4">
             <div>
               <label className="form-label">Attach File</label>

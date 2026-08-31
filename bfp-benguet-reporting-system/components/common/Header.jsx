@@ -131,7 +131,7 @@ export default function Header({ user, onToggleSidebar }) {
                                 href={attachment.url}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="block text-sm text-bfp-red hover:underline"
+                                className="block text-sm text-bfp-navy hover:underline"
                                 onClick={(event) => event.stopPropagation()}
                               >
                                 Open {attachment.name}

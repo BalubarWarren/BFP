@@ -1,3 +1,9 @@
+envVarGroups:
+  - name: cron-secret
+    envVars:
+      - key: CRON_SECRET
+        generateValue: true
+
 services:
   - type: web
     name: bfp-benguet-reporting-system
@@ -6,12 +12,36 @@ services:
     rootDir: bfp-benguet-reporting-system
     buildCommand: npm install && npm run build
     startCommand: npm start
+    envVarGroups:
+      - cron-secret
     envVars:
       - key: DATABASE_URL
-        value: file:./dev.db
+        sync: false # Set manually in the Render dashboard to the Supabase Postgres connection string
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRY
         value: 24h
       - key: NODE_ENV
         value: production
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: "BFP Benguet Reporting <onboarding@resend.dev>"
+
+  # Runs daily and just curls the web service's own endpoint rather than querying the database
+  # directly. This was originally required because Cron Job services get an isolated filesystem
+  # and couldn't see the web service's local SQLite file; now that the database is Postgres
+  # (network-accessible from anywhere), this indirection isn't strictly necessary anymore, but the
+  # pattern still works fine as-is. See app/api/cron/check-overdue/route.js.
+  - type: cron
+    name: bfp-overdue-report-check
+    runtime: image
+    image:
+      url: docker.io/curlimages/curl:latest
+    plan: free
+    schedule: "0 1 * * *"
+    envVarGroups:
+      - cron-secret
+    dockerCommand: >-
+      curl -fsS -X POST https://bfp-benguet-reporting-system.onrender.com/api/cron/check-overdue
+      -H "Authorization: Bearer $CRON_SECRET"

@@ -4,7 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { formatDate, isAuthError } from '@/lib/utils';
 import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
-import { MoreVertical, Printer, Download } from 'lucide-react';
+import StatusBadge from '@/components/common/StatusBadge';
+import {
+  MoreVertical, Printer, Download, X, Home, Building2, TreePine, Truck,
+  LayoutGrid, MapPin, Inbox, FileSearch,
+} from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { CATEGORY_CHART_COLORS } from '@/lib/constants';
 import {
   BarChart, Bar,
@@ -50,7 +56,7 @@ function SectionMenu({ onPrint, onExport }) {
               onClick={() => { setOpen(false); onExport(); }}
               className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2 border-t border-gray-100"
             >
-              <Download className="w-4 h-4" /> Export CSV
+              <Download className="w-4 h-4" /> Export PDF
             </button>
           )}
         </div>
@@ -60,21 +66,28 @@ function SectionMenu({ onPrint, onExport }) {
 }
 
 // ── Benguet SVG Fire Rate Map ─────────────────────────────────────────────────
+// Coordinates are scaled ~0.5x horizontally (vertical scale unchanged) from an earlier version so
+// the province silhouette reads as tall/narrow — matching real Benguet's actual elongated shape —
+// rather than the too-wide/short blob the unscaled hand-traced points produced.
 const BENGUET_MUNICIPALITIES = [
-  { code: 'BAKUN',    name: 'Bakun',        points: '30,95 88,48 188,48 200,98 188,148 148,170 92,162 50,142',                                                                           lx: 108, ly: 112 },
-  { code: 'MANKAYAN', name: 'Mankayan',     points: '188,48 302,46 348,82 366,132 332,156 285,168 248,154 222,126 200,98',                                                               lx: 272, ly: 96  },
-  { code: 'KIBUNGAN', name: 'Kibungan',     points: '30,95 50,142 92,162 148,170 188,148 208,188 210,228 175,252 124,262 70,252 40,224 30,180',                                          lx: 112, ly: 200 },
-  { code: 'BUGUIAS',  name: 'Buguias',      points: '248,154 285,168 332,156 366,132 372,212 345,228 298,238 265,215 252,182',                                                           lx: 310, ly: 186 },
-  { code: 'KABAYAN',  name: 'Kabayan',      points: '265,215 298,238 345,228 372,212 372,318 348,336 300,328 270,298 264,265',                                                           lx: 322, ly: 268 },
-  { code: 'KAPANGAN', name: 'Kapangan',     points: '30,180 40,224 70,252 124,262 136,312 92,332 48,322 30,296',                                                                         lx: 66,  ly: 256 },
-  { code: 'ATOK',     name: 'Atok',         points: '175,252 210,228 208,188 252,182 265,215 264,265 270,298 246,312 204,318 176,308 156,282',                                           lx: 218, ly: 256 },
-  { code: 'TUBLAY',   name: 'Tublay',       points: '136,312 156,282 176,308 204,318 204,352 172,360 146,350',                                                                           lx: 172, ly: 326 },
-  { code: 'LT',       name: 'La Trinidad',  points: '146,350 172,360 204,352 204,386 190,394 158,386 148,368',                                                                           lx: 170, ly: 366 },
-  { code: 'SABLAN',   name: 'Sablan',       points: '30,296 48,322 92,332 136,312 146,350 148,368 130,390 98,400 58,390 30,366',                                                         lx: 72,  ly: 342 },
-  { code: 'BOKOD',    name: 'Bokod',        points: '264,265 270,298 300,328 348,336 372,318 372,415 342,425 298,415 264,378 258,338',                                                   lx: 320, ly: 362 },
-  { code: 'TUBA',     name: 'Tuba',         points: '30,366 58,390 98,400 130,390 148,368 158,386 190,394 190,498 125,498 60,478 30,446',                                                lx: 100, ly: 438 },
-  { code: 'ITOGON',   name: 'Itogon',       points: '190,394 204,386 258,338 264,378 298,415 342,425 322,468 265,498 190,498',                                                           lx: 258, ly: 448 },
+  { code: 'BAKUN',    name: 'Bakun',        points: '77,86 128,76 144,117 136,173 108,183 81,158 71,117',           lx: 106, ly: 130 },
+  { code: 'MANKAYAN', name: 'Mankayan',     points: '148,76 192,65 204,90 199,125 188,158 174,130 144,117',         lx: 178, ly: 109 },
+  { code: 'KIBUNGAN', name: 'Kibungan',     points: '81,158 136,173 168,188 168,229 152,260 111,265 81,229 71,178', lx: 121, ly: 210 },
+  { code: 'BUGUIAS',  name: 'Buguias',      points: '188,158 209,145 219,190 233,229 200,239 172,229 168,188',      lx: 198, ly: 197 },
+  { code: 'KABAYAN',  name: 'Kabayan',      points: '172,229 200,239 233,229 241,270 237,331 204,341 167,337 172,290', lx: 203, ly: 283 },
+  { code: 'KAPANGAN', name: 'Kapangan',     points: '71,219 87,249 120,265 120,321 91,331 63,300 59,249',           lx: 87,  ly: 276 },
+  { code: 'ATOK',     name: 'Atok',         points: '120,265 152,260 172,229 172,290 167,337 131,341 120,321',      lx: 148, ly: 292 },
+  { code: 'TUBLAY',   name: 'Tublay',       points: '120,321 131,341 144,331 144,372 128,382 116,362',              lx: 131, ly: 352 },
+  { code: 'LT',       name: 'La Trinidad',  points: '128,382 144,372 152,392 148,423 132,423 124,402',              lx: 138, ly: 399 },
+  { code: 'SABLAN',   name: 'Sablan',       points: '63,300 91,331 120,321 116,362 108,413 71,423 55,372',          lx: 89,  ly: 360 },
+  { code: 'BOKOD',    name: 'Bokod',        points: '167,337 204,341 237,331 245,372 241,453 213,484 176,474 164,402', lx: 206, ly: 399 },
+  { code: 'TUBA',     name: 'Tuba',         points: '71,423 108,413 128,453 142,464 148,484 132,515 99,525 63,505', lx: 111, ly: 473 },
+  { code: 'ITOGON',   name: 'Itogon',       points: '142,464 152,443 176,474 213,484 221,494 217,525 152,525 148,484', lx: 178, ly: 487 },
 ];
+
+// Baguio City — an independent city enclave surrounded by La Trinidad/Tuba/Itogon, not a Benguet
+// municipality and not part of the fire incident data above; drawn only for geographic context.
+const BAGUIO_SHAPE = { points: '132,423 148,423 152,443 142,464 128,453', markerX: 140, markerY: 435, labelX: 140, labelY: 462 };
 
 function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
   const [hovered, setHovered] = useState(null);
@@ -109,6 +122,8 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
   const rankMap = {};
   sorted.forEach((m, i) => { rankMap[m.code] = i + 1; });
 
+  const labelFont = "'Georgia', 'Times New Roman', serif";
+
   return (
     <div id="section-fire-map" className="bg-white rounded-lg shadow-md p-6 mb-6">
       <div className="flex justify-between items-start mb-4">
@@ -120,11 +135,22 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
       </div>
       <div className="flex flex-wrap gap-6">
         {/* SVG Map */}
-        <div className="relative flex-shrink-0" style={{ width: 320 }}>
-          <svg viewBox="0 0 402 510" width="320">
-            <text x="201" y="24" textAnchor="middle" style={{ fontSize: 12, fontWeight: 700, fill: '#1a3c6e', letterSpacing: 1 }}>
+        <div className="relative flex-shrink-0" style={{ width: 230 }}>
+          <svg viewBox="0 0 270 545" width="100%">
+            <text x="135" y="20" textAnchor="middle" style={{ fontSize: 11, fontWeight: 700, fill: '#1a3c6e', letterSpacing: 1, fontFamily: labelFont }}>
               PROVINCE OF BENGUET
             </text>
+
+            {/* Compass rose — tucked into the empty corner above/left of Bakun */}
+            <g transform="translate(40, 32)" style={{ pointerEvents: 'none' }}>
+              <polygon points="0,-12 4,0 0,12 -4,0" fill="#CC0000" />
+              <polygon points="-12,0 0,-4 12,0 0,4" fill="#4b5563" />
+              <text x="0" y="-15" textAnchor="middle" style={{ fontSize: 8, fontWeight: 800, fill: '#1a3c6e' }}>N</text>
+              <text x="0" y="20" textAnchor="middle" style={{ fontSize: 8, fontWeight: 800, fill: '#1a3c6e' }}>S</text>
+              <text x="-16" y="3" textAnchor="middle" style={{ fontSize: 8, fontWeight: 800, fill: '#1a3c6e' }}>W</text>
+              <text x="16" y="3" textAnchor="middle" style={{ fontSize: 8, fontWeight: 800, fill: '#1a3c6e' }}>E</text>
+            </g>
+
             {BENGUET_MUNICIPALITIES.map((mun) => {
               const val = dataMap[mun.code] || 0;
               const fill = getColor(mun.code);
@@ -138,18 +164,28 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
                     stroke="white" strokeWidth={isHov ? 3 : 1.5}
                     style={{ filter: isHov ? 'brightness(1.12)' : 'none', transition: 'filter 0.15s' }} />
                   <text x={mun.lx} y={mun.ly} textAnchor="middle"
-                    style={{ fontSize: small ? 6.5 : 8.5, fontWeight: 700, fill: val === 0 ? '#9ca3af' : '#fff', pointerEvents: 'none', paintOrder: 'stroke', stroke: val === 0 ? 'none' : 'rgba(0,0,0,0.25)', strokeWidth: 3 }}>
-                    {mun.name}
+                    style={{ fontSize: small ? 5.5 : 7, fontWeight: 700, fontStyle: 'italic', fontFamily: labelFont, fill: val === 0 ? '#6b7280' : '#fff', pointerEvents: 'none', paintOrder: 'stroke', stroke: val === 0 ? 'none' : 'rgba(0,0,0,0.25)', strokeWidth: 3 }}>
+                    {mun.code === 'LT' ? '★ La Trinidad' : mun.name}
                   </text>
                   {val > 0 && (
-                    <text x={mun.lx} y={mun.ly + (small ? 9 : 11)} textAnchor="middle"
-                      style={{ fontSize: small ? 7 : 10, fontWeight: 800, fill: '#fff', pointerEvents: 'none', paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 3 }}>
+                    <text x={mun.lx} y={mun.ly + (small ? 7 : 9)} textAnchor="middle"
+                      style={{ fontSize: small ? 6 : 8.5, fontWeight: 800, fill: '#fff', pointerEvents: 'none', paintOrder: 'stroke', stroke: 'rgba(0,0,0,0.25)', strokeWidth: 3 }}>
                       {val}
                     </text>
                   )}
                 </g>
               );
             })}
+
+            {/* Baguio City — independent city enclave, not a Benguet municipality and not part of the
+                fire incident data above; shown only for geographic context, like the reference map. */}
+            <g style={{ pointerEvents: 'none' }}>
+              <polygon points={BAGUIO_SHAPE.points} fill="#fef3c7" stroke="white" strokeWidth={1.5} />
+              <rect x={BAGUIO_SHAPE.markerX - 2.5} y={BAGUIO_SHAPE.markerY - 2.5} width="5" height="5" fill="#dc2626" stroke="#7f1d1d" strokeWidth={0.6} />
+              <text x={BAGUIO_SHAPE.labelX} y={BAGUIO_SHAPE.labelY} textAnchor="middle" style={{ fontSize: 4.5, fontWeight: 700, fontStyle: 'italic', fontFamily: labelFont, fill: '#6b7280' }}>
+                Baguio
+              </text>
+            </g>
           </svg>
           {/* Hover tooltip */}
           {hovered && (
@@ -184,6 +220,23 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
               ))}
             </div>
           </div>
+
+          {/* Map markers legend */}
+          <div>
+            <p className="text-xs font-bold uppercase text-gray-500 mb-2">Map Markers</p>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <span className="w-5 flex-shrink-0 text-center text-bfp-gold">&#9733;</span>
+                <span className="text-xs text-gray-600">Provincial capital (La Trinidad)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+                  <span className="w-2.5 h-2.5 bg-bfp-red border border-red-900" />
+                </span>
+                <span className="text-xs text-gray-600">Highly urbanized city (Baguio, independent — no data)</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -216,6 +269,53 @@ export default function ProvincialDashboard() {
   const [histTotals, setHistTotals] = useState({});
   const [histLabel, setHistLabel] = useState('');
   const [histLoading, setHistLoading] = useState(false);
+
+  // Clicking a category tile opens a drill-down modal: a per-municipality breakdown for just
+  // that category, plus the individually filed Spot Investigation reports behind it (only reports
+  // that have actually reached the provincial level — Provincial Chief IIS/Marshal/Chief
+  // Investigator IIS — count here; ones still sitting with a municipal reviewer don't yet). The
+  // daily tally counts that make up part of each total have no per-incident record — see the
+  // reconciliation note rendered in the modal — so the report list will usually be shorter than
+  // the tile's own number, and that's expected rather than a bug.
+  const [reportsByCategory, setReportsByCategory] = useState({});
+  const [histReportsByCategory, setHistReportsByCategory] = useState({});
+  const [categoryModal, setCategoryModal] = useState(null); // { field, label } | null
+
+  // Sub-category breakdown view: only sub-categories with an actual reported count are shown.
+  const [showSubCategories, setShowSubCategories] = useState(false);
+  const [subCategoryTotals, setSubCategoryTotals] = useState({});
+  const [histSubCategoryTotals, setHistSubCategoryTotals] = useState({});
+
+  const CATEGORY_TILE_META = {
+    residential: { label: 'Residential', accent: 'text-blue-800', chip: 'bg-blue-50', solid: 'bg-blue-600', ring: 'ring-blue-100', bar: 'bg-blue-500', icon: Home },
+    nonResidential: { label: 'Non-Residential', accent: 'text-red-800', chip: 'bg-red-50', solid: 'bg-red-600', ring: 'ring-red-100', bar: 'bg-red-500', icon: Building2 },
+    nonStructural: { label: 'Non-Structural', accent: 'text-orange-800', chip: 'bg-orange-50', solid: 'bg-orange-600', ring: 'ring-orange-100', bar: 'bg-orange-500', icon: TreePine },
+    transport: { label: 'Transport', accent: 'text-green-800', chip: 'bg-green-50', solid: 'bg-green-600', ring: 'ring-green-100', bar: 'bg-green-500', icon: Truck },
+    total: { label: 'Total', accent: 'text-bfp-navy', chip: 'bg-bfp-navy/10', solid: 'bg-bfp-navy', ring: 'ring-bfp-navy/10', bar: 'bg-bfp-navy', icon: LayoutGrid },
+  };
+
+  const getCategoryDrilldown = (field) => {
+    const rows = boardTab === 'current' ? monitoringBoard : (histData || []);
+    const totalsSource = boardTab === 'current' ? totals : histTotals;
+    const byCategory = boardTab === 'current' ? reportsByCategory : histReportsByCategory;
+
+    const municipalityRows = rows
+      .map((row) => ({ municipality: row.municipality, count: row[field] || 0 }))
+      .filter((row) => row.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    const reports = field === 'total'
+      ? ['residential', 'nonResidential', 'nonStructural', 'transport']
+          .flatMap((f) => byCategory[f] || [])
+          .sort((a, b) => new Date(b.reportDate) - new Date(a.reportDate))
+      : (byCategory[field] || []);
+
+    const total = totalsSource[field] || 0;
+    const individualCount = reports.length;
+    const tallyCount = Math.max(total - individualCount, 0);
+
+    return { municipalityRows, reports, total, individualCount, tallyCount };
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -265,6 +365,8 @@ export default function ProvincialDashboard() {
 
       setMonitoringBoard(boardResponse.data.monitoringBoard);
       setTotals(boardResponse.data.totals);
+      setReportsByCategory(boardResponse.data.reportsByCategory || {});
+      setSubCategoryTotals(boardResponse.data.subCategoryTotals || {});
       setAsOf(boardResponse.data.asOf);
       setKpis(analyticsResponse.data.kpis);
       setCharts(analyticsResponse.data.charts || {});
@@ -307,6 +409,8 @@ export default function ProvincialDashboard() {
       });
       setHistData(resp.data.monitoringBoard);
       setHistTotals(resp.data.totals);
+      setHistReportsByCategory(resp.data.reportsByCategory || {});
+      setHistSubCategoryTotals(resp.data.subCategoryTotals || {});
       setHistLabel(label);
     } catch (err) {
       console.error('Historical data error:', err);
@@ -338,28 +442,35 @@ export default function ProvincialDashboard() {
     printWin.onload = () => { printWin.focus(); printWin.print(); };
   };
 
-  const downloadCsv = (filename, lines) => {
-    const csv = lines.map((line) => line.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  const downloadPdf = (filename, title, header, rows) => {
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text('BFP Benguet Fire Incident Report', 14, 16);
+    doc.setFontSize(11);
+    doc.setTextColor(100);
+    doc.text(title, 14, 23);
+    autoTable(doc, {
+      startY: 28,
+      head: [header],
+      body: rows,
+      headStyles: { fillColor: [26, 60, 110] },
+      styles: { fontSize: 9 },
+    });
+    doc.save(filename);
   };
 
-  const exportBoardCsv = (rows, rowTotals, periodLabel) => {
+  const exportBoardPdf = (rows, rowTotals, periodLabel) => {
     const header = ['Municipality', 'Residential', 'Non-Residential', 'Non-Structural', 'Transport', 'Total'];
-    const lines = [
-      [`Fire Incident Monitoring Board - ${periodLabel}`],
-      header,
+    const body = [
       ...rows.map((row) => [row.municipality, row.residential, row.nonResidential, row.nonStructural, row.transport, row.total]),
       ['TOTAL', rowTotals.residential || 0, rowTotals.nonResidential || 0, rowTotals.nonStructural || 0, rowTotals.transport || 0, rowTotals.total || 0],
     ];
-    downloadCsv(`bfp-benguet-monitoring-board-${periodLabel.replace(/\s+/g, '-').toLowerCase()}.csv`, lines);
+    downloadPdf(
+      `bfp-benguet-monitoring-board-${periodLabel.replace(/\s+/g, '-').toLowerCase()}.pdf`,
+      `Fire Incident Monitoring Board - ${periodLabel}`,
+      header,
+      body
+    );
   };
 
   const handleExportMonitoringBoard = () => {
@@ -368,29 +479,25 @@ export default function ProvincialDashboard() {
     const periodLabel = boardTab === 'current'
       ? new Date().toLocaleString('default', { month: 'long', year: 'numeric' })
       : histLabel;
-    exportBoardCsv(rows, rowTotals, periodLabel);
+    exportBoardPdf(rows, rowTotals, periodLabel);
   };
 
   const handleExportFireMap = () => {
     const periodLabel = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    exportBoardCsv(monitoringBoard, totals, periodLabel);
+    exportBoardPdf(monitoringBoard, totals, periodLabel);
   };
 
   const handleExportComparison = () => {
     const header = ['Period', 'Residential', 'Non-Residential', 'Non-Structural', 'Transport', 'Total'];
-    const lines = [
-      ['Fire Incident Comparison'],
-      header,
-      ...trendComparisonData.map((row) => [
-        row.period,
-        row.Residential || 0,
-        row['Non-Residential'] || 0,
-        row['Non-Structural'] || 0,
-        row.Transport || 0,
-        row.total || 0,
-      ]),
-    ];
-    downloadCsv('bfp-benguet-fire-incident-comparison.csv', lines);
+    const body = trendComparisonData.map((row) => [
+      row.period,
+      row.Residential || 0,
+      row['Non-Residential'] || 0,
+      row['Non-Structural'] || 0,
+      row.Transport || 0,
+      row.total || 0,
+    ]);
+    downloadPdf('bfp-benguet-fire-incident-comparison.pdf', 'Fire Incident Comparison', header, body);
   };
 
   const now = new Date();
@@ -536,27 +643,77 @@ export default function ProvincialDashboard() {
 
         {(boardTab === 'current' || histData !== null) && (
           <>
-            <h3 className="text-lg font-bold text-bfp-navy mb-3">
-              {boardTab === 'current'
-                ? `${currentMonthName} ${currentYear} — as of ${formatDate(asOf)}`
-                : `${histLabel} — Fire Incident Summary`}
-            </h3>
-
-            {/* Category totals */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
-              {[
-                { label: 'Residential',     value: (boardTab === 'current' ? totals.residential : histTotals.residential) || 0, color: 'bg-blue-100 text-blue-800' },
-                { label: 'Non-Residential', value: (boardTab === 'current' ? totals.nonResidential : histTotals.nonResidential) || 0, color: 'bg-red-100 text-red-800' },
-                { label: 'Non-Structural',  value: (boardTab === 'current' ? totals.nonStructural : histTotals.nonStructural) || 0, color: 'bg-orange-100 text-orange-800' },
-                { label: 'Transport',       value: (boardTab === 'current' ? totals.transport : histTotals.transport) || 0, color: 'bg-green-100 text-green-800' },
-                { label: 'TOTAL',           value: (boardTab === 'current' ? totals.total : histTotals.total) || 0, color: 'bg-bfp-navy text-white' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className={`rounded-lg p-3 text-center ${color}`}>
-                  <div className="text-xs font-medium opacity-80">{label}</div>
-                  <div className="text-2xl font-bold mt-0.5">{value}</div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <h3 className="text-lg font-bold text-bfp-navy">
+                {boardTab === 'current'
+                  ? `${currentMonthName} ${currentYear} — as of ${formatDate(asOf)}`
+                  : `${histLabel} — Fire Incident Summary`}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowSubCategories((v) => !v)}
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${
+                  showSubCategories
+                    ? 'bg-bfp-navy text-white border-bfp-navy'
+                    : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
+                }`}
+              >
+                {showSubCategories ? 'Category View' : 'Category + Sub-Category View'}
+              </button>
             </div>
+
+            {showSubCategories ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+                {['residential', 'nonResidential', 'nonStructural', 'transport'].map((field) => {
+                  const meta = CATEGORY_TILE_META[field];
+                  const activeTotals = boardTab === 'current' ? totals : histTotals;
+                  const activeSubTotals = boardTab === 'current' ? subCategoryTotals : histSubCategoryTotals;
+                  const subEntries = Object.entries(activeSubTotals[field] || {}).sort((a, b) => b[1] - a[1]);
+                  return (
+                    <div key={field} className={`rounded-lg p-3 ${meta.chip}`}>
+                      <div className="flex items-center justify-between">
+                        <span className={`text-xs font-bold uppercase ${meta.accent}`}>{meta.label}</span>
+                        <span className={`text-lg font-bold ${meta.accent}`}>{activeTotals[field] || 0}</span>
+                      </div>
+                      {subEntries.length === 0 ? (
+                        <p className="text-xs text-gray-400 mt-2 italic">No sub-category data reported yet</p>
+                      ) : (
+                        <ul className="mt-2 space-y-1">
+                          {subEntries.map(([sub, count]) => (
+                            <li key={sub} className="flex items-center justify-between gap-2 text-xs text-gray-700">
+                              <span className="truncate">{sub}</span>
+                              <span className="font-semibold flex-shrink-0">{count}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Category totals */
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-4">
+                {[
+                  { label: 'Residential',     field: 'residential',     value: (boardTab === 'current' ? totals.residential : histTotals.residential) || 0, color: 'bg-blue-100 text-blue-800' },
+                  { label: 'Non-Residential', field: 'nonResidential',  value: (boardTab === 'current' ? totals.nonResidential : histTotals.nonResidential) || 0, color: 'bg-red-100 text-red-800' },
+                  { label: 'Non-Structural',  field: 'nonStructural',   value: (boardTab === 'current' ? totals.nonStructural : histTotals.nonStructural) || 0, color: 'bg-orange-100 text-orange-800' },
+                  { label: 'Transport',       field: 'transport',       value: (boardTab === 'current' ? totals.transport : histTotals.transport) || 0, color: 'bg-green-100 text-green-800' },
+                  { label: 'TOTAL',           field: 'total',           value: (boardTab === 'current' ? totals.total : histTotals.total) || 0, color: 'bg-bfp-navy text-white' },
+                ].map(({ label, field, value, color }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setCategoryModal({ field, label })}
+                    title={`View ${label.toLowerCase()} breakdown`}
+                    className={`rounded-lg p-3 text-center transition hover:brightness-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-bfp-navy ${color}`}
+                  >
+                    <div className="text-xs font-medium opacity-80">{label}</div>
+                    <div className="text-2xl font-bold mt-0.5">{value}</div>
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Per-municipality breakdown */}
             {(boardTab === 'current' ? monitoringBoard : histData).length === 0 ? (
@@ -602,6 +759,149 @@ export default function ProvincialDashboard() {
           </>
         )}
       </div>
+
+      {/* Category drill-down modal */}
+      {categoryModal && (() => {
+        const { field, label } = categoryModal;
+        const { municipalityRows, reports, total, individualCount, tallyCount } = getCategoryDrilldown(field);
+        const meta = CATEGORY_TILE_META[field];
+        const Icon = meta.icon;
+        const periodLabel = boardTab === 'current' ? `${currentMonthName} ${currentYear}` : histLabel;
+        const maxMunicipalityCount = Math.max(1, ...municipalityRows.map((row) => row.count));
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+            onClick={() => setCategoryModal(null)}
+          >
+            <div
+              className="modal-pop-in flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className={`flex items-start justify-between gap-4 border-b border-gray-100 p-6 ${meta.chip}`}>
+                <div className="flex items-center gap-4">
+                  <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-white shadow-sm ${meta.solid}`}>
+                    <Icon className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{periodLabel}</p>
+                    <h2 className={`text-2xl font-bold leading-tight ${meta.accent}`}>{label}</h2>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setCategoryModal(null)}
+                  aria-label="Close"
+                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/70 text-gray-500 shadow-sm transition hover:bg-white hover:text-gray-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-6 overflow-y-auto p-6">
+                {/* Stat strip */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className={`rounded-xl p-3 text-center ${meta.chip}`}>
+                    <p className={`text-2xl font-bold ${meta.accent}`}>{total}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Total</p>
+                  </div>
+                  <div className="rounded-xl bg-gray-50 p-3 text-center">
+                    <p className="text-2xl font-bold text-gray-800">{individualCount}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Filed Reports</p>
+                  </div>
+                  <div className="rounded-xl bg-gray-50 p-3 text-center">
+                    <p className="text-2xl font-bold text-gray-800">{tallyCount}</p>
+                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Daily Tallies</p>
+                  </div>
+                </div>
+                {tallyCount > 0 && (
+                  <p className="-mt-4 text-xs text-gray-400">
+                    Daily tallies are aggregate counts from municipalities&rsquo; Daily Reports and have no individual record to list below.
+                  </p>
+                )}
+
+                {/* By Municipality */}
+                <div>
+                  <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
+                    <MapPin className="h-4 w-4" /> By Municipality
+                  </h3>
+                  {municipalityRows.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-gray-200 py-8 text-center">
+                      <Inbox className="h-6 w-6 text-gray-300" />
+                      <p className="text-sm text-gray-400">No incidents recorded in this category for this period.</p>
+                    </div>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {municipalityRows.map((row, idx) => (
+                        <li key={row.municipality} className="relative overflow-hidden rounded-lg bg-gray-50">
+                          <div
+                            className={`absolute inset-y-0 left-0 opacity-15 ${meta.bar}`}
+                            style={{ width: `${(row.count / maxMunicipalityCount) * 100}%` }}
+                          />
+                          <div className="relative flex items-center justify-between px-4 py-2.5 text-sm">
+                            <span className="flex items-center gap-2.5 text-gray-700">
+                              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-bold text-gray-400 shadow-sm">
+                                {idx + 1}
+                              </span>
+                              {row.municipality}
+                            </span>
+                            <span className={`font-bold ${meta.accent}`}>{row.count}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+
+                {/* Filed Spot Investigation Reports */}
+                <div>
+                  <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
+                    <FileSearch className="h-4 w-4" /> Filed Spot Investigation Reports ({reports.length})
+                  </h3>
+                  {reports.length === 0 ? (
+                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-gray-200 py-8 text-center">
+                      <Inbox className="h-6 w-6 text-gray-300" />
+                      <p className="max-w-sm text-sm text-gray-400">
+                        No individually filed reports in this category for this period — the count above comes
+                        entirely from municipalities&rsquo; daily tallies.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg">
+                      <table className="data-table">
+                        <thead>
+                          <tr>
+                            <th>Reference #</th>
+                            <th>Municipality</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {reports.map((report) => (
+                            <tr key={report.id}>
+                              <td className="font-semibold">{report.referenceNumber || `#${report.id}`}</td>
+                              <td>{report.municipality}</td>
+                              <td>{new Date(report.reportDate).toLocaleDateString()}</td>
+                              <td><StatusBadge status={report.status} /></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end border-t border-gray-100 bg-gray-50 px-6 py-4">
+                <button onClick={() => setCategoryModal(null)} className="btn btn-secondary px-6">
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ── 2. KPI Cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -669,8 +969,8 @@ export default function ProvincialDashboard() {
                   onClick={() => toggleTrendYear(year)}
                   className={`px-3 py-1.5 rounded border text-sm font-medium transition-colors ${
                     selectedTrendYears.includes(year)
-                      ? 'bg-bfp-red text-white border-bfp-red'
-                      : 'bg-white text-bfp-navy border-gray-300 hover:border-bfp-red'
+                      ? 'bg-bfp-navy text-white border-bfp-navy'
+                      : 'bg-white text-bfp-navy border-gray-300 hover:border-bfp-navy'
                   }`}
                 >
                   {year}
@@ -704,8 +1004,8 @@ export default function ProvincialDashboard() {
                       onClick={() => toggleTrendMonth(monthNumber)}
                       className={`px-3 py-1.5 rounded border text-sm font-medium transition-colors ${
                         selectedTrendMonths.includes(monthNumber)
-                          ? 'bg-bfp-red text-white border-bfp-red'
-                          : 'bg-white text-bfp-navy border-gray-300 hover:border-bfp-red'
+                          ? 'bg-bfp-navy text-white border-bfp-navy'
+                          : 'bg-white text-bfp-navy border-gray-300 hover:border-bfp-navy'
                       }`}
                     >
                       {month.slice(0, 3)}
@@ -794,8 +1094,10 @@ export default function ProvincialDashboard() {
 
       <div className="bg-bfp-navy/5 border-l-4 border-bfp-navy p-4 rounded">
         <p className="text-sm text-gray-700">
-          <strong>Note:</strong> The monitoring board displays aggregated incident counts from submitted daily reports.
-          Data is populated when municipal officers submit their Daily Reports through the system.
+          <strong>Note:</strong> The monitoring board displays aggregated incident counts from submitted daily reports,
+          plus categorized Spot Investigation reports once they reach the provincial level. Data is populated when
+          municipal officers submit their Daily Reports, or when an investigation report is passed up to the
+          Provincial Chief IIS (or Marshal/Chief Investigator IIS).
         </p>
       </div>
     </div>

@@ -7,6 +7,7 @@ import StatusBadge from '@/components/common/StatusBadge';
 import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
 import { useToast } from '@/components/common/ToastProvider';
 import { formatDateTime, isAuthError } from '@/lib/utils';
+import AttachmentList from '@/components/reports/AttachmentList';
 
 export default function ProvincialReportsPage() {
   const toast = useToast();
@@ -20,6 +21,7 @@ export default function ProvincialReportsPage() {
   const [reportDetail, setReportDetail] = useState(null);
   const [comments, setComments] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetchReports();
@@ -121,11 +123,28 @@ export default function ProvincialReportsPage() {
     catch { return []; }
   };
 
+  const matchesSearch = (report) =>
+    !search || report.incident?.referenceNumber?.toLowerCase().includes(search.toLowerCase());
+
+  const filteredIncoming = incomingReports.filter(matchesSearch);
+  const filteredReviewed = reviewedReports.filter(matchesSearch);
+
   return (
     <div className="p-8 space-y-8">
       <h1 className="text-3xl font-bold text-bfp-navy">Provincial Chief IIS — Reports</h1>
 
       {sessionExpired && <SessionExpiredBanner />}
+
+      <div className="max-w-xs">
+        <label className="form-label">Search Reference #</label>
+        <input
+          type="text"
+          className="form-input"
+          placeholder="e.g. BFP-BEN-2026-001"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
       {!sessionExpired && error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">{error}</div>
@@ -138,8 +157,8 @@ export default function ProvincialReportsPage() {
           {/* Fire Incident Reports — incoming from municipalities */}
           <section className="bg-white rounded-lg shadow-md p-6">
             <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy mb-4"><Flame className="w-5 h-5" /> Fire Incident Reports — For Review</h2>
-            {incomingReports.length === 0 ? (
-              <p className="text-gray-500">No pending reports for review.</p>
+            {filteredIncoming.length === 0 ? (
+              <p className="text-gray-500">{search ? 'No reports match that reference number.' : 'No pending reports for review.'}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="data-table">
@@ -147,6 +166,7 @@ export default function ProvincialReportsPage() {
                     <tr>
                       <th>Municipality</th>
                       <th>Type</th>
+                      <th>Reference #</th>
                       <th>Report Date</th>
                       <th>Submitted By</th>
                       <th>Status</th>
@@ -155,10 +175,11 @@ export default function ProvincialReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {incomingReports.map((report) => (
+                    {filteredIncoming.map((report) => (
                       <tr key={report.id}>
                         <td className="font-semibold">{report.municipality?.name}</td>
                         <td>{report.reportType}</td>
+                        <td>{report.incident?.referenceNumber || '-'}</td>
                         <td>{new Date(report.reportDate).toLocaleDateString()}</td>
                         <td>{report.submittedBy?.name}</td>
                         <td><StatusBadge status={report.status} /></td>
@@ -182,8 +203,8 @@ export default function ProvincialReportsPage() {
           {/* Already reviewed fire incident reports */}
           <section className="bg-white rounded-lg shadow-md p-6">
             <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy mb-4"><Flame className="w-5 h-5" /> Fire Incident Reports — Already Reviewed</h2>
-            {reviewedReports.length === 0 ? (
-              <p className="text-gray-500">No reviewed reports yet.</p>
+            {filteredReviewed.length === 0 ? (
+              <p className="text-gray-500">{search ? 'No reports match that reference number.' : 'No reviewed reports yet.'}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="data-table">
@@ -191,6 +212,7 @@ export default function ProvincialReportsPage() {
                     <tr>
                       <th>Municipality</th>
                       <th>Type</th>
+                      <th>Reference #</th>
                       <th>Status</th>
                       <th>Returned To</th>
                       <th>Reviewed At</th>
@@ -199,16 +221,17 @@ export default function ProvincialReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {reviewedReports.map((report) => (
+                    {filteredReviewed.map((report) => (
                       <tr key={report.id}>
                         <td className="font-semibold">{report.municipality?.name}</td>
                         <td>{report.reportType}</td>
+                        <td>{report.incident?.referenceNumber || '-'}</td>
                         <td><StatusBadge status={report.status} /></td>
                         <td>{report.status === 'RETURNED' ? (report.submittedBy?.name || '-') : '-'}</td>
                         <td className="text-sm text-gray-500">{report.reviewedAt ? formatDateTime(report.reviewedAt) : '-'}</td>
                         <td className="text-sm text-gray-600 max-w-xs truncate">{report.remarks || '-'}</td>
                         <td>
-                          <button onClick={() => openReview(report)} className="text-bfp-red hover:underline text-sm">View</button>
+                          <button onClick={() => openReview(report)} className="text-bfp-navy hover:underline text-sm">View</button>
                         </td>
                       </tr>
                     ))}
@@ -251,13 +274,15 @@ export default function ProvincialReportsPage() {
                 {(parseAttachments(reportDetail?.attachments).length || parseAttachments(selectedReport?.attachments).length) > 0 && (
                   <div className="bg-gray-50 rounded-lg p-4">
                     <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
-                    <ul className="space-y-2 text-sm">
-                      {(parseAttachments(reportDetail?.attachments).length ? parseAttachments(reportDetail.attachments) : parseAttachments(selectedReport?.attachments)).map((attachment) => (
-                        <li key={attachment.url}>
-                          <a href={attachment.url} target="_blank" rel="noreferrer" className="font-medium text-bfp-red hover:underline">{attachment.name}</a>
-                        </li>
-                      ))}
-                    </ul>
+                    <AttachmentList
+                      attachments={
+                        parseAttachments(reportDetail?.attachments).length
+                          ? reportDetail.attachments
+                          : selectedReport?.attachments
+                      }
+                      reportId={selectedReport.id}
+                      canAnnotate={selectedReport.status === 'SUBMITTED'}
+                    />
                   </div>
                 )}
               </div>

@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -45,6 +45,7 @@ model User {
   reportsPassedTo      Report[] @relation("PassedTo")
   incidentsCreated     Incident[] @relation("CreatedBy")
   notifications        Notification[]
+  annotations          Annotation[]
 
   @@map("users")
 }
@@ -121,6 +122,7 @@ model Report {
   updatedAt         DateTime @updatedAt
 
   notifications     Notification[]
+  annotations       Annotation[]
 
   @@map("reports")
 }
@@ -160,6 +162,24 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@map("notifications")
+}
+
+model Annotation {
+  id            Int     @id @default(autoincrement())
+  reportId      Int
+  report        Report  @relation(fields: [reportId], references: [id], onDelete: Cascade)
+
+  attachmentUrl String  // matches the attachment's `url` inside Report.attachments JSON
+
+  authorId      Int
+  author        User    @relation(fields: [authorId], references: [id])
+
+  comment       String
+  highlightData String  // JSON: react-pdf-highlighter's { position, content }
+
+  createdAt     DateTime @default(now())
+
+  @@map("annotations")
 }
 
 model AuditLog {

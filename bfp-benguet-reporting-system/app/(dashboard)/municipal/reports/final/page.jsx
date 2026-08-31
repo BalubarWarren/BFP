@@ -1,22 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, FileText, Send, User } from 'lucide-react';
 import AttachmentInput from '@/components/reports/AttachmentInput';
 
 export default function FinalInvestigationForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [attachments, setAttachments] = useState([]);
+  const [incidents, setIncidents] = useState([]);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
 
   const [formData, setFormData] = useState({
     reportDate: new Date().toISOString().split('T')[0],
+    incidentId: searchParams.get('incidentId') || '',
     respondingUnits: '',
     respondingOfficer: '',
     reportingOfficerRank: '',
@@ -26,7 +29,18 @@ export default function FinalInvestigationForm() {
   useEffect(() => {
     const userData = sessionStorage.getItem('user');
     if (userData) setUser(JSON.parse(userData));
+    fetchIncidents();
   }, []);
+
+  const fetchIncidents = async () => {
+    try {
+      const token = sessionStorage.getItem('token');
+      const res = await axios.get('/api/incidents', { headers: { Authorization: `Bearer ${token}` } });
+      setIncidents(res.data.incidents || []);
+    } catch {
+      // incidents list is optional
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -61,6 +75,7 @@ export default function FinalInvestigationForm() {
       const payload = new FormData();
       payload.append('reportType', 'FINAL_INVESTIGATION');
       payload.append('municipalityId', String(effectiveUser.municipalityId));
+      if (formData.incidentId) payload.append('incidentId', formData.incidentId);
       payload.append('reportDate', formData.reportDate);
       payload.append('respondingUnits', formData.respondingUnits);
       payload.append('respondingOfficer', formData.respondingOfficer);
@@ -100,17 +115,32 @@ export default function FinalInvestigationForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Report Info */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Report Information</h2>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+            <FileText className="w-5 h-5" /> Report Information
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Report Date *</label>
+              <label className="form-label">Report Date <span className="text-bfp-red">*</span></label>
               <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input" required />
+            </div>
+            <div>
+              <label className="form-label">Linked Incident (optional)</label>
+              <select name="incidentId" value={formData.incidentId} onChange={handleChange} className="form-input">
+                <option value="" className="text-gray-400">— None / Not linked —</option>
+                {incidents.map((inc) => (
+                  <option key={inc.id} value={inc.id}>
+                    {inc.referenceNumber} — {inc.generalCategory} ({new Date(inc.dateOfIncident).toLocaleDateString()})
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-bold text-bfp-navy mb-4">Submit To</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+              <Send className="w-5 h-5" /> Submit To
+            </h2>
             <div>
               <label className="form-label">Recipient</label>
               <select value={recipientRole} onChange={(e) => setRecipientRole(e.target.value)} className="form-select max-w-xs">
@@ -124,14 +154,16 @@ export default function FinalInvestigationForm() {
 
           {/* Officer Details */}
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Officer Details</h2>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+            <User className="w-5 h-5" /> Officer Details
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="form-label">Responding Units</label>
               <input type="text" name="respondingUnits" value={formData.respondingUnits} onChange={handleChange} className="form-input" placeholder="Unit names / call signs" />
             </div>
             <div>
-              <label className="form-label">Reporting Officer *</label>
+              <label className="form-label">Reporting Officer <span className="text-bfp-red">*</span></label>
               <input type="text" name="respondingOfficer" value={formData.respondingOfficer} onChange={handleChange} className="form-input" placeholder="Full name" required />
             </div>
             <div>

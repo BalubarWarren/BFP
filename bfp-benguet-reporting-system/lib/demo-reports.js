@@ -637,7 +637,116 @@ function generateDemoReportsForMunicipality(cfg, currentUser) {
     stationCommanderName: officers.commander,
   };
 
+  // ── Two cases dedicated to the "Next Report" follow-up prompt (CaseFollowUpCta). Every
+  // other Spot/Progress report below is either not yet reviewed or was only approved at the
+  // municipal/marshal level (still needs the investigator to forward it) — none of them are
+  // ever finally approved by the Provincial Chief IIS. These two are, on purpose, and are
+  // placed first in the list so they're immediately visible rather than buried behind R1-R16. ──
+  const inc3 = buildIncident(cfg, {
+    num: 3,
+    ref: `BFP-BEN-2026-DEMO-${code}-003`,
+    date: addHours(reportDates.r1.report, 48),
+    time: incidents[0].time,
+    barangay: incidents[0].barangay,
+    address: `Follow-up site near ${incidents[0].address}`,
+    category: incidents[0].category,
+    sub: incidents[0].sub,
+    desc: `Case under continuing investigation in ${name}. The Spot Investigation report has been finally approved by the Provincial Chief IIS.`,
+    area: incidents[0].area,
+    damage: incidents[0].damage,
+    injured: 0,
+    cause: incidents[0].cause,
+    findings: 'Spot investigation complete and approved by the Provincial Chief IIS. Case remains open for Progress or Final reporting.',
+  });
+
+  const inc4 = buildIncident(cfg, {
+    num: 4,
+    ref: `BFP-BEN-2026-DEMO-${code}-004`,
+    date: addHours(reportDates.r2.report, 60),
+    time: incidents[1].time,
+    barangay: incidents[1].barangay,
+    address: `Follow-up site near ${incidents[1].address}`,
+    category: incidents[1].category,
+    sub: incidents[1].sub,
+    desc: `Case under continuing investigation in ${name}. The Progress Investigation report has been finally approved by the Provincial Chief IIS.`,
+    area: incidents[1].area,
+    damage: incidents[1].damage,
+    injured: 0,
+    cause: incidents[1].cause,
+    findings: 'Progress investigation complete and approved by the Provincial Chief IIS. Case remains open for the Final Investigation report.',
+  });
+
   return [
+    // R17 — Spot Investigation, finally approved by the Provincial Chief IIS. Expect both
+    // "Submit Progress Investigation" and "Submit Final Investigation" links.
+    buildReport({
+      ...baseArgs,
+      id: -(idx * 1000 + 17),
+      reportType: 'SPOT_INVESTIGATION',
+      status: 'APPROVED',
+      linkedIncident: inc3,
+      reportDate: addHours(reportDates.r1.report, 48),
+      submittedAt: addHours(reportDates.r1.report, 48.5),
+      reviewedAt: addHours(reportDates.r1.report, 68),
+      submittedBy: submitter,
+      // No passedToRole/passedTo: finally approved, nothing left to forward.
+      reviewedBy: provincial,
+      remarks: 'Approved for filing by the Provincial Chief IIS. Ready for the next report in this case.',
+      respondingOfficer: officers.primary,
+      reportingOfficerRank: officers.primaryRank,
+      content: {
+        incidentReference: inc3.referenceNumber,
+        pointOfOrigin: inc3.address,
+        preliminaryCause: inc3.causeOfFire,
+        investigationStatus: 'Spot investigation complete — finally approved by Provincial Chief IIS',
+      },
+    }),
+    // R18 — Spot for the case below, finally approved (older) — establishes the case before Progress.
+    buildReport({
+      ...baseArgs,
+      id: -(idx * 1000 + 18),
+      reportType: 'SPOT_INVESTIGATION',
+      status: 'APPROVED',
+      linkedIncident: inc4,
+      reportDate: addHours(reportDates.r2.report, 60),
+      submittedAt: addHours(reportDates.r2.report, 60.5),
+      reviewedAt: addHours(reportDates.r2.report, 80),
+      submittedBy: submitter,
+      reviewedBy: provincial,
+      remarks: 'Approved for filing by the Provincial Chief IIS.',
+      respondingOfficer: officers.primary,
+      reportingOfficerRank: officers.primaryRank,
+      content: {
+        incidentReference: inc4.referenceNumber,
+        pointOfOrigin: inc4.address,
+        preliminaryCause: inc4.causeOfFire,
+        investigationStatus: 'Spot investigation complete — finally approved by Provincial Chief IIS',
+      },
+    }),
+    // R19 — Progress Investigation, finally approved by the Provincial Chief IIS. Expect only
+    // "Submit Final Investigation" (Progress is already done, so it isn't re-offered).
+    buildReport({
+      ...baseArgs,
+      id: -(idx * 1000 + 19),
+      reportType: 'PROGRESS_INVESTIGATION',
+      status: 'APPROVED',
+      linkedIncident: inc4,
+      reportDate: addHours(reportDates.r2.report, 90),
+      submittedAt: addHours(reportDates.r2.report, 90.5),
+      reviewedAt: addHours(reportDates.r2.report, 110),
+      submittedBy: submitter,
+      // No passedToRole/passedTo: finally approved, nothing left to forward.
+      reviewedBy: provincial,
+      remarks: 'Approved for filing by the Provincial Chief IIS. Ready for the Final Investigation report.',
+      respondingOfficer: officers.secondary,
+      reportingOfficerRank: officers.secondaryRank,
+      content: {
+        incidentReference: inc4.referenceNumber,
+        containmentSummary: 'Area perimeter re-checked with no rekindling observed.',
+        evidenceCollected: 'Updated scene photographs and witness follow-up notes',
+        nextAction: 'Progress investigation complete — finally approved by Provincial Chief IIS',
+      },
+    }),
     // R1 — MDFIR submitted to Municipal Chief IIS
     buildReport({
       ...baseArgs,

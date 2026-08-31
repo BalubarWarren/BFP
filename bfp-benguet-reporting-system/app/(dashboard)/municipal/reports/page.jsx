@@ -7,12 +7,16 @@ import { FileText } from 'lucide-react';
 import StatusBadge from '@/components/common/StatusBadge';
 import { useToast } from '@/components/common/ToastProvider';
 import { formatDateTime } from '@/lib/utils';
+import ReportProgressBar, { getReportProgress } from '@/components/reports/ReportProgressBar';
+import AttachmentList from '@/components/reports/AttachmentList';
+import CaseFollowUpCta from '@/components/reports/CaseFollowUpCta';
 
 export default function MunicipalReportsPage() {
   const toast = useToast();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
+  const [search, setSearch] = useState('');
   const [blastLoadingId, setBlastLoadingId] = useState(null);
   const [selectedReport, setSelectedReport] = useState(null);
   const [reportDetail, setReportDetail] = useState(null);
@@ -52,6 +56,12 @@ export default function MunicipalReportsPage() {
     }),
     {}
   );
+
+  const filteredReports = search
+    ? reports.filter((r) =>
+        r.incident?.referenceNumber?.toLowerCase().includes(search.toLowerCase())
+      )
+    : reports;
 
   const formatReportType = (type) =>
     type
@@ -150,15 +160,11 @@ export default function MunicipalReportsPage() {
               <div className="rounded-lg bg-gray-50 p-4">
                 <h3 className="mb-3 font-bold text-bfp-navy">Attachments</h3>
                 {parseJson(reportDetail?.attachments || selectedReport.attachments, []).length ? (
-                  <ul className="space-y-2 text-sm">
-                    {parseJson(reportDetail?.attachments || selectedReport.attachments, []).map((attachment) => (
-                      <li key={attachment.url}>
-                        <a href={attachment.url} target="_blank" rel="noreferrer" className="font-medium text-bfp-red hover:underline">
-                          {attachment.name}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
+                  <AttachmentList
+                    attachments={reportDetail?.attachments || selectedReport.attachments}
+                    reportId={selectedReport.id}
+                    canAnnotate={false}
+                  />
                 ) : (
                   <p className="text-sm text-gray-500">No attachments uploaded.</p>
                 )}
@@ -188,7 +194,7 @@ export default function MunicipalReportsPage() {
         </div>
         <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Showing</p>
-          <p className="text-2xl font-bold text-bfp-navy">{reports.length}</p>
+          <p className="text-2xl font-bold text-bfp-navy">{filteredReports.length}</p>
         </div>
       </div>
 
@@ -215,6 +221,16 @@ export default function MunicipalReportsPage() {
             </p>
           </div>
           <div className="w-full md:w-72">
+            <label className="form-label">Search Reference #</label>
+            <input
+              type="text"
+              className="form-input"
+              placeholder="e.g. BFP-BEN-2026-001"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="w-full md:w-72">
             <label className="form-label">Status</label>
             <select
               className="form-select"
@@ -232,14 +248,14 @@ export default function MunicipalReportsPage() {
 
         {loading ? (
           <div className="p-10 text-center text-gray-600">Loading reports...</div>
-        ) : reports.length === 0 ? (
+        ) : filteredReports.length === 0 ? (
           <div className="flex min-h-56 flex-col items-center justify-center bg-gray-50 p-10 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
               <FileText className="w-6 h-6 text-gray-400" />
             </div>
             <p className="text-lg font-semibold text-bfp-navy">No reports found</p>
             <p className="mt-1 text-sm text-gray-500">
-              {filterStatus ? 'No reports match the selected status.' : 'Submitted reports will appear here.'}
+              {search ? 'No reports match that reference number.' : filterStatus ? 'No reports match the selected status.' : 'Submitted reports will appear here.'}
             </p>
           </div>
         ) : (
@@ -248,6 +264,7 @@ export default function MunicipalReportsPage() {
               <thead className="bg-gray-50">
                 <tr className="border-b border-gray-200">
                   <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report Type</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Reference #</th>
                   <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report Date</th>
                   <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Status</th>
                   <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Submitted At</th>
@@ -255,12 +272,13 @@ export default function MunicipalReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
-                {reports.map((report) => (
+                {filteredReports.map((report) => (
                   <tr key={report.id} className="hover:bg-gray-50">
                     <td className="px-5 py-4">
                       <p className="font-semibold text-gray-900">{formatReportType(report.reportType)}</p>
                       <p className="text-xs text-gray-500">#{report.id}</p>
                     </td>
+                    <td className="px-5 py-4 text-sm text-gray-700">{report.incident?.referenceNumber || '-'}</td>
                     <td className="px-5 py-4 text-sm text-gray-700">
                       {new Date(report.reportDate).toLocaleDateString()}
                     </td>
@@ -274,7 +292,7 @@ export default function MunicipalReportsPage() {
                       {report.status === 'DRAFT' && (
                         <Link
                           href={`/municipal/reports/${report.id}/edit`}
-                          className="font-semibold text-bfp-red hover:underline"
+                          className="font-semibold text-bfp-navy hover:underline"
                         >
                           Edit
                         </Link>
@@ -284,7 +302,7 @@ export default function MunicipalReportsPage() {
                           <button
                             type="button"
                             onClick={() => openReport(report)}
-                            className="font-semibold text-bfp-red hover:underline"
+                            className="font-semibold text-bfp-navy hover:underline"
                           >
                             View
                           </button>
@@ -303,7 +321,7 @@ export default function MunicipalReportsPage() {
                           <button
                             type="button"
                             onClick={() => openReport(report)}
-                            className="font-semibold text-bfp-red hover:underline"
+                            className="font-semibold text-bfp-navy hover:underline"
                           >
                             View
                           </button>
@@ -318,6 +336,10 @@ export default function MunicipalReportsPage() {
                             </button>
                           )}
                         </div>
+                      )}
+                      <ReportProgressBar progress={getReportProgress(report)} compact />
+                      {['SPOT_INVESTIGATION', 'PROGRESS_INVESTIGATION'].includes(report.reportType) && report.status === 'APPROVED' && !report.passedToId && (
+                        <CaseFollowUpCta report={report} allReports={reports} />
                       )}
                     </td>
                   </tr>

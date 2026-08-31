@@ -1,7 +1,13 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-this-in-production';
+// Fail fast rather than silently signing tokens with a public, guessable fallback secret if
+// JWT_SECRET is ever missing from the environment (e.g. a misconfigured deploy).
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required but not set.');
+}
+
+const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '24h';
 
 // Generate JWT token
@@ -10,6 +16,7 @@ export function generateToken(user) {
     {
       id: user.id,
       email: user.email,
+      name: user.name,
       role: user.role,
       municipalityId: user.municipalityId,
     },

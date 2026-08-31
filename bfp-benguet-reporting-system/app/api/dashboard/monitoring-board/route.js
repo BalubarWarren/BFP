@@ -10,6 +10,10 @@ const CATEGORY_FIELD_MAP = {
   TRANSPORT: 'transport',
 };
 
+// A report only counts toward the provincial monitoring board once it has actually
+// reached the province level — not while it's still sitting with a municipal reviewer.
+const PROVINCIAL_REVIEWER_ROLES = [ROLES.PROVINCIAL_CHIEF_IIS, ROLES.MARSHAL, ROLES.CHIEF_INVESTIGATOR_IIS];
+
 export async function GET(request) {
   try {
     const user = await getUserFromRequest(request);
@@ -53,7 +57,7 @@ export async function GET(request) {
     }
 
     // Get all daily report entries (which contain the incident counts), plus categorized
-    // Spot Investigation reports submitted directly by investigators
+    // Spot Investigation reports that have reached the provincial level
     const [dailyEntries, spotReports, allMunicipalities] = await Promise.all([
       prisma.dailyReportEntry.findMany({
         where: dateFilter,
@@ -61,8 +65,18 @@ export async function GET(request) {
         orderBy: { reportDate: 'desc' },
       }),
       prisma.report.findMany({
-        where: { ...dateFilter, reportType: 'SPOT_INVESTIGATION', category: { not: null } },
-        include: { municipality: true },
+        where: {
+          ...dateFilter,
+          reportType: 'SPOT_INVESTIGATION',
+          category: { not: null },
+          passedToRole: { in: PROVINCIAL_REVIEWER_ROLES },
+        },
+        include: {
+          municipality: true,
+          incident: { select: { referenceNumber: true, subCategory: true } },
+          submittedBy: { select: { name: true } },
+        },
+        orderBy: { reportDate: 'desc' },
       }),
       prisma.municipality.findMany({ orderBy: { name: 'asc' } }),
     ]);
@@ -145,9 +159,39 @@ export async function GET(request) {
       total: monitoringBoard.reduce((sum, m) => sum + m.total, 0),
     };
 
+    // Individually filed Spot Investigation reports that reached the provincial level, grouped
+    // by category, for drill-down — the daily-tally portion of each total (totals[field] minus
+    // this list's length) has no per-incident record to show, only these categorized reports do.
+    const reportsByCategory = { residential: [], nonResidential: [], nonStructural: [], transport: [] };
+    spotReports.forEach((report) => {
+      const field = CATEGORY_FIELD_MAP[report.category];
+      if (!field) return;
+      reportsByCategory[field].push({
+        id: report.id,
+        referenceNumber: report.incident?.referenceNumber || null,
+        municipality: report.municipality.name,
+        reportDate: report.reportDate,
+        status: report.status,
+        submittedBy: report.submittedBy?.name || null,
+      });
+    });
+
+    // Sub-category tallies, province-wide, per general category — only sub-categories an
+    // investigator actually reported appear here (e.g. a category with only "Grass" reports
+    // this period won't list "Forest" or "Rubbish" at all, let alone at zero).
+    const subCategoryTotals = { residential: {}, nonResidential: {}, nonStructural: {}, transport: {} };
+    spotReports.forEach((report) => {
+      const field = CATEGORY_FIELD_MAP[report.category];
+      const sub = report.incident?.subCategory;
+      if (!field || !sub) return;
+      subCategoryTotals[field][sub] = (subCategoryTotals[field][sub] || 0) + 1;
+    });
+
     return NextResponse.json({
       monitoringBoard,
       totals,
+      reportsByCategory,
+      subCategoryTotals,
       asOf: new Date(),
     });
   } catch (error) {

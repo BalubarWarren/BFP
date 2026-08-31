@@ -121,8 +121,9 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // Only submitter can edit DRAFT reports
-    if (report.status === REPORT_STATUS.DRAFT && report.submittedById !== user.id) {
+    // This endpoint only supports the submitter editing/resubmitting/forwarding their own
+    // report (reviewers act through /approve instead) — reject anyone else outright.
+    if (report.submittedById !== user.id) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -131,6 +132,15 @@ export async function PATCH(request, { params }) {
 
     const body = await request.json();
     const { content, category, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName, status, passedToRole: requestedPassedToRole, passedToId: requestedPassedToId } = body;
+
+    // The only status transition this endpoint may perform is re-submitting; approvals/returns
+    // must go through /approve so reviewedById/reviewedAt/remarks stay accurate.
+    if (status && status !== REPORT_STATUS.SUBMITTED) {
+      return NextResponse.json(
+        { error: 'Invalid status transition' },
+        { status: 400 }
+      );
+    }
 
     // Allow submitter to re-submit a returned report and optionally forward to a specific municipal role
     let updateData = {

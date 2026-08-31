@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Home, Building2, Trees, Car } from 'lucide-react';
+import { Home, Building2, Trees, Car, FileBarChart } from 'lucide-react';
 import { useToast } from '@/components/common/ToastProvider';
 
 export default function DailyReportForm() {
@@ -147,7 +147,7 @@ export default function DailyReportForm() {
   return (
     <div className="p-8">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-bfp-navy mb-2">Daily Fire Incident Report</h1>
+        <h1 className="flex items-center gap-2 text-3xl font-bold text-bfp-navy mb-2"><FileBarChart className="w-7 h-7" /> Daily Fire Incident Report</h1>
         <p className="text-gray-600 mb-8">
           Submit your municipality's daily incident statistics
         </p>
@@ -279,7 +279,7 @@ export default function DailyReportForm() {
 
               {/* Officer Info */}
               <div className="form-group">
-                <label className="form-label">Reporting Officer Name *</label>
+                <label className="form-label">Reporting Officer Name <span className="text-bfp-red">*</span></label>
                 <input
                   type="text"
                   className="form-input"

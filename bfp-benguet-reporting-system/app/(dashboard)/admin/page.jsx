@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Undo2, Check, CheckCircle2, MapPin, User, Calendar, Tag } from 'lucide-react';
+import { Undo2, Check, CheckCircle2, MapPin, User, Calendar, Tag, ChevronUp, ChevronDown } from 'lucide-react';
 import StatusBadge from '@/components/common/StatusBadge';
 import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
 import { formatDateTime, isAuthError } from '@/lib/utils';
@@ -274,7 +274,7 @@ export default function AdminDashboard() {
                       <div>Submitted {formatDateTime(report.submittedAt)}</div>
                       {report.reviewedAt && <div className="text-green-600">Reviewed {formatDateTime(report.reviewedAt)}</div>}
                     </div>
-                    <span className="text-gray-400 text-sm">{expandedId === report.id ? '▲' : '▼'}</span>
+                    <span className="text-gray-400">{expandedId === report.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</span>
                   </div>
                 </div>
 

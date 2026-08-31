@@ -1,9 +1,13 @@
 'use client';
 
+import { Paperclip } from 'lucide-react';
+
 export default function AttachmentInput({ files, onChange }) {
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-lg font-bold text-bfp-navy mb-4">Attachments</h2>
+      <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+        <Paperclip className="w-5 h-5" /> Attachments
+      </h2>
       <label className="form-label">Attach Files</label>
       <input
         type="file"

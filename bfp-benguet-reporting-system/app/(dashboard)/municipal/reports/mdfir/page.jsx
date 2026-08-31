@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { FileEdit } from 'lucide-react';
-import { GENERAL_CATEGORIES } from '@/lib/constants';
+import { FileEdit, ClipboardList, Send } from 'lucide-react';
+import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '@/lib/constants';
 import AttachmentInput from '@/components/reports/AttachmentInput';
 
 export default function MinimalDamageFireIncidentReportForm() {
@@ -21,6 +21,7 @@ export default function MinimalDamageFireIncidentReportForm() {
     dateOfIncident: new Date().toISOString().split('T')[0],
     timeOfIncident: '00:00',
     generalCategory: '',
+    subCategory: '',
   });
 
   useEffect(() => {
@@ -30,6 +31,10 @@ export default function MinimalDamageFireIncidentReportForm() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    if (name === 'generalCategory') {
+      setFormData((prev) => ({ ...prev, generalCategory: value, subCategory: '' }));
+      return;
+    }
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -40,6 +45,7 @@ export default function MinimalDamageFireIncidentReportForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.generalCategory) { setError('Please select a fire category.'); return; }
+    if (!formData.subCategory) { setError('Please select a sub-category.'); return; }
 
     setLoading(true);
     setError('');
@@ -67,6 +73,7 @@ export default function MinimalDamageFireIncidentReportForm() {
         dateOfIncident: formData.dateOfIncident,
         timeOfIncident: formData.timeOfIncident,
         generalCategory: formData.generalCategory,
+        subCategory: formData.subCategory,
       }));
       attachments.forEach((file) => payload.append('attachments', file));
       payload.append('passedToRole', recipientRole);
@@ -96,26 +103,41 @@ export default function MinimalDamageFireIncidentReportForm() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-lg font-bold text-bfp-navy mb-4">Incident Details</h2>
+          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+            <ClipboardList className="w-5 h-5" /> Incident Details
+          </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Report Date *</label>
+              <label className="form-label">Report Date <span className="text-bfp-red">*</span></label>
               <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input" required />
             </div>
             <div>
-              <label className="form-label">General Category *</label>
+              <label className="form-label">General Category <span className="text-bfp-red">*</span></label>
               <select name="generalCategory" value={formData.generalCategory} onChange={handleChange} className="form-input" required>
-                <option value="">— Select —</option>
+                <option value="" className="text-gray-400">— Select —</option>
                 {Object.keys(GENERAL_CATEGORIES).map((key) => (
                   <option key={key} value={key}>{key.replace(/_/g, ' ')}</option>
                 ))}
               </select>
             </div>
+            {formData.generalCategory && (
+              <div>
+                <label className="form-label">Sub-Category <span className="text-bfp-red">*</span></label>
+                <select name="subCategory" value={formData.subCategory} onChange={handleChange} className="form-input" required>
+                  <option value="" className="text-gray-400">— Select —</option>
+                  {(SUB_CATEGORIES[formData.generalCategory] || []).map((sub) => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
         </div>
 
           <div className="bg-white rounded-lg shadow-md p-6">
-            <h2 className="text-lg font-bold text-bfp-navy mb-4">Submit To</h2>
+            <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+              <Send className="w-5 h-5" /> Submit To
+            </h2>
             <div>
               <label className="form-label">Recipient</label>
               <select value={recipientRole} onChange={(e) => setRecipientRole(e.target.value)} className="form-select max-w-xs">

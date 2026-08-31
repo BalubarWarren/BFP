@@ -178,7 +178,7 @@ export default function InitialReportForm() {
             <>
               {/* Location */}
               <div className="form-group">
-                <label className="form-label">Barangay *</label>
+                <label className="form-label">Barangay <span className="text-bfp-red">*</span></label>
                 <input
                   type="text"
                   className="form-input"
@@ -191,7 +191,7 @@ export default function InitialReportForm() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Address/Location *</label>
+                <label className="form-label">Address/Location <span className="text-bfp-red">*</span></label>
                 <textarea
                   className="form-textarea"
                   name="address"
@@ -204,7 +204,7 @@ export default function InitialReportForm() {
 
               {/* Fire Category */}
               <div className="form-group">
-                <label className="form-label">Fire Type - General Category *</label>
+                <label className="form-label">Fire Type - General Category <span className="text-bfp-red">*</span></label>
                 <select
                   className="form-select"
                   name="generalCategory"
@@ -212,7 +212,7 @@ export default function InitialReportForm() {
                   onChange={handleInputChange}
                   required
                 >
-                  <option value="">-- Select Category --</option>
+                  <option value="" className="text-gray-400">-- Select Category --</option>
                   <option value="RESIDENTIAL">🏘️ Residential</option>
                   <option value="NON_RESIDENTIAL">🏢 Non-Residential</option>
                   <option value="NON_STRUCTURAL">🌳 Non-Structural</option>
@@ -222,7 +222,7 @@ export default function InitialReportForm() {
 
               {formData.generalCategory && (
                 <div className="form-group">
-                  <label className="form-label">Fire Type - Sub-Category *</label>
+                  <label className="form-label">Fire Type - Sub-Category <span className="text-bfp-red">*</span></label>
                   <select
                     className="form-select"
                     name="subCategory"
@@ -230,7 +230,7 @@ export default function InitialReportForm() {
                     onChange={handleInputChange}
                     required
                   >
-                    <option value="">-- Select Sub-Category --</option>
+                    <option value="" className="text-gray-400">-- Select Sub-Category --</option>
                     {availableSubCategories.map((sub) => (
                       <option key={sub} value={sub}>
                         {sub}
@@ -245,7 +245,7 @@ export default function InitialReportForm() {
           {step === 2 && (
             <>
               <div className="form-group">
-                <label className="form-label">Brief Description of Incident *</label>
+                <label className="form-label">Brief Description of Incident <span className="text-bfp-red">*</span></label>
                 <textarea
                   className="form-textarea"
                   name="description"
@@ -270,7 +270,7 @@ export default function InitialReportForm() {
 
               {/* Current Status */}
               <div className="form-group">
-                <label className="form-label">Current Status *</label>
+                <label className="form-label">Current Status <span className="text-bfp-red">*</span></label>
                 <select
                   className="form-select"
                   name="status"
@@ -315,7 +315,7 @@ export default function InitialReportForm() {
           {step === 3 && (
             <>
               <div className="form-group">
-                <label className="form-label">Reporting Officer Name *</label>
+                <label className="form-label">Reporting Officer Name <span className="text-bfp-red">*</span></label>
                 <input
                   type="text"
                   className="form-input"
@@ -328,7 +328,7 @@ export default function InitialReportForm() {
               </div>
 
               <div className="form-group">
-                <label className="form-label">Officer Rank *</label>
+                <label className="form-label">Officer Rank <span className="text-bfp-red">*</span></label>
                 <input
                   type="text"
                   className="form-input"

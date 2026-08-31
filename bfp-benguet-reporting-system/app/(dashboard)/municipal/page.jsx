@@ -3,117 +3,14 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
-import { FileEdit, Search, Clock, CheckCircle2, Check, MessageSquare } from 'lucide-react';
+import { FileEdit, Search, Clock, CheckCircle2, MessageSquare, FileText } from 'lucide-react';
 import StatusBadge from '@/components/common/StatusBadge';
 import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
 import { useToast } from '@/components/common/ToastProvider';
 import { formatDateTime, isAuthError } from '@/lib/utils';
-
-// ── Report review progress tracker ─────────────────────────────────────────────
-const PROGRESS_STEP_LABELS = ['Submitted', 'Municipal Chief IIS', 'Municipal Fire Marshal', 'Provincial Chief IIS'];
-const REVIEW_TIER_LABELS = ['Municipal Chief IIS', 'Municipal Fire Marshal', 'Provincial Chief IIS'];
-
-const roleTierIndex = (role) => {
-  if (role === 'MUNICIPAL_CHIEF_IIS' || role === 'MUNICIPAL_CHIEF_OPERATION') return 0;
-  if (role === 'MUNICIPAL_FIRE_MARSHAL') return 1;
-  if (role === 'PROVINCIAL_CHIEF_IIS') return 2;
-  return null;
-};
-
-// Figures out which step of the review chain a report is currently at, for
-// display in ReportProgressBar. Returns null for reports that aren't submitted yet.
-const getReportProgress = (report) => {
-  if (!report || report.status === 'DRAFT') return null;
-
-  if (report.status === 'SUBMITTED') {
-    const tier = roleTierIndex(report.passedToRole) ?? 0;
-    return {
-      activeIndex: tier + 1,
-      variant: 'pending',
-      description: `Awaiting review by ${REVIEW_TIER_LABELS[tier]}.`,
-    };
-  }
-
-  if (report.status === 'RETURNED') {
-    const tier = roleTierIndex(report.reviewedBy?.role) ?? 0;
-    return {
-      activeIndex: tier + 1,
-      variant: 'returned',
-      description: `Returned by ${REVIEW_TIER_LABELS[tier]} — needs revision.`,
-    };
-  }
-
-  if (report.status === 'APPROVED') {
-    const tier = roleTierIndex(report.reviewedBy?.role) ?? 0;
-    if (!report.passedToId) {
-      return {
-        activeIndex: PROGRESS_STEP_LABELS.length,
-        variant: 'done',
-        description: `Approved by ${REVIEW_TIER_LABELS[tier]} — finalized.`,
-      };
-    }
-    const nextTier = Math.min(tier + 1, REVIEW_TIER_LABELS.length - 1);
-    return {
-      activeIndex: nextTier + 1,
-      variant: 'awaiting-forward',
-      description: `Approved by ${REVIEW_TIER_LABELS[tier]} — proceed to next step: submit to ${REVIEW_TIER_LABELS[nextTier]}.`,
-    };
-  }
-
-  return null;
-};
-
-function ReportProgressBar({ progress, compact }) {
-  if (!progress) return null;
-  const { activeIndex, variant, description } = progress;
-
-  const activeColor = {
-    pending: 'bg-blue-500',
-    returned: 'bg-red-500',
-    'awaiting-forward': 'bg-bfp-amber',
-    done: 'bg-bfp-green',
-  }[variant] || 'bg-blue-500';
-
-  const descriptionColor = {
-    pending: 'text-blue-700',
-    returned: 'text-red-600',
-    'awaiting-forward': 'text-bfp-navy',
-    done: 'text-bfp-green',
-  }[variant] || 'text-gray-600';
-
-  return (
-    <div className={compact ? 'mt-2 max-w-xs' : 'mt-1'}>
-      <div className="flex items-center">
-        {PROGRESS_STEP_LABELS.map((label, i) => {
-          const isDone = i < activeIndex;
-          const isActive = i === activeIndex;
-          return (
-            <div key={label} className={`flex items-center ${i < PROGRESS_STEP_LABELS.length - 1 ? 'flex-1' : ''}`}>
-              <div className="flex flex-col items-center flex-shrink-0">
-                <div
-                  className={`flex items-center justify-center rounded-full font-bold text-white ${compact ? 'w-5 h-5 text-[9px]' : 'w-7 h-7 text-xs'} ${
-                    isDone ? 'bg-bfp-green' : isActive ? activeColor : 'bg-gray-300'
-                  }`}
-                >
-                  {isDone ? <Check className={compact ? 'w-3 h-3' : 'w-4 h-4'} /> : i + 1}
-                </div>
-                {!compact && (
-                  <span className={`mt-1 text-[10px] text-center leading-tight w-16 ${isActive ? 'font-bold text-gray-800' : 'text-gray-500'}`}>
-                    {label}
-                  </span>
-                )}
-              </div>
-              {i < PROGRESS_STEP_LABELS.length - 1 && (
-                <div className={`flex-1 h-1 mx-1 rounded ${i < activeIndex ? 'bg-bfp-green' : 'bg-gray-300'}`} />
-              )}
-            </div>
-          );
-        })}
-      </div>
-      {description && <p className={`text-xs mt-2 ${descriptionColor}`}>{description}</p>}
-    </div>
-  );
-}
+import ReportProgressBar, { getReportProgress } from '@/components/reports/ReportProgressBar';
+import AttachmentList from '@/components/reports/AttachmentList';
+import CaseFollowUpCta from '@/components/reports/CaseFollowUpCta';
 
 export default function MunicipalDashboard() {
   const toast = useToast();
@@ -127,6 +24,8 @@ export default function MunicipalDashboard() {
   const [forwardTarget, setForwardTarget] = useState(null);
   const [forwardRole, setForwardRole] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [filterStatus, setFilterStatus] = useState('');
+  const [search, setSearch] = useState('');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -267,6 +166,26 @@ export default function MunicipalDashboard() {
     catch { return []; }
   };
 
+  const formatReportType = (type) =>
+    type
+      ?.replace(/_/g, ' ')
+      .toLowerCase()
+      .replace(/\b\w/g, (letter) => letter.toUpperCase()) || '-';
+
+  const statusCounts = reports.reduce(
+    (counts, report) => ({
+      ...counts,
+      [report.status]: (counts[report.status] || 0) + 1,
+    }),
+    {}
+  );
+
+  const filteredReports = reports
+    .filter((r) => (filterStatus ? r.status === filterStatus : true))
+    .filter((r) =>
+      search ? r.incident?.referenceNumber?.toLowerCase().includes(search.toLowerCase()) : true
+    );
+
   return (
     <div className="p-8">
       {/* Welcome Section */}
@@ -317,13 +236,11 @@ export default function MunicipalDashboard() {
               <div className="bg-gray-50 rounded-lg p-4">
                 <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
                 {parseAttachments(reportDetail?.attachments || selectedReport.attachments).length > 0 ? (
-                  <ul className="space-y-2 text-sm">
-                    {parseAttachments(reportDetail?.attachments || selectedReport.attachments).map((a) => (
-                      <li key={a.url}>
-                        <a href={a.url} target="_blank" rel="noreferrer" className="text-bfp-red hover:underline font-medium">{a.name}</a>
-                      </li>
-                    ))}
-                  </ul>
+                  <AttachmentList
+                    attachments={reportDetail?.attachments || selectedReport.attachments}
+                    reportId={selectedReport.id}
+                    canAnnotate={false}
+                  />
                 ) : (
                   <p className="text-sm text-gray-500">No attachments uploaded.</p>
                 )}
@@ -488,93 +405,157 @@ export default function MunicipalDashboard() {
       </div>
 
       {/* My Reports Section */}
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-2xl font-bold text-bfp-navy mb-4">My Submitted Reports</h2>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+          {[
+            ['Submitted', statusCounts.SUBMITTED || 0, 'border-bfp-amber'],
+            ['Approved', statusCounts.APPROVED || 0, 'border-green-500'],
+            ['Returned', statusCounts.RETURNED || 0, 'border-red-500'],
+            ['Draft', statusCounts.DRAFT || 0, 'border-gray-400'],
+          ].map(([label, value, borderClass]) => (
+            <div key={label} className={`rounded-lg border-l-4 ${borderClass} bg-white p-4 shadow-sm`}>
+              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+              <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+            </div>
+          ))}
+        </div>
 
-        {loading ? (
-          <p className="text-gray-600">Loading reports...</p>
-        ) : reports.length === 0 ? (
-          <p className="text-gray-600">No reports submitted yet</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Report Type</th>
-                  <th>Report Date</th>
-                  <th>Status</th>
-                  <th>Submitted At</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {reports.slice(0, 10).map((report) => (
-                  <tr key={report.id}>
-                    <td className="font-semibold">{report.reportType}</td>
-                    <td>{new Date(report.reportDate).toLocaleDateString()}</td>
-                    <td>
-                      <StatusBadge status={report.status} />
-                    </td>
-                    <td className="text-sm">
-                      {formatDateTime(report.submittedAt)}
-                    </td>
-                    <td>
-                      <div className="flex gap-2 items-center">
-                        <button
-                          onClick={() => openView(report)}
-                          className="btn btn-primary text-sm py-1 px-3"
-                        >
-                          View
-                        </button>
-                        {report.status === 'RETURNED' && (
-                          <Link href={`/municipal/reports/${report.id}/edit`} className="btn btn-danger text-sm py-1 px-3">
-                            Revise
-                          </Link>
-                        )}
-                        {needsForwarding(report) && (
+        <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-gray-200 p-5 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-bfp-navy">Reports</h2>
+              <p className="text-sm text-gray-500">
+                {filterStatus ? `${formatReportType(filterStatus)} reports` : 'All statuses'}
+              </p>
+            </div>
+            <div className="w-full md:w-64">
+              <label className="form-label">Search Reference #</label>
+              <input
+                type="text"
+                className="form-input"
+                placeholder="e.g. BFP-BEN-2026-001"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="w-full md:w-72">
+              <label className="form-label">Status</label>
+              <select
+                className="form-select"
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option value="">All Statuses</option>
+                <option value="SUBMITTED">Submitted</option>
+                <option value="APPROVED">Approved</option>
+                <option value="RETURNED">Returned</option>
+              </select>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="p-10 text-center text-gray-600">Loading reports...</div>
+          ) : filteredReports.length === 0 ? (
+            <div className="flex min-h-56 flex-col items-center justify-center bg-gray-50 p-10 text-center">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
+                <FileText className="w-6 h-6 text-gray-400" />
+              </div>
+              <p className="text-lg font-semibold text-bfp-navy">No reports found</p>
+              <p className="mt-1 text-sm text-gray-500">
+                {search ? 'No reports match that reference number.' : filterStatus ? 'No reports match the selected status.' : 'Submitted reports will appear here.'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead className="bg-gray-50">
+                  <tr className="border-b border-gray-200">
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report Type</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Reference #</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report Date</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Status</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Submitted At</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {filteredReports.slice(0, 10).map((report) => (
+                    <tr key={report.id} className="hover:bg-gray-50">
+                      <td className="px-5 py-4">
+                        <p className="font-semibold text-gray-900">{formatReportType(report.reportType)}</p>
+                        <p className="text-xs text-gray-500">#{report.id}</p>
+                      </td>
+                      <td className="px-5 py-4 text-sm text-gray-700">{report.incident?.referenceNumber || '-'}</td>
+                      <td className="px-5 py-4 text-sm text-gray-700">
+                        {new Date(report.reportDate).toLocaleDateString()}
+                      </td>
+                      <td className="px-5 py-4">
+                        <StatusBadge status={report.status} />
+                      </td>
+                      <td className="px-5 py-4 text-sm text-gray-600">
+                        {formatDateTime(report.submittedAt)}
+                      </td>
+                      <td className="px-5 py-4 text-sm">
+                        <div className="flex flex-wrap gap-2 items-center">
                           <button
-                            type="button"
-                            onClick={() => openForward(report)}
+                            onClick={() => openView(report)}
                             className="btn btn-primary text-sm py-1 px-3"
                           >
-                            Submit
+                            View
                           </button>
+                          {report.status === 'RETURNED' && (
+                            <Link href={`/municipal/reports/${report.id}/edit`} className="btn btn-danger text-sm py-1 px-3">
+                              Revise
+                            </Link>
+                          )}
+                          {needsForwarding(report) && (
+                            <button
+                              type="button"
+                              onClick={() => openForward(report)}
+                              className="btn btn-primary text-sm py-1 px-3"
+                            >
+                              Submit
+                            </button>
+                          )}
+                          {canTextBlast(report) && (
+                            <button
+                              type="button"
+                              onClick={() => handleTextBlast(report)}
+                              className="btn btn-success text-sm py-1 px-3"
+                              disabled={blastLoadingId === report.id}
+                            >
+                              {blastLoadingId === report.id ? 'Sending...' : 'Text Blast'}
+                            </button>
+                          )}
+                        </div>
+                        <ReportProgressBar progress={getReportProgress(report)} compact />
+                        {['SPOT_INVESTIGATION', 'PROGRESS_INVESTIGATION'].includes(report.reportType) && isFinallyApproved(report) && (
+                          <CaseFollowUpCta report={report} allReports={reports} />
                         )}
-                        {canTextBlast(report) && (
-                          <button
-                            type="button"
-                            onClick={() => handleTextBlast(report)}
-                            className="btn btn-success text-sm py-1 px-3"
-                            disabled={blastLoadingId === report.id}
-                          >
-                            {blastLoadingId === report.id ? 'Sending...' : 'Text Blast'}
-                          </button>
+                        {report.status === 'RETURNED' && report.remarks && (
+                          <p className="text-xs text-red-600 mt-1 max-w-xs truncate" title={report.remarks}>
+                            {report.remarks}
+                          </p>
                         )}
-                      </div>
-                      <ReportProgressBar progress={getReportProgress(report)} compact />
-                      {report.status === 'RETURNED' && report.remarks && (
-                        <p className="text-xs text-red-600 mt-1 max-w-xs truncate" title={report.remarks}>
-                          {report.remarks}
-                        </p>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
 
-        {reports.length > 10 && (
-          <div className="mt-4">
-            <Link
-              href="/municipal/reports"
-              className="text-bfp-red hover:underline font-semibold"
-            >
-              View All Reports ({reports.length})
-            </Link>
-          </div>
-        )}
+          {filteredReports.length > 10 && (
+            <div className="border-t border-gray-200 p-4">
+              <Link
+                href="/municipal/reports"
+                className="text-bfp-navy hover:underline font-semibold"
+              >
+                View All Reports ({filteredReports.length})
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
