@@ -8,8 +8,8 @@ import { ROLE_HOME_PATH } from '../../../lib/constants';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@bfp-benguet.gov.ph');
-  const [password, setPassword] = useState('admin@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -97,14 +97,6 @@ export default function LoginPage() {
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
-
-          <div className="border-t pt-4 text-sm text-gray-600">
-            <p className="mb-2 font-semibold">Test Credentials:</p>
-            <p><strong>Provincial Chief IIS:</strong> provincial.chief.iis@bfp-benguet.gov.ph / provchiefiis@123</p>
-            <p><strong>Investigator:</strong> investigator.atok@bfp-benguet.gov.ph / investigator@123</p>
-            <p><strong>Municipal Chief IIS:</strong> chief.iis.atok@bfp-benguet.gov.ph / chiefiis@123</p>
-            <p><strong>Municipal Fire Marshal:</strong> marshal.atok@bfp-benguet.gov.ph / marshal@123</p>
-          </div>
         </div>
       </div>
     </div>

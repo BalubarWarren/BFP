@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 import { NOTIFICATION_TYPES, ROLES } from '../../../../lib/constants';
+import { saveAttachments } from '../../../../lib/storage';
 
 const TEXT_BLAST_RECIPIENT_ROLES = [
   ROLES.MUNICIPAL_CHIEF_IIS,
@@ -11,35 +10,6 @@ const TEXT_BLAST_RECIPIENT_ROLES = [
   ROLES.MUNICIPAL_FIRE_MARSHAL,
   ROLES.PROVINCIAL_CHIEF_IIS,
 ];
-
-const sanitizeFileName = (fileName) =>
-  fileName.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_+/g, '_');
-
-const saveTextBlastAttachments = async (files) => {
-  const validFiles = files.filter((file) => file && file.size > 0);
-  if (!validFiles.length) return [];
-
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'text-blasts');
-  await mkdir(uploadDir, { recursive: true });
-
-  return Promise.all(
-    validFiles.map(async (file) => {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const storedName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${sanitizeFileName(file.name)}`;
-      const filePath = path.join(uploadDir, storedName);
-
-      await writeFile(filePath, buffer);
-
-      return {
-        name: file.name,
-        type: file.type || 'application/octet-stream',
-        size: file.size,
-        url: `/uploads/text-blasts/${storedName}`,
-      };
-    })
-  );
-};
 
 export async function POST(request) {
   try {
@@ -57,7 +27,12 @@ export async function POST(request) {
     }
 
     const formData = await request.formData();
-    const attachments = await saveTextBlastAttachments(formData.getAll('attachments'));
+    let attachments;
+    try {
+      attachments = await saveAttachments(formData.getAll('attachments'), 'text-blasts');
+    } catch (uploadError) {
+      return NextResponse.json({ error: uploadError.message }, { status: 400 });
+    }
     const note = String(formData.get('message') || '').trim();
 
     if (!attachments.length) {

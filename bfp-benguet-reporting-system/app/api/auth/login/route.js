@@ -46,17 +46,19 @@ export async function POST(request) {
       );
     }
 
-    // Check if user is active
-    if (!user.isActive) {
+    // Compare password
+    const isPasswordValid = await comparePassword(password, user.passwordHash);
+    if (!isPasswordValid) {
+      recordFailedAttempt(emailKey);
+      recordFailedAttempt(ipKey);
       return NextResponse.json(
-        { error: 'User account is inactive' },
+        { error: 'Invalid email or password' },
         { status: 401 }
       );
     }
 
-    // Compare password
-    const isPasswordValid = await comparePassword(password, user.passwordHash);
-    if (!isPasswordValid) {
+    // Checked after the password so a deactivated account's status can't be probed with a wrong password.
+    if (!user.isActive) {
       recordFailedAttempt(emailKey);
       recordFailedAttempt(ipKey);
       return NextResponse.json(
@@ -86,7 +88,7 @@ export async function POST(request) {
   } catch (error) {
     console.error('Login error:', error.message, error.stack);
     return NextResponse.json(
-      { error: error.message || 'Login failed' },
+      { error: 'Login failed. Please try again.' },
       { status: 500 }
     );
   }

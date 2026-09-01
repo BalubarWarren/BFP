@@ -58,14 +58,27 @@ async function checkCaseFollowUps() {
   let finalWarningCreated = 0;
   let finalOverdueCreated = 0;
 
+  const incidentIds = finallyApprovedSpotReports.map((r) => r.incidentId);
+  const allCaseReports = incidentIds.length
+    ? await prisma.report.findMany({
+        where: {
+          incidentId: { in: incidentIds },
+          reportType: { in: ['PROGRESS_INVESTIGATION', 'FINAL_INVESTIGATION'] },
+        },
+      })
+    : [];
+  const caseReportsByIncident = new Map();
+  for (const report of allCaseReports) {
+    if (!caseReportsByIncident.has(report.incidentId)) {
+      caseReportsByIncident.set(report.incidentId, []);
+    }
+    caseReportsByIncident.get(report.incidentId).push(report);
+  }
+
   for (const spotReport of finallyApprovedSpotReports) {
-    const caseReports = await prisma.report.findMany({
-      where: {
-        incidentId: spotReport.incidentId,
-        id: { not: spotReport.id },
-        reportType: { in: ['PROGRESS_INVESTIGATION', 'FINAL_INVESTIGATION'] },
-      },
-    });
+    const caseReports = (caseReportsByIncident.get(spotReport.incidentId) || []).filter(
+      (r) => r.id !== spotReport.id
+    );
 
     const hasFinalSubmitted = caseReports.some(
       (r) => r.reportType === 'FINAL_INVESTIGATION' && r.status !== 'DRAFT'
