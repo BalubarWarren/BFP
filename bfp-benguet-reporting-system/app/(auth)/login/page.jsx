@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import BFPCrest from '@/components/common/BFPCrest';
-import { ROLE_HOME_PATH } from '@/lib/constants';
+import BFPCrest from '../../../components/common/BFPCrest';
+import { ROLE_HOME_PATH } from '../../../lib/constants';
 
 export default function LoginPage() {
   const router = useRouter();

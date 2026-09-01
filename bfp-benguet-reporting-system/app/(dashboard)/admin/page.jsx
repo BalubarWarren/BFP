@@ -3,9 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Undo2, Check, CheckCircle2, MapPin, User, Calendar, Tag, ChevronUp, ChevronDown } from 'lucide-react';
-import StatusBadge from '@/components/common/StatusBadge';
-import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
-import { formatDateTime, isAuthError } from '@/lib/utils';
+import StatusBadge from '../../../components/common/StatusBadge';
+import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
+import { formatDateTime, isAuthError } from '../../../lib/utils';
 
 const ROLE_LABELS = {
   INVESTIGATOR: 'Investigator',
