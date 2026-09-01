@@ -4,6 +4,10 @@ import { getUserFromRequest } from '../../../lib/auth';
 import { ROLES } from '../../../lib/constants';
 import generateIncidentReference from '../../../lib/incident-reference';
 
+// Safety cap on list results — orderBy is already createdAt desc, so this returns the most
+// recent incidents rather than silently truncating in an unpredictable order.
+const MAX_LIST_RESULTS = 200;
+
 export async function GET(request) {
   try {
     const user = await getUserFromRequest(request);
@@ -38,6 +42,7 @@ export async function GET(request) {
       orderBy: {
         createdAt: 'desc',
       },
+      take: MAX_LIST_RESULTS,
     });
 
     return NextResponse.json({ incidents });

@@ -47,6 +47,8 @@ model User {
   notifications        Notification[]
   annotations          Annotation[]
 
+  // Matches how /api/reports resolves the recipient for a role within a municipality
+  @@index([role, municipalityId])
   @@map("users")
 }
 
@@ -80,6 +82,10 @@ model Incident {
 
   reports               Report[] @relation("IncidentReports")
 
+  @@index([municipalityId])
+  @@index([createdById])
+  @@index([generalCategory])
+  @@index([dateOfIncident])
   @@map("incidents")
 }
 
@@ -124,6 +130,17 @@ model Report {
   notifications     Notification[]
   annotations       Annotation[]
 
+  @@index([submittedById])
+  @@index([passedToId])
+  @@index([passedToRole])
+  @@index([reviewedById])
+  @@index([municipalityId])
+  @@index([incidentId])
+  @@index([status])
+  @@index([category])
+  // Matches the provincial monitoring board's hot, frequently-polled query
+  // (reportType + reportDate range, filtered further by passedToRole)
+  @@index([reportType, reportDate])
   @@map("reports")
 }
 
@@ -144,6 +161,8 @@ model DailyReportEntry {
 
   createdAt               DateTime @default(now())
 
+  @@index([municipalityId])
+  @@index([reportDate])
   @@map("daily_report_entries")
 }
 
@@ -161,6 +180,9 @@ model Notification {
 
   createdAt DateTime @default(now())
 
+  // Matches GET /api/notifications (where userId, orderBy createdAt desc)
+  @@index([userId, createdAt])
+  @@index([reportId])
   @@map("notifications")
 }
 
@@ -179,6 +201,8 @@ model Annotation {
 
   createdAt     DateTime @default(now())
 
+  @@index([reportId])
+  @@index([authorId])
   @@map("annotations")
 }
 
@@ -190,5 +214,8 @@ model AuditLog {
   changes   String? // JSON stored as string
   createdAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([reportId])
+  @@index([createdAt])
   @@map("audit_logs")
 }

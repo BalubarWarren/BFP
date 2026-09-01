@@ -7,6 +7,10 @@ import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '../../../lib/constants
 import generateIncidentReference from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
 
+// Safety cap on list results — orderBy is already createdAt desc, so this returns the most
+// recent reports rather than silently truncating in an unpredictable order.
+const MAX_LIST_RESULTS = 200;
+
 const INVESTIGATION_REPORT_TYPES = [
   'MDFIR',
   'SPOT_INVESTIGATION',
@@ -231,6 +235,7 @@ export async function GET(request) {
       orderBy: {
         createdAt: 'desc',
       },
+      take: MAX_LIST_RESULTS,
     });
 
     const demoReports = filterDemoReports(
