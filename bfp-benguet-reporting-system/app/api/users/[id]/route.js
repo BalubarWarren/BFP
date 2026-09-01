@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromRequest, hashPassword } from '@/lib/auth';
-import { ROLES } from '@/lib/constants';
+import prisma from '../../../../lib/prisma';
+import { getUserFromRequest, hashPassword } from '../../../../lib/auth';
+import { ROLES } from '../../../../lib/constants';
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 

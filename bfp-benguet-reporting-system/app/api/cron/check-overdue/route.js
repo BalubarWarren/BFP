@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { runOverdueCheck } from '@/lib/check-overdue-reports';
+import { runOverdueCheck } from '../../../../lib/check-overdue-reports';
 
 export async function POST(request) {
   const authHeader = request.headers.get('authorization') || '';

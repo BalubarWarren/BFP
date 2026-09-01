@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ROLE_HOME_PATH } from '@/lib/constants';
+import { ROLE_HOME_PATH } from '../lib/constants';
 
 export default function Home() {
   const router = useRouter();

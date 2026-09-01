@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { FileEdit, ClipboardList, Send } from 'lucide-react';
-import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '@/lib/constants';
-import AttachmentInput from '@/components/reports/AttachmentInput';
+import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
+import AttachmentInput from '../../../../../components/reports/AttachmentInput';
 
 export default function MinimalDamageFireIncidentReportForm() {
   const router = useRouter();

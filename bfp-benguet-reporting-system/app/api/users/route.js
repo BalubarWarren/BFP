@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromRequest, hashPassword } from '@/lib/auth';
-import { ROLES } from '@/lib/constants';
-import { sendEmail, welcomeAccountEmail } from '@/lib/email';
+import prisma from '../../../lib/prisma';
+import { getUserFromRequest, hashPassword } from '../../../lib/auth';
+import { ROLES } from '../../../lib/constants';
+import { sendEmail, welcomeAccountEmail } from '../../../lib/email';
 
 const formatRoleLabel = (role) =>
   role.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());

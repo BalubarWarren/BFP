@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { FileEdit, Search, Clock, CheckCircle2, MessageSquare, FileText } from 'lucide-react';
-import StatusBadge from '@/components/common/StatusBadge';
-import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
-import { useToast } from '@/components/common/ToastProvider';
-import { formatDateTime, isAuthError } from '@/lib/utils';
-import ReportProgressBar, { getReportProgress } from '@/components/reports/ReportProgressBar';
-import AttachmentList from '@/components/reports/AttachmentList';
-import CaseFollowUpCta from '@/components/reports/CaseFollowUpCta';
+import StatusBadge from '../../../components/common/StatusBadge';
+import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
+import { useToast } from '../../../components/common/ToastProvider';
+import { formatDateTime, isAuthError } from '../../../lib/utils';
+import ReportProgressBar, { getReportProgress } from '../../../components/reports/ReportProgressBar';
+import AttachmentList from '../../../components/reports/AttachmentList';
+import CaseFollowUpCta from '../../../components/reports/CaseFollowUpCta';
 
 export default function MunicipalDashboard() {
   const toast = useToast();

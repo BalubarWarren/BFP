@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
-import { ROLES } from '@/lib/constants';
-import generateIncidentReference from '@/lib/incident-reference';
+import prisma from '../../../lib/prisma';
+import { getUserFromRequest } from '../../../lib/auth';
+import { ROLES } from '../../../lib/constants';
+import generateIncidentReference from '../../../lib/incident-reference';
 
 export async function GET(request) {
   try {

@@ -2,10 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import Sidebar from '@/components/common/Sidebar';
-import Header from '@/components/common/Header';
-import { ToastProvider } from '@/components/common/ToastProvider';
-import { ROLE_HOME_PATH, isRouteAllowedForRole } from '@/lib/constants';
+import Sidebar from '../../components/common/Sidebar';
+import Header from '../../components/common/Header';
+import { ToastProvider } from '../../components/common/ToastProvider';
+import { ROLE_HOME_PATH, isRouteAllowedForRole } from '../../lib/constants';
 
 export default function DashboardLayout({ children }) {
   const router = useRouter();

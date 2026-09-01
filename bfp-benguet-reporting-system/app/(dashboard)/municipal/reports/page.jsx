@@ -4,12 +4,12 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
 import { FileText } from 'lucide-react';
-import StatusBadge from '@/components/common/StatusBadge';
-import { useToast } from '@/components/common/ToastProvider';
-import { formatDateTime } from '@/lib/utils';
-import ReportProgressBar, { getReportProgress } from '@/components/reports/ReportProgressBar';
-import AttachmentList from '@/components/reports/AttachmentList';
-import CaseFollowUpCta from '@/components/reports/CaseFollowUpCta';
+import StatusBadge from '../../../../components/common/StatusBadge';
+import { useToast } from '../../../../components/common/ToastProvider';
+import { formatDateTime } from '../../../../lib/utils';
+import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
+import AttachmentList from '../../../../components/reports/AttachmentList';
+import CaseFollowUpCta from '../../../../components/reports/CaseFollowUpCta';
 
 export default function MunicipalReportsPage() {
   const toast = useToast();

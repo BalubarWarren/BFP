@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Search, ClipboardList, Send, MessageSquare } from 'lucide-react';
-import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '@/lib/constants';
-import AttachmentInput from '@/components/reports/AttachmentInput';
+import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
+import AttachmentInput from '../../../../../components/reports/AttachmentInput';
 
 export default function SpotInvestigationForm() {
   const router = useRouter();

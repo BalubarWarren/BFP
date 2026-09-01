@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { AlertTriangle } from 'lucide-react';
-import { useToast } from '@/components/common/ToastProvider';
-import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '@/lib/constants';
+import { useToast } from '../../../../../components/common/ToastProvider';
+import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
 
 export default function InitialReportForm() {
   const router = useRouter();

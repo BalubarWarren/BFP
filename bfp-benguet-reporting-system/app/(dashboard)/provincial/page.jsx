@@ -2,16 +2,16 @@
 
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { formatDate, isAuthError } from '@/lib/utils';
-import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
-import StatusBadge from '@/components/common/StatusBadge';
+import { formatDate, isAuthError } from '../../../lib/utils';
+import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
+import StatusBadge from '../../../components/common/StatusBadge';
 import {
   MoreVertical, Printer, Download, X, Home, Building2, TreePine, Truck,
   LayoutGrid, MapPin, Inbox, FileSearch,
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { CATEGORY_CHART_COLORS } from '@/lib/constants';
+import { CATEGORY_CHART_COLORS } from '../../../lib/constants';
 import {
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,

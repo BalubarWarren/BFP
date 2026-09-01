@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
-import { NOTIFICATION_TYPES, REPORT_STATUS, REPORT_TYPES, ROLES } from '@/lib/constants';
+import prisma from '../../../../../lib/prisma';
+import { getUserFromRequest } from '../../../../../lib/auth';
+import { NOTIFICATION_TYPES, REPORT_STATUS, REPORT_TYPES, ROLES } from '../../../../../lib/constants';
 
 const TEXT_BLAST_RECIPIENT_ROLES = [
   ROLES.MUNICIPAL_CHIEF_IIS,

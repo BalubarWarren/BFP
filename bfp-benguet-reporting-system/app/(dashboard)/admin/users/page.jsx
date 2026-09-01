@@ -3,9 +3,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { UserPlus, Pencil, Power } from 'lucide-react';
-import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
-import { useToast } from '@/components/common/ToastProvider';
-import { isAuthError } from '@/lib/utils';
+import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
+import { useToast } from '../../../../components/common/ToastProvider';
+import { isAuthError } from '../../../../lib/utils';
 
 const ROLE_OPTIONS = [
   { value: 'INVESTIGATOR', label: 'Investigator' },

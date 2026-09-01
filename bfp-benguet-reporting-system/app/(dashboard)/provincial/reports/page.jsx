@@ -3,11 +3,11 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Flame } from 'lucide-react';
-import StatusBadge from '@/components/common/StatusBadge';
-import SessionExpiredBanner from '@/components/common/SessionExpiredBanner';
-import { useToast } from '@/components/common/ToastProvider';
-import { formatDateTime, isAuthError } from '@/lib/utils';
-import AttachmentList from '@/components/reports/AttachmentList';
+import StatusBadge from '../../../../components/common/StatusBadge';
+import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
+import { useToast } from '../../../../components/common/ToastProvider';
+import { formatDateTime, isAuthError } from '../../../../lib/utils';
+import AttachmentList from '../../../../components/reports/AttachmentList';
 
 export default function ProvincialReportsPage() {
   const toast = useToast();

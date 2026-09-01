@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
+import prisma from '../../../lib/prisma';
+import { getUserFromRequest } from '../../../lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
-import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '@/lib/constants';
-import generateIncidentReference from '@/lib/incident-reference';
-import { filterDemoReports, getDemoReportsForUser } from '@/lib/demo-reports';
+import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '../../../lib/constants';
+import generateIncidentReference from '../../../lib/incident-reference';
+import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
 
 const INVESTIGATION_REPORT_TYPES = [
   'MDFIR',

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
-import { ROLES } from '@/lib/constants';
+import prisma from '../../../../../lib/prisma';
+import { getUserFromRequest } from '../../../../../lib/auth';
+import { ROLES } from '../../../../../lib/constants';
 
 const MUNICIPAL_REVIEWER_ROLES = [
   ROLES.MUNICIPAL_CHIEF_IIS,

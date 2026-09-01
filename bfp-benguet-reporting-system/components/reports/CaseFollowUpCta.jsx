@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRight, Clock, CheckCircle2 } from 'lucide-react';
-import { getCaseFollowUp } from '@/lib/report-workflow';
+import { getCaseFollowUp } from '../../lib/report-workflow';
 
 // Shown under a finally-approved Spot or Progress Investigation report row so the investigator
 // can move the case forward. These render as real buttons (not text links) — easy to mistake

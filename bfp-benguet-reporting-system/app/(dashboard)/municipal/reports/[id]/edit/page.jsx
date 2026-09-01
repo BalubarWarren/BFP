@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import StatusBadge from '@/components/common/StatusBadge';
+import StatusBadge from '../../../../../../components/common/StatusBadge';
 
 export default function EditReturnedReportPage() {
   const router = useRouter();

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { comparePassword, generateToken } from '@/lib/auth';
-import { checkRateLimit, recordFailedAttempt, clearAttempts, getClientIp } from '@/lib/rate-limit';
+import prisma from '../../../../lib/prisma';
+import { comparePassword, generateToken } from '../../../../lib/auth';
+import { checkRateLimit, recordFailedAttempt, clearAttempts, getClientIp } from '../../../../lib/rate-limit';
 
 export async function POST(request) {
   try {

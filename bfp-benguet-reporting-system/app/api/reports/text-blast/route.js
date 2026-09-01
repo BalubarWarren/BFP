@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
+import prisma from '../../../../lib/prisma';
+import { getUserFromRequest } from '../../../../lib/auth';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
-import { NOTIFICATION_TYPES, ROLES } from '@/lib/constants';
+import { NOTIFICATION_TYPES, ROLES } from '../../../../lib/constants';
 
 const TEXT_BLAST_RECIPIENT_ROLES = [
   ROLES.MUNICIPAL_CHIEF_IIS,

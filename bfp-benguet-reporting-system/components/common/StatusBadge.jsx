@@ -1,6 +1,6 @@
 'use client';
 
-import { getStatusColor } from '@/lib/utils';
+import { getStatusColor } from '../../lib/utils';
 
 export default function StatusBadge({ status, className = '' }) {
   const colorClass = getStatusColor(status);

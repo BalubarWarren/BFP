@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
-import { getUserFromRequest } from '@/lib/auth';
-import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS } from '@/lib/constants';
-import { getDemoReportById, isDemoReportId } from '@/lib/demo-reports';
+import prisma from '../../../../lib/prisma';
+import { getUserFromRequest } from '../../../../lib/auth';
+import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
+import { getDemoReportById, isDemoReportId } from '../../../../lib/demo-reports';
 
 const MUNICIPAL_REVIEWER_ROLES = [
   ROLES.MUNICIPAL_CHIEF_IIS,

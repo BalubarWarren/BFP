@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Home, Building2, Trees, Car, FileBarChart } from 'lucide-react';
-import { useToast } from '@/components/common/ToastProvider';
+import { useToast } from '../../../../../components/common/ToastProvider';
 
 export default function DailyReportForm() {
   const router = useRouter();
