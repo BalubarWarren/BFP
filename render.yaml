@@ -37,11 +37,15 @@ services:
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false # Secret — Project Settings > API > service_role in the Supabase dashboard
 
-  # Runs daily and just curls the web service's own endpoint rather than querying the database
+  # Runs daily and just curls the web app's own endpoint rather than querying the database
   # directly. This was originally required because Cron Job services get an isolated filesystem
   # and couldn't see the web service's local SQLite file; now that the database is Postgres
   # (network-accessible from anywhere), this indirection isn't strictly necessary anymore, but the
   # pattern still works fine as-is. See app/api/cron/check-overdue/route.js.
+  # Target moved from the Render web service to Vercel (bfp-gamma.vercel.app) since the app itself
+  # is now hosted there — Render's free web service sleeps after 15 min idle, which isn't
+  # acceptable for a system meant to be reachable 24/7. This cron job is the one piece kept on
+  # Render, since it needs nothing more than the ability to fire an HTTP request on a schedule.
   - type: cron
     name: bfp-overdue-report-check
     runtime: image
@@ -52,5 +56,5 @@ services:
     envVarGroups:
       - cron-secret
     dockerCommand: >-
-      curl -fsS -X POST https://bfp-benguet-reporting-system.onrender.com/api/cron/check-overdue
+      curl -fsS -X POST https://bfp-gamma.vercel.app/api/cron/check-overdue
       -H "Authorization: Bearer $CRON_SECRET"
