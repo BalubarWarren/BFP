@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
 import { getUserFromRequest } from '../../../lib/auth';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
 import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '../../../lib/constants';
 import generateIncidentReference from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
+import { saveAttachments } from '../../../lib/storage';
 
 // Safety cap on list results — orderBy is already createdAt desc, so this returns the most
 // recent reports rather than silently truncating in an unpredictable order.
@@ -45,35 +44,6 @@ const parseJsonField = (value, fallback = {}) => {
   } catch {
     return fallback;
   }
-};
-
-const sanitizeFileName = (fileName) =>
-  fileName.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_+/g, '_');
-
-const saveReportAttachments = async (files) => {
-  const validFiles = files.filter((file) => file && file.size > 0);
-  if (!validFiles.length) return [];
-
-  const uploadDir = path.join(process.cwd(), 'public', 'uploads', 'reports');
-  await mkdir(uploadDir, { recursive: true });
-
-  return Promise.all(
-    validFiles.map(async (file) => {
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const storedName = `${Date.now()}-${Math.random().toString(36).slice(2)}-${sanitizeFileName(file.name)}`;
-      const filePath = path.join(uploadDir, storedName);
-
-      await writeFile(filePath, buffer);
-
-      return {
-        name: file.name,
-        type: file.type || 'application/octet-stream',
-        size: file.size,
-        url: `/uploads/reports/${storedName}`,
-      };
-    })
-  );
 };
 
 const getInvestigationRecipientWhere = (municipalityId) => ({
@@ -300,9 +270,17 @@ export async function POST(request) {
     const parsedMunicipalityId = parseInt(municipalityId);
     const parsedIncidentId = incidentId ? parseInt(incidentId) : null;
     const parsedContent = parseJsonField(content, {});
-    const attachments = isMultipart
-      ? await saveReportAttachments(formData.getAll('attachments'))
-      : parseJsonField(body.attachments, []);
+
+    let attachments;
+    if (isMultipart) {
+      try {
+        attachments = await saveAttachments(formData.getAll('attachments'), 'reports');
+      } catch (uploadError) {
+        return NextResponse.json({ error: uploadError.message }, { status: 400 });
+      }
+    } else {
+      attachments = parseJsonField(body.attachments, []);
+    }
 
     // Validate required fields
     if (!reportType || !municipalityId || !reportDate) {

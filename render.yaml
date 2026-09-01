@@ -32,6 +32,10 @@ services:
         sync: false
       - key: EMAIL_FROM
         value: "BFP Benguet Reporting <onboarding@resend.dev>"
+      - key: SUPABASE_URL
+        sync: false # Set manually in the Render dashboard — same Supabase project as DATABASE_URL
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false # Secret — Project Settings > API > service_role in the Supabase dashboard
 
   # Runs daily and just curls the web service's own endpoint rather than querying the database
   # directly. This was originally required because Cron Job services get an isolated filesystem
