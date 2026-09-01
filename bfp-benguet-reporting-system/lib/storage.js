@@ -1,8 +1,21 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-});
+// Created lazily on first actual use, not at module load — Next.js's build imports route modules
+// to collect page data, and constructing the client eagerly threw "supabaseUrl is required"
+// during the build whenever the env vars weren't available at build time (same class of issue as
+// the JWT_SECRET fail-fast check; see lib/auth.js).
+let _supabase = null;
+function getSupabaseClient() {
+  if (!_supabase) {
+    if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY environment variables are required but not set.');
+    }
+    _supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  }
+  return _supabase;
+}
 
 const BUCKET = 'report-attachments';
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB — matches the bucket's own configured limit
@@ -29,6 +42,8 @@ export async function saveAttachments(files, folder) {
   if (disallowed) {
     throw new Error(`"${disallowed.name}" has an unsupported file type. Only images and PDFs are allowed.`);
   }
+
+  const supabase = getSupabaseClient();
 
   return Promise.all(
     validFiles.map(async (file) => {
