@@ -70,6 +70,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
+    if (ADMIN_ROLES.includes(role) && user.role !== ROLES.SUPER_ADMIN) {
+      return NextResponse.json(
+        { error: 'Only a Super Admin can create Admin or Super Admin accounts' },
+        { status: 403 }
+      );
+    }
+
     if (password.length < 8) {
       return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
     }

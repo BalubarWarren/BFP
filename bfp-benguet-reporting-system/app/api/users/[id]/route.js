@@ -50,6 +50,15 @@ export async function PATCH(request, { params }) {
       return NextResponse.json({ error: 'Invalid role' }, { status: 400 });
     }
 
+    const isTargetAdminTier = ADMIN_ROLES.includes(existingUser.role);
+    const isAssigningAdminTier = role !== undefined && ADMIN_ROLES.includes(role);
+    if ((isTargetAdminTier || isAssigningAdminTier) && user.role !== ROLES.SUPER_ADMIN) {
+      return NextResponse.json(
+        { error: 'Only a Super Admin can manage Admin or Super Admin accounts' },
+        { status: 403 }
+      );
+    }
+
     const effectiveRole = role || existingUser.role;
     const effectiveMunicipalityId = municipalityId !== undefined
       ? (municipalityId ? parseInt(municipalityId) : null)
