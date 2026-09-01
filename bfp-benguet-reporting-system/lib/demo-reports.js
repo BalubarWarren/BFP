@@ -1128,7 +1128,13 @@ function generateDemoReportsForMunicipality(cfg, currentUser) {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-export const isDemoReportId = (id) => Number(id) < 0;
+// Off by default everywhere, including production, unless explicitly opted into (e.g. for a local
+// sales/UI demo) — this generator fabricates realistic-looking incidents keyed to email patterns
+// like investigator.<municipality-code>@..., which real accounts could plausibly also use, so it
+// must never silently inject fake incident data into a real user's report list.
+const DEMO_DATA_ENABLED = process.env.ENABLE_DEMO_DATA === 'true';
+
+export const isDemoReportId = (id) => DEMO_DATA_ENABLED && Number(id) < 0;
 
 const PROVINCIAL_ROLES = [
   ROLES.PROVINCIAL_CHIEF_IIS,
@@ -1137,6 +1143,7 @@ const PROVINCIAL_ROLES = [
 ];
 
 export function getDemoReportsForUser(user) {
+  if (!DEMO_DATA_ENABLED) return [];
   if (!user) return [];
 
   const munCode = getMunCodeFromUser(user);
