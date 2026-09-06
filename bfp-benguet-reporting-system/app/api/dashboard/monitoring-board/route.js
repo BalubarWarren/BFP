@@ -14,6 +14,19 @@ const CATEGORY_FIELD_MAP = {
 // reached the province level — not while it's still sitting with a municipal reviewer.
 const PROVINCIAL_REVIEWER_ROLES = [ROLES.PROVINCIAL_CHIEF_IIS, ROLES.MARSHAL, ROLES.CHIEF_INVESTIGATOR_IIS];
 
+const emptySubCategories = () => ({ residential: {}, nonResidential: {}, nonStructural: {}, transport: {} });
+
+// Spot Investigation reports carry their sub-category on the linked Incident; MDFIR reports don't
+// create an Incident at all, so theirs only lives inside the stored content JSON.
+const getReportSubCategory = (report) => {
+  if (report.incident?.subCategory) return report.incident.subCategory;
+  try {
+    return JSON.parse(report.content || '{}').subCategory || null;
+  } catch {
+    return null;
+  }
+};
+
 export async function GET(request) {
   try {
     const user = await getUserFromRequest(request);
@@ -94,6 +107,7 @@ export async function GET(request) {
         transport: 0,
         total: 0,
         lastUpdated: null,
+        subCategories: emptySubCategories(),
       };
     });
 
@@ -111,6 +125,7 @@ export async function GET(request) {
           transport: 0,
           total: 0,
           lastUpdated: entry.reportDate,
+          subCategories: emptySubCategories(),
         };
       }
       monitoringData[munName].residential += entry.residentialCount;
@@ -139,12 +154,18 @@ export async function GET(request) {
           transport: 0,
           total: 0,
           lastUpdated: null,
+          subCategories: emptySubCategories(),
         };
       }
       monitoringData[munName][field] += 1;
       monitoringData[munName].total += 1;
       if (!monitoringData[munName].lastUpdated || report.reportDate > monitoringData[munName].lastUpdated) {
         monitoringData[munName].lastUpdated = report.reportDate;
+      }
+
+      const sub = getReportSubCategory(report);
+      if (sub) {
+        monitoringData[munName].subCategories[field][sub] = (monitoringData[munName].subCategories[field][sub] || 0) + 1;
       }
     });
 
@@ -179,10 +200,10 @@ export async function GET(request) {
     // Sub-category tallies, province-wide, per general category — only sub-categories an
     // investigator actually reported appear here (e.g. a category with only "Grass" reports
     // this period won't list "Forest" or "Rubbish" at all, let alone at zero).
-    const subCategoryTotals = { residential: {}, nonResidential: {}, nonStructural: {}, transport: {} };
+    const subCategoryTotals = emptySubCategories();
     spotReports.forEach((report) => {
       const field = CATEGORY_FIELD_MAP[report.category];
-      const sub = report.incident?.subCategory;
+      const sub = getReportSubCategory(report);
       if (!field || !sub) return;
       subCategoryTotals[field][sub] = (subCategoryTotals[field][sub] || 0) + 1;
     });

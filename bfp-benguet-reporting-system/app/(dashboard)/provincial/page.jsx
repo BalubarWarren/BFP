@@ -718,44 +718,87 @@ export default function ProvincialDashboard() {
             {/* Per-municipality breakdown */}
             {(boardTab === 'current' ? monitoringBoard : histData).length === 0 ? (
               <p className="text-gray-400 text-center py-6">No incident data recorded for this period.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>Municipality</th>
-                      <th className="text-right">Residential</th>
-                      <th className="text-right">Non-Residential</th>
-                      <th className="text-right">Non-Structural</th>
-                      <th className="text-right">Transport</th>
-                      <th className="text-right font-bold">Total</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(boardTab === 'current' ? monitoringBoard : histData).map((row) => (
-                      <tr key={row.code}>
-                        <td className="font-semibold">{row.municipality}</td>
-                        <td className="text-right">{row.residential}</td>
-                        <td className="text-right">{row.nonResidential}</td>
-                        <td className="text-right">{row.nonStructural}</td>
-                        <td className="text-right">{row.transport}</td>
-                        <td className="text-right font-bold text-bfp-red">{row.total}</td>
+            ) : (() => {
+              const rows = boardTab === 'current' ? monitoringBoard : histData;
+              const rowTotals = boardTab === 'current' ? totals : histTotals;
+              const activeSubTotals = boardTab === 'current' ? subCategoryTotals : histSubCategoryTotals;
+              const FIELD_LABELS = { residential: 'Residential', nonResidential: 'Non-Residential', nonStructural: 'Non-Structural', transport: 'Transport' };
+              const fieldOrder = ['residential', 'nonResidential', 'nonStructural', 'transport'];
+
+              // Only sub-categories with a nonzero count anywhere this period get their own column —
+              // matches the tiles above. A field with none of its own stays a single plain column.
+              const subKeysByField = {};
+              fieldOrder.forEach((field) => {
+                subKeysByField[field] = showSubCategories
+                  ? Object.entries(activeSubTotals[field] || {}).sort((a, b) => b[1] - a[1]).map(([sub]) => sub)
+                  : [];
+              });
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th rowSpan={2}>Municipality</th>
+                        {fieldOrder.map((field) =>
+                          subKeysByField[field].length > 0 ? (
+                            <th key={field} colSpan={subKeysByField[field].length} className="text-center">
+                              {FIELD_LABELS[field]}
+                            </th>
+                          ) : (
+                            <th key={field} rowSpan={2} className="text-right">{FIELD_LABELS[field]}</th>
+                          )
+                        )}
+                        <th rowSpan={2} className="text-right font-bold">Total</th>
                       </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-gray-100 font-bold">
-                      <td>TOTAL</td>
-                      <td className="text-right">{(boardTab === 'current' ? totals.residential : histTotals.residential) || 0}</td>
-                      <td className="text-right">{(boardTab === 'current' ? totals.nonResidential : histTotals.nonResidential) || 0}</td>
-                      <td className="text-right">{(boardTab === 'current' ? totals.nonStructural : histTotals.nonStructural) || 0}</td>
-                      <td className="text-right">{(boardTab === 'current' ? totals.transport : histTotals.transport) || 0}</td>
-                      <td className="text-right text-bfp-red text-lg">{(boardTab === 'current' ? totals.total : histTotals.total) || 0}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
-            )}
+                      <tr>
+                        {fieldOrder.flatMap((field) =>
+                          subKeysByField[field].map((sub) => (
+                            <th key={`${field}-${sub}`} className="text-right text-xs font-normal text-gray-500">{sub}</th>
+                          ))
+                        )}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row) => (
+                        <tr key={row.code}>
+                          <td className="font-semibold">{row.municipality}</td>
+                          {fieldOrder.flatMap((field) => {
+                            const subKeys = subKeysByField[field];
+                            if (subKeys.length > 0) {
+                              return subKeys.map((sub) => (
+                                <td key={`${row.code}-${field}-${sub}`} className="text-right">
+                                  {row.subCategories?.[field]?.[sub] || 0}
+                                </td>
+                              ));
+                            }
+                            return [<td key={`${row.code}-${field}`} className="text-right">{row[field]}</td>];
+                          })}
+                          <td className="text-right font-bold text-bfp-red">{row.total}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="bg-gray-100 font-bold">
+                        <td>TOTAL</td>
+                        {fieldOrder.flatMap((field) => {
+                          const subKeys = subKeysByField[field];
+                          if (subKeys.length > 0) {
+                            return subKeys.map((sub) => (
+                              <td key={`total-${field}-${sub}`} className="text-right">
+                                {activeSubTotals[field]?.[sub] || 0}
+                              </td>
+                            ));
+                          }
+                          return [<td key={`total-${field}`} className="text-right">{rowTotals[field] || 0}</td>];
+                        })}
+                        <td className="text-right text-bfp-red text-lg">{rowTotals.total || 0}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              );
+            })()}
           </>
         )}
       </div>
