@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
+import { Undo2, Send, ShieldCheck, Flame } from 'lucide-react';
 import StatusBadge from '../../../../../../components/common/StatusBadge';
 
 const ROLE_LABELS = {
@@ -12,14 +13,21 @@ const ROLE_LABELS = {
   PROVINCIAL_CHIEF_IIS: 'Provincial Chief IIS',
 };
 
-// Same escalation chain the "forward an approved report" flow uses — who comes after
-// whoever returned this one, so the investigator can skip straight ahead instead of
-// only ever bouncing back to the same reviewer.
-const NEXT_ROLE_AFTER = {
-  MUNICIPAL_CHIEF_IIS: 'MUNICIPAL_FIRE_MARSHAL',
-  MUNICIPAL_CHIEF_OPERATION: 'MUNICIPAL_FIRE_MARSHAL',
-  MUNICIPAL_FIRE_MARSHAL: 'PROVINCIAL_CHIEF_IIS',
-};
+// Who the investigator can forward a corrected report to, aside from returning it to whoever sent it back.
+const SUBMIT_TARGETS = [
+  {
+    value: 'MUNICIPAL_FIRE_MARSHAL',
+    label: 'Municipal Fire Marshal',
+    description: 'Final municipal review before it goes to the province.',
+    icon: Flame,
+  },
+  {
+    value: 'PROVINCIAL_CHIEF_IIS',
+    label: 'Provincial Chief IIS',
+    description: 'Provincial-level review.',
+    icon: ShieldCheck,
+  },
+];
 
 const roleLabel = (role) => ROLE_LABELS[role] || role?.replace(/_/g, ' ') || 'the reviewer';
 
@@ -30,6 +38,8 @@ export default function EditReturnedReportPage() {
   const [error, setError] = useState('');
   const [corrections, setCorrections] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showSubmitPicker, setShowSubmitPicker] = useState(false);
+  const [submitTarget, setSubmitTarget] = useState('MUNICIPAL_FIRE_MARSHAL');
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -53,7 +63,6 @@ export default function EditReturnedReportPage() {
   }, []);
 
   const returnedByRole = report?.reviewedBy?.role;
-  const nextRole = returnedByRole ? NEXT_ROLE_AFTER[returnedByRole] : null;
 
   const resubmit = async (passedToRole) => {
     setSubmitting(true);
@@ -91,15 +100,15 @@ export default function EditReturnedReportPage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-bfp-navy mb-4">← Back</button>
+      <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-bfp-navy mb-4 transition-colors">← Back</button>
       <h1 className="text-2xl font-bold text-bfp-navy mb-2">Edit Returned Report</h1>
       <p className="text-gray-600 mb-4">Status: <StatusBadge status={report.status} /></p>
 
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-lg font-bold mb-4">Address Corrections</h2>
-        <div className="space-y-4">
+      <div className="bg-white rounded-xl shadow-md p-6">
+        <h2 className="text-lg font-bold text-bfp-navy mb-4">Address Corrections</h2>
+        <div className="space-y-5">
           <div>
             <label className="form-label">Original Remarks from Reviewer</label>
             <div className="p-3 bg-red-50 border-l-4 border-red-400 rounded text-sm text-red-700">{report.remarks || '—'}</div>
@@ -110,33 +119,103 @@ export default function EditReturnedReportPage() {
             <textarea value={corrections} onChange={(e) => setCorrections(e.target.value)} rows={6} className="form-input" />
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={() => resubmit(null)}
-              disabled={submitting}
-              className="btn btn-secondary"
-            >
-              ↩ Return to {roleLabel(returnedByRole)}
-            </button>
-            {nextRole && (
+          <div className="border-t border-gray-100 pt-5">
+            <p className="text-sm font-semibold text-gray-700 mb-3">What would you like to do?</p>
+            <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => resubmit(nextRole)}
+                onClick={() => resubmit(null)}
                 disabled={submitting}
-                className="btn btn-primary"
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
-                → Submit to {roleLabel(nextRole)}
+                <Undo2 className="h-4 w-4" />
+                Return to {roleLabel(returnedByRole)}
               </button>
-            )}
-            <button type="button" onClick={() => router.push('/municipal/reports')} className="btn btn-secondary">Cancel</button>
+              <button
+                type="button"
+                onClick={() => setShowSubmitPicker(true)}
+                disabled={submitting}
+                className="inline-flex items-center gap-2 rounded-lg bg-bfp-navy px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-bfp-navy/90 disabled:opacity-50"
+              >
+                <Send className="h-4 w-4" />
+                Submit
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push('/municipal/reports')}
+                className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-gray-500 transition-colors hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+            </div>
+            <p className="mt-3 text-xs text-gray-500">
+              <strong className="text-gray-600">Return</strong> sends your corrected report back to {roleLabel(returnedByRole)} for another look.{' '}
+              <strong className="text-gray-600">Submit</strong> lets you choose the next reviewer yourself.
+            </p>
           </div>
-          <p className="text-xs text-gray-500">
-            <strong>Return</strong> sends your corrected report back to {roleLabel(returnedByRole)} for another look.
-            {nextRole && <> <strong>Submit</strong> skips ahead to {roleLabel(nextRole)} instead, if the correction is already enough.</>}
-          </p>
         </div>
       </div>
+
+      {/* Submit — choose recipient */}
+      {showSubmitPicker && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+          onClick={() => setShowSubmitPicker(false)}
+        >
+          <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b border-gray-100 p-6">
+              <p className="text-xs font-semibold uppercase tracking-wide text-bfp-red">Submit Report</p>
+              <h2 className="text-lg font-bold text-bfp-navy">Who should receive this next?</h2>
+            </div>
+
+            <div className="space-y-2 p-6">
+              {SUBMIT_TARGETS.map((option) => {
+                const Icon = option.icon;
+                const selected = submitTarget === option.value;
+                return (
+                  <label
+                    key={option.value}
+                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
+                      selected ? 'border-bfp-navy bg-bfp-navy/5' : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="submitTarget"
+                      value={option.value}
+                      checked={selected}
+                      onChange={() => setSubmitTarget(option.value)}
+                      className="mt-1"
+                    />
+                    <Icon className="h-4 w-4 mt-0.5 text-bfp-navy flex-shrink-0" />
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-800">{option.label}</span>
+                      <span className="block text-xs text-gray-500">{option.description}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex gap-3 p-6 pt-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSubmitPicker(false);
+                  resubmit(submitTarget);
+                }}
+                disabled={submitting}
+                className="btn btn-primary px-6"
+              >
+                {submitting ? 'Submitting…' : 'Confirm & Submit'}
+              </button>
+              <button type="button" onClick={() => setShowSubmitPicker(false)} className="btn btn-secondary px-6">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
