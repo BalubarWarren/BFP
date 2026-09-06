@@ -5,12 +5,23 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import StatusBadge from '../../../../../../components/common/StatusBadge';
 
-const RECIPIENT_OPTIONS = [
-  { value: 'MUNICIPAL_CHIEF_IIS', label: 'Municipal Chief IIS' },
-  { value: 'MUNICIPAL_CHIEF_OPERATION', label: 'Municipal Chief Operation' },
-  { value: 'MUNICIPAL_FIRE_MARSHAL', label: 'Municipal Fire Marshal' },
-  { value: 'PROVINCIAL_CHIEF_IIS', label: 'Provincial Chief IIS' },
-];
+const ROLE_LABELS = {
+  MUNICIPAL_CHIEF_IIS: 'Municipal Chief IIS',
+  MUNICIPAL_CHIEF_OPERATION: 'Municipal Chief Operation',
+  MUNICIPAL_FIRE_MARSHAL: 'Municipal Fire Marshal',
+  PROVINCIAL_CHIEF_IIS: 'Provincial Chief IIS',
+};
+
+// Same escalation chain the "forward an approved report" flow uses — who comes after
+// whoever returned this one, so the investigator can skip straight ahead instead of
+// only ever bouncing back to the same reviewer.
+const NEXT_ROLE_AFTER = {
+  MUNICIPAL_CHIEF_IIS: 'MUNICIPAL_FIRE_MARSHAL',
+  MUNICIPAL_CHIEF_OPERATION: 'MUNICIPAL_FIRE_MARSHAL',
+  MUNICIPAL_FIRE_MARSHAL: 'PROVINCIAL_CHIEF_IIS',
+};
+
+const roleLabel = (role) => ROLE_LABELS[role] || role?.replace(/_/g, ' ') || 'the reviewer';
 
 export default function EditReturnedReportPage() {
   const router = useRouter();
@@ -18,7 +29,7 @@ export default function EditReturnedReportPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [corrections, setCorrections] = useState('');
-  const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -31,10 +42,6 @@ export default function EditReturnedReportPage() {
         setReport(res.data.report);
         const content = res.data.report?.content ? JSON.parse(res.data.report.content) : {};
         setCorrections(content.corrections || '');
-        // Default the recipient picker to whoever returned it — the investigator can change it.
-        if (res.data.report?.reviewedBy?.role) {
-          setRecipientRole(res.data.report.reviewedBy.role);
-        }
         setLoading(false);
       } catch (err) {
         setError('Failed to load report');
@@ -45,8 +52,11 @@ export default function EditReturnedReportPage() {
     fetchReport();
   }, []);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const returnedByRole = report?.reviewedBy?.role;
+  const nextRole = returnedByRole ? NEXT_ROLE_AFTER[returnedByRole] : null;
+
+  const resubmit = async (passedToRole) => {
+    setSubmitting(true);
     try {
       setError('');
       const token = sessionStorage.getItem('token');
@@ -61,7 +71,8 @@ export default function EditReturnedReportPage() {
         {
           content: JSON.stringify(newContent),
           status: 'SUBMITTED',
-          passedToRole: recipientRole,
+          // Omitting passedToRole tells the server to auto-route back to whoever returned it.
+          ...(passedToRole && { passedToRole }),
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -69,6 +80,8 @@ export default function EditReturnedReportPage() {
       router.push('/municipal/reports');
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to resubmit report');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -86,7 +99,7 @@ export default function EditReturnedReportPage() {
 
       <div className="bg-white rounded-lg shadow-md p-6">
         <h2 className="text-lg font-bold mb-4">Address Corrections</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <label className="form-label">Original Remarks from Reviewer</label>
             <div className="p-3 bg-red-50 border-l-4 border-red-400 rounded text-sm text-red-700">{report.remarks || '—'}</div>
@@ -97,25 +110,32 @@ export default function EditReturnedReportPage() {
             <textarea value={corrections} onChange={(e) => setCorrections(e.target.value)} rows={6} className="form-input" />
           </div>
 
-          <div>
-            <label className="form-label">Submit To</label>
-            <select
-              value={recipientRole}
-              onChange={(e) => setRecipientRole(e.target.value)}
-              className="form-select max-w-xs"
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => resubmit(null)}
+              disabled={submitting}
+              className="btn btn-secondary"
             >
-              {RECIPIENT_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-            <p className="mt-1 text-xs text-gray-500">Defaults to whoever returned this report — change it if it should go elsewhere instead.</p>
-          </div>
-
-          <div className="flex gap-3">
-            <button type="submit" className="btn btn-primary">Resubmit Corrected Report</button>
+              ↩ Return to {roleLabel(returnedByRole)}
+            </button>
+            {nextRole && (
+              <button
+                type="button"
+                onClick={() => resubmit(nextRole)}
+                disabled={submitting}
+                className="btn btn-primary"
+              >
+                → Submit to {roleLabel(nextRole)}
+              </button>
+            )}
             <button type="button" onClick={() => router.push('/municipal/reports')} className="btn btn-secondary">Cancel</button>
           </div>
-        </form>
+          <p className="text-xs text-gray-500">
+            <strong>Return</strong> sends your corrected report back to {roleLabel(returnedByRole)} for another look.
+            {nextRole && <> <strong>Submit</strong> skips ahead to {roleLabel(nextRole)} instead, if the correction is already enough.</>}
+          </p>
+        </div>
       </div>
     </div>
   );

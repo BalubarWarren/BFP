@@ -96,3 +96,80 @@ export async function PATCH(request, { params }) {
     return NextResponse.json({ error: 'Failed to update user' }, { status: 500 });
   }
 }
+
+// Permanently removes an account (e.g. cleaning up test accounts after a testing pass).
+// `Report.submittedById` and `Incident.createdById` are required FKs with no cascade rule, so a
+// user who has ever submitted a report or created an incident can't simply be deleted — this
+// cascades their own reports/incidents/annotations instead, but refuses if one of their incidents
+// still carries reports submitted by someone else, since deleting it would sever real data that
+// isn't this user's to remove.
+export async function DELETE(request, { params }) {
+  try {
+    const user = await getUserFromRequest(request);
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    if (!ADMIN_ROLES.includes(user.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const targetId = parseInt(params.id);
+
+    if (targetId === user.id) {
+      return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { id: targetId } });
+    if (!existingUser) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    if (ADMIN_ROLES.includes(existingUser.role) && user.role !== ROLES.SUPER_ADMIN) {
+      return NextResponse.json(
+        { error: 'Only a Super Admin can delete Admin or Super Admin accounts' },
+        { status: 403 }
+      );
+    }
+
+    if (existingUser.role === ROLES.SUPER_ADMIN) {
+      const activeSuperAdmins = await prisma.user.count({
+        where: { role: ROLES.SUPER_ADMIN, isActive: true },
+      });
+      if (activeSuperAdmins <= 1) {
+        return NextResponse.json(
+          { error: 'Cannot delete the last active Super Admin account' },
+          { status: 400 }
+        );
+      }
+    }
+
+    const incidentWithForeignReport = await prisma.report.findFirst({
+      where: {
+        incident: { createdById: targetId },
+        submittedById: { not: targetId },
+      },
+      include: { incident: { select: { referenceNumber: true } } },
+    });
+
+    if (incidentWithForeignReport) {
+      return NextResponse.json(
+        {
+          error: `Cannot delete: incident ${incidentWithForeignReport.incident?.referenceNumber || '(unknown)'} created by this user has reports submitted by other users`,
+        },
+        { status: 409 }
+      );
+    }
+
+    await prisma.$transaction([
+      prisma.annotation.deleteMany({ where: { authorId: targetId } }),
+      prisma.report.deleteMany({ where: { submittedById: targetId } }),
+      prisma.incident.deleteMany({ where: { createdById: targetId } }),
+      prisma.user.delete({ where: { id: targetId } }),
+    ]);
+
+    return NextResponse.json({ message: 'Account deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return NextResponse.json({ error: 'Failed to delete account' }, { status: 500 });
+  }
+}

@@ -299,6 +299,12 @@ export default function MunicipalReportsPage() {
                       )}
                       {report.status === 'RETURNED' && (
                         <div className="flex flex-wrap items-center gap-3">
+                          <Link
+                            href={`/municipal/reports/${report.id}/edit`}
+                            className="btn btn-danger px-3 py-1 text-sm"
+                          >
+                            ↩ Revise &amp; Resubmit
+                          </Link>
                           <button
                             type="button"
                             onClick={() => openReport(report)}

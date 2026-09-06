@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { UserPlus, Pencil, Power } from 'lucide-react';
+import { UserPlus, Pencil, Power, Trash2 } from 'lucide-react';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../../components/common/ToastProvider';
 import { isAuthError } from '../../../../lib/utils';
@@ -49,6 +49,8 @@ export default function UserManagementPage() {
   const [editForm, setEditForm] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
   const [filterRole, setFilterRole] = useState('');
   const [search, setSearch] = useState('');
 
@@ -171,6 +173,21 @@ export default function UserManagementPage() {
       fetchAll();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to update account status.');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await axios.delete(`/api/users/${deleteTarget.id}?force=true`, { headers: authHeaders() });
+      toast.success(`${deleteTarget.name}'s account was deleted.`);
+      setDeleteTarget(null);
+      fetchAll();
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Failed to delete account.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -317,6 +334,13 @@ export default function UserManagementPage() {
                         >
                           <Power className="w-3.5 h-3.5" /> {u.isActive ? 'Deactivate' : 'Activate'}
                         </button>
+                        <button
+                          type="button"
+                          onClick={() => setDeleteTarget(u)}
+                          className="flex items-center gap-1 font-semibold text-red-700 hover:underline"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" /> Delete
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -404,6 +428,30 @@ export default function UserManagementPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirmation */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={() => setDeleteTarget(null)}>
+          <div className="w-full max-w-md rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="border-b p-6">
+              <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Delete Account</p>
+              <h2 className="text-xl font-bold text-bfp-navy">{deleteTarget.name}</h2>
+            </div>
+            <div className="space-y-3 p-6 text-sm text-gray-700">
+              <p>This permanently deletes <strong>{deleteTarget.email}</strong>. This cannot be undone.</p>
+              <p>Any reports they submitted, incidents they created, or comments they left will be permanently deleted along with them — unless one of their incidents still has reports from other users, in which case the delete will be refused.</p>
+            </div>
+            <div className="flex gap-3 p-6 pt-0">
+              <button type="button" onClick={handleDelete} disabled={deleting} className="btn btn-danger px-6">
+                {deleting ? 'Deleting…' : 'Delete Permanently'}
+              </button>
+              <button type="button" onClick={() => setDeleteTarget(null)} className="btn btn-secondary px-6">
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
       )}
