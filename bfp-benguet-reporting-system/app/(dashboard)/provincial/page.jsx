@@ -734,6 +734,14 @@ export default function ProvincialDashboard() {
                   : [];
               });
 
+              // A heavier line marks the start of a new category; a lighter one separates
+              // sibling sub-categories within the same category, so the eye can tell the two
+              // kinds of division apart at a glance.
+              const groupBorderHeader = 'border-l-2 border-l-white/25';
+              const subBorderHeader = 'border-l border-l-white/10';
+              const groupBorderBody = 'border-l-2 border-l-gray-300';
+              const subBorderBody = 'border-l border-l-gray-200';
+
               return (
                 <div className="overflow-x-auto">
                   <table className="data-table">
@@ -742,19 +750,24 @@ export default function ProvincialDashboard() {
                         <th rowSpan={2}>Municipality</th>
                         {fieldOrder.map((field) =>
                           subKeysByField[field].length > 0 ? (
-                            <th key={field} colSpan={subKeysByField[field].length} className="text-center">
+                            <th key={field} colSpan={subKeysByField[field].length} className={`text-center ${groupBorderHeader}`}>
                               {FIELD_LABELS[field]}
                             </th>
                           ) : (
-                            <th key={field} rowSpan={2} className="text-right">{FIELD_LABELS[field]}</th>
+                            <th key={field} rowSpan={2} className={`text-right ${groupBorderHeader}`}>{FIELD_LABELS[field]}</th>
                           )
                         )}
-                        <th rowSpan={2} className="text-right font-bold">Total</th>
+                        <th rowSpan={2} className={`text-right font-bold ${groupBorderHeader}`}>Total</th>
                       </tr>
                       <tr>
                         {fieldOrder.flatMap((field) =>
-                          subKeysByField[field].map((sub) => (
-                            <th key={`${field}-${sub}`} className="text-right text-xs font-normal text-gray-500">{sub}</th>
+                          subKeysByField[field].map((sub, idx) => (
+                            <th
+                              key={`${field}-${sub}`}
+                              className={`text-right text-xs font-normal text-white/70 ${idx === 0 ? groupBorderHeader : subBorderHeader}`}
+                            >
+                              {sub}
+                            </th>
                           ))
                         )}
                       </tr>
@@ -766,15 +779,22 @@ export default function ProvincialDashboard() {
                           {fieldOrder.flatMap((field) => {
                             const subKeys = subKeysByField[field];
                             if (subKeys.length > 0) {
-                              return subKeys.map((sub) => (
-                                <td key={`${row.code}-${field}-${sub}`} className="text-right">
+                              return subKeys.map((sub, idx) => (
+                                <td
+                                  key={`${row.code}-${field}-${sub}`}
+                                  className={`text-right ${idx === 0 ? groupBorderBody : subBorderBody}`}
+                                >
                                   {row.subCategories?.[field]?.[sub] || 0}
                                 </td>
                               ));
                             }
-                            return [<td key={`${row.code}-${field}`} className="text-right">{row[field]}</td>];
+                            return [
+                              <td key={`${row.code}-${field}`} className={`text-right ${groupBorderBody}`}>
+                                {row[field]}
+                              </td>,
+                            ];
                           })}
-                          <td className="text-right font-bold text-bfp-red">{row.total}</td>
+                          <td className={`text-right font-bold text-bfp-red ${groupBorderBody}`}>{row.total}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -784,15 +804,22 @@ export default function ProvincialDashboard() {
                         {fieldOrder.flatMap((field) => {
                           const subKeys = subKeysByField[field];
                           if (subKeys.length > 0) {
-                            return subKeys.map((sub) => (
-                              <td key={`total-${field}-${sub}`} className="text-right">
+                            return subKeys.map((sub, idx) => (
+                              <td
+                                key={`total-${field}-${sub}`}
+                                className={`text-right ${idx === 0 ? groupBorderBody : subBorderBody}`}
+                              >
                                 {activeSubTotals[field]?.[sub] || 0}
                               </td>
                             ));
                           }
-                          return [<td key={`total-${field}`} className="text-right">{rowTotals[field] || 0}</td>];
+                          return [
+                            <td key={`total-${field}`} className={`text-right ${groupBorderBody}`}>
+                              {rowTotals[field] || 0}
+                            </td>,
+                          ];
                         })}
-                        <td className="text-right text-bfp-red text-lg">{rowTotals.total || 0}</td>
+                        <td className={`text-right text-bfp-red text-lg ${groupBorderBody}`}>{rowTotals.total || 0}</td>
                       </tr>
                     </tfoot>
                   </table>
