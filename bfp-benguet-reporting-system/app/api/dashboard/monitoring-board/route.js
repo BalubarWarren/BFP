@@ -57,7 +57,7 @@ export async function GET(request) {
     }
 
     // Get all daily report entries (which contain the incident counts), plus categorized
-    // Spot Investigation reports that have reached the provincial level
+    // Spot Investigation / MDFIR reports that have reached the provincial level
     const [dailyEntries, spotReports, allMunicipalities] = await Promise.all([
       prisma.dailyReportEntry.findMany({
         where: dateFilter,
@@ -67,7 +67,7 @@ export async function GET(request) {
       prisma.report.findMany({
         where: {
           ...dateFilter,
-          reportType: 'SPOT_INVESTIGATION',
+          reportType: { in: ['SPOT_INVESTIGATION', 'MDFIR'] },
           category: { not: null },
           passedToRole: { in: PROVINCIAL_REVIEWER_ROLES },
         },

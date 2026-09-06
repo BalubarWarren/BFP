@@ -148,10 +148,6 @@ export default function EditReturnedReportPage() {
                 Cancel
               </button>
             </div>
-            <p className="mt-3 text-xs text-gray-500">
-              <strong className="text-gray-600">Return</strong> sends your corrected report back to {roleLabel(returnedByRole)} for another look.{' '}
-              <strong className="text-gray-600">Submit</strong> lets you choose the next reviewer yourself.
-            </p>
           </div>
         </div>
       </div>

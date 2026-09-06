@@ -68,6 +68,7 @@ export default function MinimalDamageFireIncidentReportForm() {
       payload.append('reportType', 'MDFIR');
       payload.append('municipalityId', String(effectiveUser.municipalityId));
       payload.append('reportDate', formData.reportDate);
+      payload.append('category', formData.generalCategory);
       payload.append('content', JSON.stringify({
         reportName: 'Minimal Damage Fire Incident Report',
         dateOfIncident: formData.dateOfIncident,
