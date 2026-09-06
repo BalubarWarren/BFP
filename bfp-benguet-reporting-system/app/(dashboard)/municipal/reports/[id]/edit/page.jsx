@@ -5,12 +5,20 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import StatusBadge from '../../../../../../components/common/StatusBadge';
 
+const RECIPIENT_OPTIONS = [
+  { value: 'MUNICIPAL_CHIEF_IIS', label: 'Municipal Chief IIS' },
+  { value: 'MUNICIPAL_CHIEF_OPERATION', label: 'Municipal Chief Operation' },
+  { value: 'MUNICIPAL_FIRE_MARSHAL', label: 'Municipal Fire Marshal' },
+  { value: 'PROVINCIAL_CHIEF_IIS', label: 'Provincial Chief IIS' },
+];
+
 export default function EditReturnedReportPage() {
   const router = useRouter();
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [corrections, setCorrections] = useState('');
+  const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -23,6 +31,10 @@ export default function EditReturnedReportPage() {
         setReport(res.data.report);
         const content = res.data.report?.content ? JSON.parse(res.data.report.content) : {};
         setCorrections(content.corrections || '');
+        // Default the recipient picker to whoever returned it — the investigator can change it.
+        if (res.data.report?.reviewedBy?.role) {
+          setRecipientRole(res.data.report.reviewedBy.role);
+        }
         setLoading(false);
       } catch (err) {
         setError('Failed to load report');
@@ -32,17 +44,6 @@ export default function EditReturnedReportPage() {
 
     fetchReport();
   }, []);
-
-  // Determine where the corrected report will be re-submitted (for display only)
-  const getResubmitDestination = () => {
-    if (!report?.reviewedBy?.role) return 'the reviewer';
-    const role = report.reviewedBy.role;
-    if (role === 'MUNICIPAL_CHIEF_IIS') return 'Municipal Chief IIS';
-    if (role === 'MUNICIPAL_CHIEF_OPERATION') return 'Municipal Chief Operation';
-    if (role === 'MUNICIPAL_FIRE_MARSHAL') return 'Municipal Fire Marshal';
-    if (role === 'PROVINCIAL_CHIEF_IIS') return 'Provincial Chief IIS';
-    return role.replace(/_/g, ' ');
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,12 +56,12 @@ export default function EditReturnedReportPage() {
       const existingContent = report?.content ? JSON.parse(report.content) : {};
       const newContent = { ...existingContent, corrections };
 
-      // Server auto-routes back to whoever returned the report
       await axios.patch(
         `/api/reports/${id}`,
         {
           content: JSON.stringify(newContent),
           status: 'SUBMITTED',
+          passedToRole: recipientRole,
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -96,8 +97,18 @@ export default function EditReturnedReportPage() {
             <textarea value={corrections} onChange={(e) => setCorrections(e.target.value)} rows={6} className="form-input" />
           </div>
 
-          <div className="p-3 bg-bfp-navy/5 rounded text-sm text-bfp-navy">
-            <strong>Note:</strong> This corrected report will be re-submitted to <strong>{getResubmitDestination()}</strong> for review.
+          <div>
+            <label className="form-label">Submit To</label>
+            <select
+              value={recipientRole}
+              onChange={(e) => setRecipientRole(e.target.value)}
+              className="form-select max-w-xs"
+            >
+              {RECIPIENT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">Defaults to whoever returned this report — change it if it should go elsewhere instead.</p>
           </div>
 
           <div className="flex gap-3">

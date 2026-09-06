@@ -153,13 +153,39 @@ export async function PATCH(request, { params }) {
       ...(status && { status }),
     };
 
-    // Investigator re-submitting a RETURNED report → auto-route back to whoever returned it
+    // Investigator re-submitting a RETURNED report → let them pick a recipient, same as the
+    // original submission; falls back to auto-routing back to whoever returned it if they don't.
     if (
       user.role === ROLES.INVESTIGATOR &&
       report.status === REPORT_STATUS.RETURNED &&
       status === REPORT_STATUS.SUBMITTED
     ) {
-      if (report.reviewedById) {
+      const RESUBMIT_ROLES = [
+        ROLES.MUNICIPAL_CHIEF_IIS,
+        ROLES.MUNICIPAL_CHIEF_OPERATION,
+        ROLES.MUNICIPAL_FIRE_MARSHAL,
+        ROLES.PROVINCIAL_CHIEF_IIS,
+      ];
+
+      if (requestedPassedToRole && RESUBMIT_ROLES.includes(requestedPassedToRole)) {
+        const recipient = MUNICIPAL_REVIEWER_ROLES.includes(requestedPassedToRole)
+          ? await prisma.user.findFirst({
+              where: { role: requestedPassedToRole, municipalityId: report.municipalityId, isActive: true },
+            })
+          : await prisma.user.findFirst({
+              where: { role: ROLES.PROVINCIAL_CHIEF_IIS, isActive: true },
+            });
+
+        if (!recipient) {
+          return NextResponse.json(
+            { error: `No ${requestedPassedToRole} account is available for this report` },
+            { status: 400 }
+          );
+        }
+
+        updateData.passedToRole = requestedPassedToRole;
+        updateData.passedToId = recipient.id;
+      } else if (report.reviewedById) {
         const lastReviewer = await prisma.user.findUnique({
           where: { id: report.reviewedById },
           select: { id: true, role: true, isActive: true },
