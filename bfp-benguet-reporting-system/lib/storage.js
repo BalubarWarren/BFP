@@ -27,6 +27,32 @@ const ALLOWED_MIME_TYPES = [
 const sanitizeFileName = (fileName) =>
   fileName.replace(/[^a-zA-Z0-9._-]/g, '_').replace(/_+/g, '_');
 
+const UPLOAD_RETRY_ATTEMPTS = 3;
+const UPLOAD_RETRY_DELAY_MS = 500;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Supabase's JS client wraps a plain network failure (DNS hiccup, dropped connection, etc.) in a
+// StorageUnknownError with no HTTP status — unlike a real API error (bad mimetype, conflict),
+// which always has one. Only the former is worth retrying; retrying a genuine API error just
+// re-fails the same way.
+const isRetryableUploadError = (error) => error && error.status === undefined;
+
+async function uploadWithRetry(supabase, storedName, buffer, contentType) {
+  let lastError;
+  for (let attempt = 1; attempt <= UPLOAD_RETRY_ATTEMPTS; attempt += 1) {
+    const { error } = await supabase.storage.from(BUCKET).upload(storedName, buffer, {
+      contentType,
+      upsert: false,
+    });
+    if (!error) return;
+    lastError = error;
+    if (!isRetryableUploadError(error) || attempt === UPLOAD_RETRY_ATTEMPTS) break;
+    await sleep(UPLOAD_RETRY_DELAY_MS * attempt);
+  }
+  throw lastError;
+}
+
 // Uploads to Supabase Storage instead of local disk — Render's filesystem is ephemeral and wipes
 // on every deploy/restart, which was silently deleting every previously-uploaded attachment.
 export async function saveAttachments(files, folder) {
@@ -51,11 +77,11 @@ export async function saveAttachments(files, folder) {
       const buffer = Buffer.from(bytes);
       const storedName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${sanitizeFileName(file.name)}`;
 
-      const { error } = await supabase.storage.from(BUCKET).upload(storedName, buffer, {
-        contentType: file.type || 'application/octet-stream',
-        upsert: false,
-      });
-      if (error) throw new Error(`Failed to upload "${file.name}": ${error.message}`);
+      try {
+        await uploadWithRetry(supabase, storedName, buffer, file.type || 'application/octet-stream');
+      } catch (error) {
+        throw new Error(`Failed to upload "${file.name}": ${error.message}`);
+      }
 
       const { data } = supabase.storage.from(BUCKET).getPublicUrl(storedName);
 
