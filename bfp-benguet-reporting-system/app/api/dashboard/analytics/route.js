@@ -5,7 +5,21 @@ import { ROLES } from '../../../../lib/constants';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-const getDailyReportTotals = async (start, end) => {
+const CATEGORY_LABEL_MAP = {
+  RESIDENTIAL: 'Residential',
+  NON_RESIDENTIAL: 'Non-Residential',
+  NON_STRUCTURAL: 'Non-Structural',
+  TRANSPORT: 'Transport',
+};
+
+// A report only counts toward these charts once it has actually reached the province level —
+// matches the monitoring board's rule (see app/api/dashboard/monitoring-board/route.js).
+const PROVINCIAL_REVIEWER_ROLES = [ROLES.PROVINCIAL_CHIEF_IIS, ROLES.MARSHAL, ROLES.CHIEF_INVESTIGATOR_IIS];
+
+// Builds a (start, end) -> category totals function that combines Daily Report tallies with
+// individually filed Spot Investigation/MDFIR reports — pulling the latter in once up front
+// (categorizedReports) instead of re-querying per period across dozens of month/year buckets.
+const makeGetPeriodTotals = (categorizedReports) => async (start, end) => {
   const agg = await prisma.dailyReportEntry.aggregate({
     where: { reportDate: { gte: start, lte: end } },
     _sum: {
@@ -17,13 +31,23 @@ const getDailyReportTotals = async (start, end) => {
     },
   });
 
-  return {
+  const totals = {
     Residential: agg._sum.residentialCount ?? 0,
     'Non-Residential': agg._sum.nonResidentialCount ?? 0,
     'Non-Structural': agg._sum.nonStructuralCount ?? 0,
     Transport: agg._sum.transportCount ?? 0,
     total: agg._sum.totalCount ?? 0,
   };
+
+  categorizedReports.forEach((report) => {
+    if (report.reportDate < start || report.reportDate > end) return;
+    const label = CATEGORY_LABEL_MAP[report.category];
+    if (!label) return;
+    totals[label] += 1;
+    totals.total += 1;
+  });
+
+  return totals;
 };
 
 const getHighestPeriod = (rows) =>
@@ -50,6 +74,16 @@ export async function GET(request) {
         { status: 403 }
       );
     }
+
+    const categorizedReports = await prisma.report.findMany({
+      where: {
+        reportType: { in: ['SPOT_INVESTIGATION', 'MDFIR'] },
+        category: { not: null },
+        passedToRole: { in: PROVINCIAL_REVIEWER_ROLES },
+      },
+      select: { reportDate: true, category: true },
+    });
+    const getPeriodTotals = makeGetPeriodTotals(categorizedReports);
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
@@ -200,7 +234,7 @@ export async function GET(request) {
       MONTHS.map(async (label, idx) => {
         const start = new Date(now.getFullYear(), idx, 1);
         const end = new Date(now.getFullYear(), idx + 1, 0, 23, 59, 59);
-        const totals = await getDailyReportTotals(start, end);
+        const totals = await getPeriodTotals(start, end);
         return {
           month: label,
           ...totals,
@@ -214,7 +248,7 @@ export async function GET(request) {
         const year = currentYear2 - (4 - offset);
         const start = new Date(year, 0, 1);
         const end = new Date(year, 11, 31, 23, 59, 59);
-        const totals = await getDailyReportTotals(start, end);
+        const totals = await getPeriodTotals(start, end);
         return {
           year: String(year),
           ...totals,
@@ -226,12 +260,15 @@ export async function GET(request) {
       select: { reportDate: true },
       orderBy: { reportDate: 'asc' },
     });
-    const availableYears = [...new Set(dailyReportDates.map((entry) => entry.reportDate.getFullYear()))];
+    const availableYears = [...new Set([
+      ...dailyReportDates.map((entry) => entry.reportDate.getFullYear()),
+      ...categorizedReports.map((report) => report.reportDate.getFullYear()),
+    ])].sort((a, b) => a - b);
     const comparisonYears = availableYears.length ? availableYears : [currentYear2];
 
     const yearlyComparison = await Promise.all(
       comparisonYears.map(async (year) => {
-        const totals = await getDailyReportTotals(
+        const totals = await getPeriodTotals(
           new Date(year, 0, 1),
           new Date(year, 11, 31, 23, 59, 59)
         );
@@ -248,7 +285,7 @@ export async function GET(request) {
       comparisonYears.map(async (year) => {
         const monthlyRows = await Promise.all(
           MONTHS.map(async (month, index) => {
-            const totals = await getDailyReportTotals(
+            const totals = await getPeriodTotals(
               new Date(year, index, 1),
               new Date(year, index + 1, 0, 23, 59, 59)
             );
