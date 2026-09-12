@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
-  Clock, CheckCircle2, ShieldCheck, LogOut, Users,
+  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
 
@@ -176,6 +176,12 @@ export default function Sidebar({ isOpen, user }) {
                     className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
                   >
                     <Users className="w-4 h-4 flex-shrink-0" /> User Management
+                  </Link>
+                  <Link
+                    href="/admin/activity"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
+                  >
+                    <History className="w-4 h-4 flex-shrink-0" /> Activity Log
                   </Link>
                 </>
               )}
