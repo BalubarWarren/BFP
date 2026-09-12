@@ -10,6 +10,7 @@ import { formatDateTime, parseJsonField } from '../../../../lib/utils';
 import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../../components/reports/AttachmentList';
 import CaseFollowUpCta from '../../../../components/reports/CaseFollowUpCta';
+import TableSkeleton from '../../../../components/common/TableSkeleton';
 
 export default function MunicipalReportsPage() {
   const toast = useToast();
@@ -112,7 +113,7 @@ export default function MunicipalReportsPage() {
     <div className="p-8 space-y-6">
       {selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="max-h-screen w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
+          <div className="modal-pop-in max-h-screen w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b p-6">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Report Details</p>
@@ -238,7 +239,7 @@ export default function MunicipalReportsPage() {
         </div>
 
         {loading ? (
-          <div className="p-10 text-center text-gray-600">Loading reports...</div>
+          <TableSkeleton rows={6} columns={6} />
         ) : filteredReports.length === 0 ? (
           <div className="flex min-h-56 flex-col items-center justify-center bg-gray-50 p-10 text-center">
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
@@ -263,8 +264,12 @@ export default function MunicipalReportsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
-                {filteredReports.map((report) => (
-                  <tr key={report.id} className="hover:bg-gray-50">
+                {filteredReports.map((report, index) => (
+                  <tr
+                    key={report.id}
+                    className="row-fade-in hover:bg-gray-50"
+                    style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
+                  >
                     <td className="px-5 py-4">
                       <p className="font-semibold text-gray-900">{formatReportType(report.reportType)}</p>
                       <p className="text-xs text-gray-500">#{report.id}</p>

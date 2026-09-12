@@ -11,6 +11,7 @@ import { formatDateTime, isAuthError, parseJsonField } from '../../../lib/utils'
 import ReportProgressBar, { getReportProgress } from '../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../components/reports/AttachmentList';
 import CaseFollowUpCta from '../../../components/reports/CaseFollowUpCta';
+import TableSkeleton from '../../../components/common/TableSkeleton';
 
 export default function MunicipalDashboard() {
   const toast = useToast();
@@ -201,7 +202,7 @@ export default function MunicipalDashboard() {
       {/* Report View Modal */}
       {selectedReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
+          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b">
               <h2 className="text-2xl font-bold text-bfp-navy">Report Details</h2>
               <button onClick={closeView} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
@@ -313,7 +314,7 @@ export default function MunicipalDashboard() {
       {/* Forward (Submit) Modal — choose who receives the approved report next */}
       {forwardTarget && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-sm">
+          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-sm">
             <div className="p-6 border-b">
               <h3 className="text-lg font-bold text-bfp-navy">Submit Report</h3>
               <p className="text-sm text-gray-500 mt-1">Choose who should receive this report next.</p>
@@ -352,7 +353,7 @@ export default function MunicipalDashboard() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl mx-auto">
           <Link
             href="/municipal/reports/mdfir"
-            className="card hover:shadow-lg transition-shadow cursor-pointer text-center"
+            className="card card-hover-lift cursor-pointer text-center"
           >
             <FileEdit className="w-9 h-9 mb-2 mx-auto text-bfp-red" />
             <h3 className="text-xl font-bold text-bfp-navy mb-2">MDFIR</h3>
@@ -364,7 +365,7 @@ export default function MunicipalDashboard() {
 
           <Link
             href="/municipal/reports/spot"
-            className="card hover:shadow-lg transition-shadow cursor-pointer text-center"
+            className="card card-hover-lift cursor-pointer text-center"
           >
             <Search className="w-9 h-9 mb-2 mx-auto text-bfp-red" />
             <h3 className="text-xl font-bold text-bfp-navy mb-2">Spot Investigation</h3>
@@ -376,7 +377,7 @@ export default function MunicipalDashboard() {
 
           <Link
             href="/municipal/reports/progress"
-            className="card hover:shadow-lg transition-shadow cursor-pointer text-center"
+            className="card card-hover-lift cursor-pointer text-center"
           >
             <Clock className="w-9 h-9 mb-2 mx-auto text-bfp-red" />
             <h3 className="text-xl font-bold text-bfp-navy mb-2">Progress Investigation</h3>
@@ -388,7 +389,7 @@ export default function MunicipalDashboard() {
 
           <Link
             href="/municipal/reports/final"
-            className="card hover:shadow-lg transition-shadow cursor-pointer text-center"
+            className="card card-hover-lift cursor-pointer text-center"
           >
             <CheckCircle2 className="w-9 h-9 mb-2 mx-auto text-bfp-red" />
             <h3 className="text-xl font-bold text-bfp-navy mb-2">Final Investigation</h3>
@@ -404,15 +405,22 @@ export default function MunicipalDashboard() {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           {[
-            ['Submitted', statusCounts.SUBMITTED || 0, 'border-bfp-amber'],
-            ['Approved', statusCounts.APPROVED || 0, 'border-green-500'],
-            ['Returned', statusCounts.RETURNED || 0, 'border-red-500'],
-            ['Draft', statusCounts.DRAFT || 0, 'border-gray-400'],
-          ].map(([label, value, borderClass]) => (
-            <div key={label} className={`rounded-lg border-l-4 ${borderClass} bg-white p-4 shadow-sm`}>
+            ['Submitted', 'SUBMITTED', statusCounts.SUBMITTED || 0, 'border-bfp-amber'],
+            ['Approved', 'APPROVED', statusCounts.APPROVED || 0, 'border-green-500'],
+            ['Returned', 'RETURNED', statusCounts.RETURNED || 0, 'border-red-500'],
+            ['Draft', 'DRAFT', statusCounts.DRAFT || 0, 'border-gray-400'],
+          ].map(([label, status, value, borderClass]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setFilterStatus((current) => (current === status ? '' : status))}
+              className={`card-hover-lift w-full rounded-lg border-l-4 ${borderClass} bg-white p-4 shadow-sm text-left transition-colors ${
+                filterStatus === status ? 'ring-2 ring-bfp-navy bg-bfp-navy/5' : ''
+              }`}
+            >
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
               <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
-            </div>
+            </button>
           ))}
         </div>
 
@@ -445,12 +453,13 @@ export default function MunicipalDashboard() {
                 <option value="SUBMITTED">Submitted</option>
                 <option value="APPROVED">Approved</option>
                 <option value="RETURNED">Returned</option>
+                <option value="DRAFT">Draft</option>
               </select>
             </div>
           </div>
 
           {loading ? (
-            <div className="p-10 text-center text-gray-600">Loading reports...</div>
+            <TableSkeleton rows={5} columns={6} />
           ) : filteredReports.length === 0 ? (
             <div className="flex min-h-56 flex-col items-center justify-center bg-gray-50 p-10 text-center">
               <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm">
@@ -475,8 +484,12 @@ export default function MunicipalDashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
-                  {filteredReports.slice(0, 10).map((report) => (
-                    <tr key={report.id} className="hover:bg-gray-50">
+                  {filteredReports.slice(0, 10).map((report, index) => (
+                    <tr
+                      key={report.id}
+                      className="row-fade-in hover:bg-gray-50"
+                      style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
+                    >
                       <td className="px-5 py-4">
                         <p className="font-semibold text-gray-900">{formatReportType(report.reportType)}</p>
                         <p className="text-xs text-gray-500">#{report.id}</p>

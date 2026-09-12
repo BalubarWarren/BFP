@@ -359,7 +359,7 @@ export default function UserManagementPage() {
       {/* Edit modal */}
       {editingUser && editForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={closeEdit}>
-          <div className="w-full max-w-md rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-pop-in w-full max-w-md rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b p-6">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Edit Account</p>
@@ -440,7 +440,7 @@ export default function UserManagementPage() {
       {/* Delete confirmation */}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={() => setDeleteTarget(null)}>
-          <div className="w-full max-w-md rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-pop-in w-full max-w-md rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="border-b p-6">
               <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Delete Account</p>
               <h2 className="text-xl font-bold text-bfp-navy">{deleteTarget.name}</h2>

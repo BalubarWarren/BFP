@@ -8,6 +8,7 @@ import SessionExpiredBanner from '../../../../components/common/SessionExpiredBa
 import { useToast } from '../../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../../../lib/utils';
 import AttachmentList from '../../../../components/reports/AttachmentList';
+import TableSkeleton from '../../../../components/common/TableSkeleton';
 
 export default function ProvincialReportsPage() {
   const toast = useToast();
@@ -147,7 +148,16 @@ export default function ProvincialReportsPage() {
       )}
 
       {loading ? (
-        <p className="text-gray-600">Loading reports...</p>
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="mb-4 h-6 w-72 animate-pulse rounded bg-gray-200" />
+            <TableSkeleton rows={4} columns={8} />
+          </div>
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="mb-4 h-6 w-72 animate-pulse rounded bg-gray-200" />
+            <TableSkeleton rows={3} columns={8} />
+          </div>
+        </div>
       ) : (
         <>
           {/* Fire Incident Reports — incoming from municipalities */}
@@ -171,8 +181,8 @@ export default function ProvincialReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredIncoming.map((report) => (
-                      <tr key={report.id}>
+                    {filteredIncoming.map((report, index) => (
+                      <tr key={report.id} className="row-fade-in" style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}>
                         <td className="font-semibold">{report.municipality?.name}</td>
                         <td>{report.reportType}</td>
                         <td>{report.incident?.referenceNumber || '-'}</td>
@@ -217,8 +227,8 @@ export default function ProvincialReportsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredReviewed.map((report) => (
-                      <tr key={report.id}>
+                    {filteredReviewed.map((report, index) => (
+                      <tr key={report.id} className="row-fade-in" style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}>
                         <td className="font-semibold">{report.municipality?.name}</td>
                         <td>{report.reportType}</td>
                         <td>{report.incident?.referenceNumber || '-'}</td>
@@ -242,7 +252,7 @@ export default function ProvincialReportsPage() {
       {/* Review Modal */}
       {selectedReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
+          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
             <div className="flex justify-between items-center p-6 border-b">
               <h2 className="text-2xl font-bold text-bfp-navy">Report Review</h2>
               <button onClick={closeReview} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>

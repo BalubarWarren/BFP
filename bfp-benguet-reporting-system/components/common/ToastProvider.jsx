@@ -7,16 +7,25 @@ const ToastContext = createContext(null);
 
 let nextId = 1;
 
+const TOAST_EXIT_MS = 180;
+
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
-  const dismiss = useCallback((id) => {
+  const remove = useCallback((id) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
+  // Flags the toast as leaving so its exit animation can play, then removes it once that
+  // animation finishes — an immediate splice would just make it vanish with no transition.
+  const dismiss = useCallback((id) => {
+    setToasts((current) => current.map((toast) => (toast.id === id ? { ...toast, leaving: true } : toast)));
+    setTimeout(() => remove(id), TOAST_EXIT_MS);
+  }, [remove]);
+
   const show = useCallback((message, type = 'success') => {
     const id = nextId++;
-    setToasts((current) => [...current, { id, message, type }]);
+    setToasts((current) => [...current, { id, message, type, leaving: false }]);
     setTimeout(() => dismiss(id), 5000);
   }, [dismiss]);
 
@@ -32,7 +41,7 @@ export function ToastProvider({ children }) {
         {toasts.map((t) => (
           <div
             key={t.id}
-            className={`flex items-start gap-2 rounded-lg border px-4 py-3 shadow-lg text-sm ${
+            className={`flex items-start gap-2 rounded-lg border px-4 py-3 shadow-lg text-sm ${t.leaving ? 'toast-out' : 'toast-in'} ${
               t.type === 'success'
                 ? 'bg-bfp-green/10 border-bfp-green text-bfp-green'
                 : 'bg-red-50 border-red-400 text-red-700'

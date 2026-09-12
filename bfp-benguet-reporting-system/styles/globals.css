@@ -76,9 +76,35 @@ body {
   @apply bg-gray-100 text-gray-800;
 }
 
+/* Pending-status pulse — a soft heartbeat ring drawing attention to reports awaiting action */
+@keyframes badge-pulse-ring {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .badge-pulse {
+    animation: badge-pulse-ring 2s ease-in-out infinite;
+  }
+}
+
 /* Buttons */
 .btn {
   @apply px-4 py-2 rounded-lg font-semibold transition-colors shadow-sm;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn {
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+  }
+
+  .btn:active {
+    transform: scale(0.96);
+  }
 }
 
 .btn-primary {
@@ -100,6 +126,31 @@ body {
 /* Cards */
 .card {
   @apply bg-white rounded-lg shadow-md p-6;
+}
+
+/* Lift-on-hover — for cards that act as a clickable action/nav target, not static panels */
+.card-hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card-hover-lift:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 28px -10px rgba(0, 0, 0, 0.18), 0 4px 10px -4px rgba(0, 0, 0, 0.08);
+  }
+
+  .card-hover-lift:active {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.16);
+  }
+
+  .card-hover-lift svg {
+    transition: transform 0.2s ease;
+  }
+
+  .card-hover-lift:hover svg {
+    transform: scale(1.1);
+  }
 }
 
 .card-accent-top {
@@ -157,6 +208,56 @@ body {
 
 .kpi-label {
   @apply text-sm text-gray-600 uppercase tracking-wider;
+}
+
+/* Row entrance — a light staggered fade-up applied via inline animation-delay so a freshly
+   loaded or re-filtered list doesn't just snap into place. */
+@keyframes row-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .row-fade-in {
+    animation: row-fade-in 0.25s ease-out both;
+  }
+}
+
+/* Toast enter/exit */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(24px) scale(0.97);
+  }
+}
+
+.toast-in {
+  animation: toast-in 0.22s ease-out;
+}
+
+.toast-out {
+  animation: toast-out 0.18s ease-in forwards;
 }
 
 /* Modal entrance */

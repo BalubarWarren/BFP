@@ -252,13 +252,24 @@ export default function AdminDashboard() {
         </div>
 
         {loading ? (
-          <div className="p-10 text-center text-gray-500">Loading reports…</div>
+          <div className="animate-pulse divide-y divide-gray-100">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-2 px-5 py-4">
+                <div className="h-4 w-1/3 rounded bg-gray-200" />
+                <div className="h-3 w-2/3 rounded bg-gray-100" />
+              </div>
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
           <div className="p-10 text-center text-gray-500">No reports match your filters.</div>
         ) : (
           <div className="divide-y divide-gray-100">
-            {filtered.map((report) => (
-              <div key={report.id} className="hover:bg-gray-50 transition-colors">
+            {filtered.map((report, index) => (
+              <div
+                key={report.id}
+                className="row-fade-in hover:bg-gray-50 transition-colors"
+                style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
+              >
                 {/* Summary row */}
                 <div
                   className="flex flex-col gap-2 px-5 py-4 cursor-pointer sm:flex-row sm:items-center sm:justify-between"

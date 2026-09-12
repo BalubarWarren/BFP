@@ -7,6 +7,7 @@ import SessionExpiredBanner from '../common/SessionExpiredBanner';
 import { useToast } from '../common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../lib/utils';
 import AttachmentList from '../reports/AttachmentList';
+import TableSkeleton from '../common/TableSkeleton';
 
 // Shared by the Municipal Chief IIS/Operation and Municipal Fire Marshal dashboards, which were
 // ~95% byte-identical (same incoming/reviewed tabs, same review modal, same approve/return
@@ -175,7 +176,10 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
       )}
 
       {loading ? (
-        <p className="text-gray-600">Loading reports...</p>
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="mb-4 h-6 w-56 animate-pulse rounded bg-gray-200" />
+          <TableSkeleton rows={5} columns={6} />
+        </div>
       ) : (
         <>
           <div className="flex gap-2 mb-6">
@@ -220,8 +224,8 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredIncoming.map((report) => (
-                        <tr key={report.id}>
+                      {filteredIncoming.map((report, index) => (
+                        <tr key={report.id} className="row-fade-in" style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}>
                           <td className="font-semibold">{report.reportType}</td>
                           <td>{report.incident?.referenceNumber || '-'}</td>
                           <td>{report.submittedBy?.name}</td>
@@ -261,8 +265,8 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredOutgoing.map((report) => (
-                        <tr key={report.id}>
+                      {filteredOutgoing.map((report, index) => (
+                        <tr key={report.id} className="row-fade-in" style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}>
                           <td className="font-semibold">{report.reportType}</td>
                           <td>{report.incident?.referenceNumber || '-'}</td>
                           <td>{report.municipality?.name}</td>
@@ -282,7 +286,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
           {/* Review Modal */}
           {selectedReport && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
+              <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
                 <div className="flex justify-between items-center p-6 border-b">
                   <h2 className="text-2xl font-bold text-bfp-navy">Report Review</h2>
                   <button onClick={closeReview} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>

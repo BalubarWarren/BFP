@@ -158,7 +158,7 @@ export default function EditReturnedReportPage() {
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={() => setShowSubmitPicker(false)}
         >
-          <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-pop-in w-full max-w-sm rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="border-b border-gray-100 p-6">
               <p className="text-xs font-semibold uppercase tracking-wide text-bfp-red">Submit Report</p>
               <h2 className="text-lg font-bold text-bfp-navy">Who should receive this next?</h2>
