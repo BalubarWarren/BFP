@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Undo2, Check, CheckCircle2, MapPin, User, Calendar, Tag, ChevronUp, ChevronDown } from 'lucide-react';
+import { Undo2, Check, CheckCircle2, MapPin, User, Calendar, Tag, ChevronUp, ChevronDown, ClipboardList } from 'lucide-react';
 import StatusBadge from '../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
+import PageHeader from '../../../components/common/PageHeader';
 import { formatDateTime, isAuthError } from '../../../lib/utils';
 
 const ROLE_LABELS = {
@@ -174,11 +175,12 @@ export default function AdminDashboard() {
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">System Administrator</p>
-        <h1 className="text-3xl font-bold text-bfp-navy">Report Tracking Dashboard</h1>
-        <p className="text-gray-500 mt-1">Full visibility of every report — from submission to final approval.</p>
-      </div>
+      <PageHeader
+        icon={ClipboardList}
+        eyebrow="System Administrator"
+        title="Report Tracking Dashboard"
+        description="Full visibility of every report — from submission to final approval."
+      />
 
       {sessionExpired && <SessionExpiredBanner />}
 

@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { UserPlus, Pencil, Power, Trash2 } from 'lucide-react';
+import { Users, UserPlus, Pencil, Power, Trash2 } from 'lucide-react';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../../components/common/ToastProvider';
+import PageHeader from '../../../../components/common/PageHeader';
 import { isAuthError } from '../../../../lib/utils';
 
 const ROLE_OPTIONS = [
@@ -215,11 +216,12 @@ export default function UserManagementPage() {
 
   return (
     <div className="p-8 space-y-6">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">System Administrator</p>
-        <h1 className="text-3xl font-bold text-bfp-navy">User Management</h1>
-        <p className="text-gray-500 mt-1">Create accounts and assign roles for investigators, reviewers, and staff.</p>
-      </div>
+      <PageHeader
+        icon={Users}
+        eyebrow="System Administrator"
+        title="User Management"
+        description="Create accounts and assign roles for investigators, reviewers, and staff."
+      />
 
       {/* Create account */}
       <div className="bg-white rounded-lg shadow-md p-6">

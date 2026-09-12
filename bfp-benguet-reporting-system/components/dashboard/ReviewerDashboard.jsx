@@ -2,17 +2,19 @@
 
 import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
+import { ClipboardCheck } from 'lucide-react';
 import StatusBadge from '../common/StatusBadge';
 import SessionExpiredBanner from '../common/SessionExpiredBanner';
 import { useToast } from '../common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../lib/utils';
 import AttachmentList from '../reports/AttachmentList';
 import TableSkeleton from '../common/TableSkeleton';
+import PageHeader from '../common/PageHeader';
 
 // Shared by the Municipal Chief IIS/Operation and Municipal Fire Marshal dashboards, which were
 // ~95% byte-identical (same incoming/reviewed tabs, same review modal, same approve/return
 // actions) and only differed in titles/labels and who the next reviewer is.
-export default function ReviewerDashboard({ title, description, incomingSectionTitle, nextStepLabel }) {
+export default function ReviewerDashboard({ title, description, incomingSectionTitle, nextStepLabel, eyebrow = 'Municipal Reviewer' }) {
   const toast = useToast();
   const [incomingReports, setIncomingReports] = useState([]);
   const [outgoingReports, setOutgoingReports] = useState([]);
@@ -151,10 +153,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
 
   return (
     <div className="p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-bfp-navy mb-2">{title}</h1>
-        <p className="text-gray-600">{description}</p>
-      </div>
+      <PageHeader icon={ClipboardCheck} eyebrow={eyebrow} title={title} description={description} />
 
       {sessionExpired && <SessionExpiredBanner />}
 

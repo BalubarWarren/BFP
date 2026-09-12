@@ -9,6 +9,7 @@ import {
   MoreVertical, Printer, Download, X, Home, Building2, TreePine, Truck,
   LayoutGrid, MapPin, Inbox, FileSearch,
 } from 'lucide-react';
+import PageHeader from '../../../components/common/PageHeader';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CATEGORY_CHART_COLORS } from '../../../lib/constants';
@@ -541,8 +542,12 @@ export default function ProvincialDashboard() {
     <div className="p-8" id="provincial-dashboard-content">
       {/* Page Title */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-bfp-navy mb-1">Provincial Dashboard</h1>
-        <p className="text-gray-600">Real-time fire incident monitoring for Benguet Province</p>
+        <PageHeader
+          icon={Home}
+          eyebrow="Provincial Office"
+          title="Provincial Dashboard"
+          description="Real-time fire incident monitoring for Benguet Province"
+        />
       </div>
 
       {sessionExpired && (

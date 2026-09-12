@@ -11,6 +11,7 @@ import ReportProgressBar, { getReportProgress } from '../../../../components/rep
 import AttachmentList from '../../../../components/reports/AttachmentList';
 import CaseFollowUpCta from '../../../../components/reports/CaseFollowUpCta';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
+import PageHeader from '../../../../components/common/PageHeader';
 
 export default function MunicipalReportsPage() {
   const toast = useToast();
@@ -180,10 +181,7 @@ export default function MunicipalReportsPage() {
       )}
 
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Report archive</p>
-          <h1 className="text-3xl font-bold text-bfp-navy">My Submitted Reports</h1>
-        </div>
+        <PageHeader icon={FileText} eyebrow="Report archive" title="My Submitted Reports" border={false} />
         <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Showing</p>
           <p className="text-2xl font-bold text-bfp-navy">{filteredReports.length}</p>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
-import { FileEdit, Search, Clock, CheckCircle2, MessageSquare, FileText } from 'lucide-react';
+import { FileEdit, Search, Clock, CheckCircle2, MessageSquare, FileText, Building2 } from 'lucide-react';
 import StatusBadge from '../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../components/common/ToastProvider';
@@ -12,6 +12,7 @@ import ReportProgressBar, { getReportProgress } from '../../../components/report
 import AttachmentList from '../../../components/reports/AttachmentList';
 import CaseFollowUpCta from '../../../components/reports/CaseFollowUpCta';
 import TableSkeleton from '../../../components/common/TableSkeleton';
+import PageHeader from '../../../components/common/PageHeader';
 
 export default function MunicipalDashboard() {
   const toast = useToast();
@@ -187,10 +188,11 @@ export default function MunicipalDashboard() {
     <div className="p-8">
       {/* Welcome Section */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-bfp-navy mb-2">Welcome, {user?.name}</h1>
-        <p className="text-gray-600">
-          Municipality: <strong>{user?.municipality?.name}</strong>
-        </p>
+        <PageHeader
+          icon={Building2}
+          eyebrow={user?.municipality?.name ? `Municipality of ${user.municipality.name}` : 'Municipal Office'}
+          title={`Welcome, ${user?.name || ''}`}
+        />
       </div>
 
       {sessionExpired && (
