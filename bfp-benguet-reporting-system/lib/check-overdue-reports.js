@@ -17,13 +17,21 @@ async function notifyOnce({ reportId, userId, type, message }) {
 }
 
 // Rule A — the full Spot Investigation review chain should reach final approval within
-// DEADLINES.SPOT_OVERDUE_HOURS of submission.
+// DEADLINES.SPOT_OVERDUE_HOURS of submission. Under the tiered review chain, a report spends
+// most of its time either SUBMITTED (sitting with a reviewer) or APPROVED-with-passedToId-set
+// (bounced back to the investigator, waiting for them to explicitly forward it) — only the
+// former used to be checked, so a report an investigator forgot to forward could sit stalled
+// past the deadline forever without ever tripping this rule. Only the terminal, fully-approved
+// state (APPROVED with no passedToId left to forward to) is excluded.
 async function checkSpotApprovalSla() {
   const overdueSpotReports = await prisma.report.findMany({
     where: {
       reportType: 'SPOT_INVESTIGATION',
-      status: 'SUBMITTED',
       submittedAt: { lte: hoursAgo(DEADLINES.SPOT_OVERDUE_HOURS) },
+      OR: [
+        { status: 'SUBMITTED' },
+        { status: 'APPROVED', passedToId: { not: null } },
+      ],
     },
   });
 

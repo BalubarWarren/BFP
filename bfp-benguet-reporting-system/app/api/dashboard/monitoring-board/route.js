@@ -71,9 +71,21 @@ export async function GET(request) {
     const [dailyEntries, spotReports, allMunicipalities] = await Promise.all([
       prisma.dailyReportEntry.findMany({
         where: dateFilter,
-        include: { municipality: true },
+        select: {
+          reportDate: true,
+          residentialCount: true,
+          nonResidentialCount: true,
+          nonStructuralCount: true,
+          transportCount: true,
+          totalCount: true,
+          municipality: { select: { id: true, name: true, code: true } },
+        },
         orderBy: { reportDate: 'desc' },
       }),
+      // select (not include) — this is polled every 15s by the provincial dashboard across every
+      // Spot/MDFIR report in the period, so it's worth not pulling attachments/respondingUnits/
+      // remarks/etc. that this endpoint never reads; only `content` is kept, for the sub-category
+      // JSON fallback in getReportSubCategory.
       prisma.report.findMany({
         where: {
           ...dateFilter,
@@ -81,8 +93,13 @@ export async function GET(request) {
           category: { not: null },
           passedToRole: { in: PROVINCIAL_REVIEWER_ROLES },
         },
-        include: {
-          municipality: true,
+        select: {
+          id: true,
+          category: true,
+          reportDate: true,
+          status: true,
+          content: true,
+          municipality: { select: { id: true, name: true, code: true } },
           incident: { select: { referenceNumber: true, subCategory: true } },
           submittedBy: { select: { name: true } },
         },

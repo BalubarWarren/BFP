@@ -184,10 +184,36 @@ export async function GET(request) {
       whereCondition.municipalityId = parseInt(municipalityId);
     }
 
+    // select (not include) — this list is polled every 15s from the municipal/admin/provincial
+    // dashboards, up to MAX_LIST_RESULTS rows at a time; `content` is dropped since nothing in any
+    // list view reads it (only the single-report detail fetch, GET /api/reports/[id], does).
+    // `attachments` stays: a couple of report-detail modals fall back to it from the list payload
+    // while their own detail fetch is still in flight.
     const reports = await prisma.report.findMany({
       where: whereCondition,
-      include: {
-        municipality: true,
+      select: {
+        id: true,
+        reportType: true,
+        status: true,
+        municipalityId: true,
+        reportDate: true,
+        category: true,
+        respondingUnits: true,
+        respondingOfficer: true,
+        reportingOfficerRank: true,
+        stationCommanderName: true,
+        remarks: true,
+        passedToRole: true,
+        passedToId: true,
+        submittedAt: true,
+        reviewedAt: true,
+        reviewedById: true,
+        submittedById: true,
+        attachments: true,
+        createdAt: true,
+        updatedAt: true,
+        incidentId: true,
+        municipality: { select: { id: true, name: true } },
         submittedBy: {
           select: {
             id: true,

@@ -217,5 +217,7 @@ model AuditLog {
   @@index([userId])
   @@index([reportId])
   @@index([createdAt])
+  // Matches GET /api/audit-log's filtered (action) + cursor-paginated (id desc) query
+  @@index([action, id])
   @@map("audit_logs")
 }

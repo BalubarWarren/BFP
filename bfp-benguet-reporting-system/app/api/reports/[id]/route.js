@@ -345,6 +345,22 @@ export async function DELETE(request, { params }) {
     await deleteAttachments(parseJsonField(report.attachments, []));
     await prisma.report.delete({ where: { id: reportId } });
 
+    // Every Incident in this app is created from a Spot Investigation report's auto-creation
+    // path (there's no UI that creates one standalone) — so once the report being deleted was
+    // the last one linked to its Incident, that Incident is now a phantom row with a burned
+    // reference number and nothing pointing to it. Best-effort: a failure here shouldn't undo an
+    // otherwise-successful report deletion.
+    if (report.incidentId) {
+      try {
+        const remainingReports = await prisma.report.count({ where: { incidentId: report.incidentId } });
+        if (remainingReports === 0) {
+          await prisma.incident.delete({ where: { id: report.incidentId } });
+        }
+      } catch (error) {
+        console.error('Failed to clean up orphaned incident:', error);
+      }
+    }
+
     return NextResponse.json({ message: 'Report deleted successfully' });
   } catch (error) {
     console.error('Error deleting report:', error);

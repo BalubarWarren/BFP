@@ -42,7 +42,11 @@ export default function MunicipalDashboard() {
     }
     fetchReports();
 
-    pollRef.current = setInterval(fetchReports, 15000);
+    // Skip the tick while this tab isn't visible — the `focus` listener below already
+    // re-fetches once the user comes back, so a background tab doesn't keep hitting the DB.
+    pollRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchReports();
+    }, 15000);
     const onFocus = () => fetchReports();
     window.addEventListener('focus', onFocus);
     return () => {

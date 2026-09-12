@@ -4,7 +4,7 @@ import { getUserFromRequest } from '../../../lib/auth';
 import { ROLES } from '../../../lib/constants';
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
-const MAX_LIST_RESULTS = 200;
+const PAGE_SIZE = 50;
 
 // AuditLog.userId/reportId are plain, relation-less Int columns (see prisma/schema.prisma) — by
 // design, so an audit trail doesn't get wiped or blocked by cascading deletes/FK constraints on
@@ -24,12 +24,21 @@ export async function GET(request) {
 
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
+    const cursor = searchParams.get('cursor');
 
-    const logs = await prisma.auditLog.findMany({
+    // Ordering and the pagination cursor both key off `id` rather than `createdAt` — ids are
+    // guaranteed unique and monotonically increasing, so a cursor built from one is unambiguous
+    // even if two rows land on the same millisecond.
+    const page = await prisma.auditLog.findMany({
       where: action ? { action } : {},
-      orderBy: { createdAt: 'desc' },
-      take: MAX_LIST_RESULTS,
+      orderBy: { id: 'desc' },
+      take: PAGE_SIZE + 1,
+      ...(cursor && { cursor: { id: parseInt(cursor) }, skip: 1 }),
     });
+
+    const hasMore = page.length > PAGE_SIZE;
+    const logs = hasMore ? page.slice(0, PAGE_SIZE) : page;
+    const nextCursor = hasMore ? logs[logs.length - 1].id : null;
 
     const userIds = [...new Set(logs.map((log) => log.userId).filter((id) => id !== null))];
     const reportIds = [...new Set(logs.map((log) => log.reportId).filter((id) => id !== null))];
@@ -63,7 +72,7 @@ export async function GET(request) {
       report: reportMap.get(log.reportId) || null,
     }));
 
-    return NextResponse.json({ entries });
+    return NextResponse.json({ entries, nextCursor });
   } catch (error) {
     console.error('Error fetching audit log:', error);
     return NextResponse.json({ error: 'Failed to fetch audit log' }, { status: 500 });

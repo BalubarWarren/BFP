@@ -340,6 +340,13 @@ body {
   @apply text-white;
 }
 
+/* Same contrast problem as text-bfp-navy above — bfp-green (#2E7D32) is dark enough that badges/
+   icons/banners using it as text on a translucent bg-bfp-green tint (e.g. the Activity Log's
+   "Approved" badge, StatusBadge's APPROVED/EXTINGUISHED colors in lib/utils.js) go dark-on-dark. */
+.dark .text-bfp-green {
+  @apply text-green-300;
+}
+
 /* Error/success banners (bg-red-100/border-red-400/text-red-700 and the green equivalent) are
    used throughout the app's forms exactly like the neutral overrides above — same treatment. */
 .dark .bg-red-100 {

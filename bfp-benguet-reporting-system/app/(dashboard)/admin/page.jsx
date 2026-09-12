@@ -120,7 +120,11 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchAll();
 
-    pollRef.current = setInterval(() => fetchAll({ silent: true }), 15000);
+    // Skip the tick while this tab isn't visible — the `focus` listener below already
+    // re-fetches once the user comes back, so a background tab doesn't keep hitting the DB.
+    pollRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchAll({ silent: true });
+    }, 15000);
     const onFocus = () => fetchAll({ silent: true });
     window.addEventListener('focus', onFocus);
     return () => {

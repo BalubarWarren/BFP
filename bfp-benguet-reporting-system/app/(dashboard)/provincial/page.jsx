@@ -11,8 +11,6 @@ import {
 } from 'lucide-react';
 import PageHeader from '../../../components/common/PageHeader';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { CATEGORY_CHART_COLORS } from '../../../lib/constants';
 import {
   BarChart, Bar,
@@ -323,7 +321,11 @@ export default function ProvincialDashboard() {
   useEffect(() => {
     fetchDashboardData();
 
-    pollRef.current = setInterval(() => fetchDashboardData({ silent: true }), 15000);
+    // Skip the tick while this tab isn't visible — the `focus` listener below already
+    // re-fetches once the user comes back, so a background tab doesn't keep hitting the DB.
+    pollRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchDashboardData({ silent: true });
+    }, 15000);
     const onFocus = () => fetchDashboardData({ silent: true });
     window.addEventListener('focus', onFocus);
     return () => {
@@ -445,7 +447,14 @@ export default function ProvincialDashboard() {
     printWin.onload = () => { printWin.focus(); printWin.print(); };
   };
 
-  const downloadPdf = (filename, title, header, rows) => {
+  // jsPDF + autotable are only ever needed here, on an explicit "Export PDF" click — loading them
+  // dynamically instead of at module top-level keeps them out of every provincial-dashboard
+  // visitor's initial JS payload, most of whom never export anything.
+  const downloadPdf = async (filename, title, header, rows) => {
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import('jspdf'),
+      import('jspdf-autotable'),
+    ]);
     const doc = new jsPDF();
     doc.setFontSize(14);
     doc.text('BFP Benguet Fire Incident Report', 14, 16);

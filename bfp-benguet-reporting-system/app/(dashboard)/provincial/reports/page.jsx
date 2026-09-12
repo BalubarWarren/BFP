@@ -28,7 +28,11 @@ export default function ProvincialReportsPage() {
   useEffect(() => {
     fetchReports();
 
-    pollRef.current = setInterval(() => fetchReports({ silent: true }), 15000);
+    // Skip the tick while this tab isn't visible — the `focus` listener below already
+    // re-fetches once the user comes back, so a background tab doesn't keep hitting the DB.
+    pollRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchReports({ silent: true });
+    }, 15000);
     const onFocus = () => fetchReports({ silent: true });
     window.addEventListener('focus', onFocus);
     return () => {
@@ -94,6 +98,13 @@ export default function ProvincialReportsPage() {
       fetchReports();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to approve report');
+      // A 409 means another reviewer already acted on this report while the modal was open —
+      // it's now showing stale data, so close it and refresh instead of leaving Approve/Return
+      // enabled against a report that's already moved on.
+      if (err.response?.status === 409) {
+        closeReview();
+        fetchReports();
+      }
     } finally {
       setActionLoading(false);
     }
@@ -116,6 +127,10 @@ export default function ProvincialReportsPage() {
       fetchReports();
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to return report');
+      if (err.response?.status === 409) {
+        closeReview();
+        fetchReports();
+      }
     } finally {
       setActionLoading(false);
     }

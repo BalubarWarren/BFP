@@ -41,10 +41,20 @@ const isReferenceNumberCollision = (error) => {
 };
 
 // A genuine double-submit (double-click, or the browser silently retrying a slow/dropped
-// request) resubmits the exact same form data — this window is long enough to catch that, short
-// enough that two real, separate fires reported back-to-back by the same investigator in the
-// same municipality/category don't get wrongly merged into one.
-const DUPLICATE_SUBMIT_WINDOW_MS = 10 * 1000;
+// request) resubmits the exact same form data within well under a second — 5s comfortably covers
+// that while limiting how long two real, separate fires reported back-to-back in the same
+// municipality/category risk being wrongly merged into one.
+const DUPLICATE_SUBMIT_WINDOW_MS = 5 * 1000;
+
+// If every optional field is blank, the identifying fields reduce to just
+// municipality+category+date — the one combination genuinely likely to match two unrelated real
+// fires reported minutes apart (not just a double-submitted one). Only treat a match as a
+// duplicate when at least one of these was actually filled in, so a bare-bones report never gets
+// silently merged into an unrelated one; the rare cost is a genuine double-submit of a
+// no-detail report creating two sparse Incidents instead of one, which is a far safer failure
+// mode than merging two different fires into a single case file.
+const hasDistinguishingContent = (data) =>
+  Boolean(data.subCategory || data.timeOfIncident || data.barangay || data.address || data.description);
 
 const duplicateCheckWhere = (data) => ({
   createdById: data.createdById,
@@ -83,11 +93,13 @@ export async function createIncidentWithReference(data, { maxAttempts = 3, inclu
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
 
-    const recentDuplicate = await tx.incident.findFirst({
-      where: duplicateCheckWhere(data),
-      ...(include && { include }),
-    });
-    if (recentDuplicate) return recentDuplicate;
+    if (hasDistinguishingContent(data)) {
+      const recentDuplicate = await tx.incident.findFirst({
+        where: duplicateCheckWhere(data),
+        ...(include && { include }),
+      });
+      if (recentDuplicate) return recentDuplicate;
+    }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
       const referenceNumber = await generateIncidentReference(undefined, tx);

@@ -35,7 +35,11 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
   useEffect(() => {
     fetchReports();
 
-    pollRef.current = setInterval(() => fetchReports({ silent: true }), 15000);
+    // Skip the tick while this tab isn't visible — the `focus` listener below already
+    // re-fetches once the user comes back, so a background tab doesn't keep hitting the DB.
+    pollRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchReports({ silent: true });
+    }, 15000);
     const onFocus = () => fetchReports({ silent: true });
     window.addEventListener('focus', onFocus);
     return () => {
@@ -112,6 +116,13 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
       toast.success(`Report approved — ready to pass to the ${nextStepLabel}. Sent back to ${submitterName} to forward.`);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to review report');
+      // A 409 means another reviewer already acted on this report between opening it and
+      // clicking Approve — the modal is now showing stale data, so close it and refresh the list
+      // instead of leaving Approve/Return enabled against a report that's already moved on.
+      if (err.response?.status === 409) {
+        closeReview();
+        fetchReports();
+      }
     } finally {
       setActionLoading(false);
     }
@@ -141,6 +152,10 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
       toast.error(`Report returned to ${submitterName} for revision.`);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to return report');
+      if (err.response?.status === 409) {
+        closeReview();
+        fetchReports();
+      }
     } finally {
       setActionLoading(false);
     }

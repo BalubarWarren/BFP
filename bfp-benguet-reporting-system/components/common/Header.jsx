@@ -33,9 +33,20 @@ export default function Header({ user, onToggleSidebar }) {
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      // Refresh notifications every 30 seconds
-      const interval = setInterval(fetchNotifications, 30000);
-      return () => clearInterval(interval);
+      // Refresh notifications every 30 seconds, skipping ticks while the tab isn't visible —
+      // unlike the page-level polls elsewhere, nothing else re-fetches notifications on focus,
+      // so that's handled here too rather than waiting up to 30s after coming back.
+      const interval = setInterval(() => {
+        if (document.visibilityState === 'visible') fetchNotifications();
+      }, 30000);
+      const onVisibilityChange = () => {
+        if (document.visibilityState === 'visible') fetchNotifications();
+      };
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      return () => {
+        clearInterval(interval);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+      };
     }
   }, [user]);
 
