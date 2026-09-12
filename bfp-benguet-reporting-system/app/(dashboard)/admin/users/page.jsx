@@ -25,6 +25,11 @@ const ROLE_OPTIONS = [
 
 const ROLE_LABELS = ROLE_OPTIONS.reduce((acc, r) => ({ ...acc, [r.value]: r.label }), {});
 
+// Only these roles can be assigned to a newly created account — the rest (legacy/provincial/
+// admin roles) are provisioned another way and shouldn't show up in the create-account dropdown.
+const CREATABLE_ROLES = ['INVESTIGATOR', 'MUNICIPAL_CHIEF_IIS', 'MUNICIPAL_FIRE_MARSHAL', 'PROVINCIAL_CHIEF_IIS'];
+const CREATABLE_ROLE_OPTIONS = ROLE_OPTIONS.filter((r) => CREATABLE_ROLES.includes(r.value));
+
 const MUNICIPAL_ROLES = ['INVESTIGATOR', 'MUNICIPAL_CHIEF_IIS', 'MUNICIPAL_CHIEF_OPERATION', 'MUNICIPAL_FIRE_MARSHAL'];
 
 const emptyForm = {
@@ -242,7 +247,7 @@ export default function UserManagementPage() {
           <div>
             <label className="form-label">Role <span className="text-bfp-red">*</span></label>
             <select name="role" value={formData.role} onChange={handleCreateChange} className="form-input" required>
-              {ROLE_OPTIONS.map((r) => (
+              {CREATABLE_ROLE_OPTIONS.map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
               ))}
             </select>

@@ -7,6 +7,7 @@ import { CheckCircle2, FileText, Send, User } from 'lucide-react';
 import AttachmentInput from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
 import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessModal';
+import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
 import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 
 export default function FinalInvestigationForm() {
@@ -17,6 +18,7 @@ export default function FinalInvestigationForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [incidents, setIncidents] = useState([]);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
@@ -56,7 +58,7 @@ export default function FinalInvestigationForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.respondingOfficer) { setError('Please enter the reporting officer name.'); return; }
-    if (!attachments.length) { setError('Please attach at least one file before submitting.'); return; }
+    if (!attachments.length) { setShowAttachmentWarning(true); return; }
 
     setLoading(true);
     setError('');
@@ -181,6 +183,10 @@ export default function FinalInvestigationForm() {
           message={success}
           onConfirm={() => router.push('/municipal')}
         />
+      )}
+
+      {showAttachmentWarning && (
+        <AttachmentWarningModal onConfirm={() => setShowAttachmentWarning(false)} />
       )}
     </div>
   );

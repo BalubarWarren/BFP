@@ -8,6 +8,7 @@ import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants
 import AttachmentInput from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
 import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessModal';
+import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
 import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 
 export default function SpotInvestigationForm() {
@@ -17,6 +18,7 @@ export default function SpotInvestigationForm() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
   const [textBlastFiles, setTextBlastFiles] = useState([]);
@@ -83,7 +85,7 @@ export default function SpotInvestigationForm() {
     e.preventDefault();
     if (!formData.category) { setError('Please select a fire category.'); return; }
     if (!formData.subCategory) { setError('Please select a sub-category.'); return; }
-    if (!attachments.length) { setError('Please attach at least one file before submitting.'); return; }
+    if (!attachments.length) { setShowAttachmentWarning(true); return; }
 
     setLoading(true);
     setError('');
@@ -238,6 +240,10 @@ export default function SpotInvestigationForm() {
           message={success}
           onConfirm={() => router.push('/municipal')}
         />
+      )}
+
+      {showAttachmentWarning && (
+        <AttachmentWarningModal onConfirm={() => setShowAttachmentWarning(false)} />
       )}
     </div>
   );
