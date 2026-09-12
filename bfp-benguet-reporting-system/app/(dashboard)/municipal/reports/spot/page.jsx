@@ -7,6 +7,7 @@ import { Search, ClipboardList, Send, MessageSquare } from 'lucide-react';
 import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
 import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
+import FieldIcon from '../../../../../components/reports/FieldIcon';
 import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessModal';
 import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
 import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
@@ -159,33 +160,45 @@ export default function SpotInvestigationForm() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Report Date <span className="text-bfp-red">*</span></label>
-              <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input" required />
+              <label className="form-label">Report Date</label>
+              <div className="form-field-icon-wrap">
+                <FieldIcon src="/icons/calendar.svg" />
+                <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input-icon" required />
+              </div>
             </div>
             <div>
-              <label className="form-label">Category <span className="text-bfp-red">*</span></label>
-              <select name="category" value={formData.category} onChange={handleChange} className="form-input" required>
-                <option value="" className="text-gray-400">— Select —</option>
-                {Object.keys(GENERAL_CATEGORIES).map((k) => (
-                  <option key={k} value={k}>{k.replace(/_/g, ' ')}</option>
-                ))}
-              </select>
+              <label className="form-label">Category</label>
+              <div className="form-field-icon-wrap">
+                <FieldIcon src="/icons/category.svg" />
+                <select name="category" value={formData.category} onChange={handleChange} className="form-select-icon" required>
+                  <option value="" className="text-gray-400">— Select —</option>
+                  {Object.keys(GENERAL_CATEGORIES).map((k) => (
+                    <option key={k} value={k}>{k.replace(/_/g, ' ')}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             {formData.category && (
               <div>
-                <label className="form-label">Sub-Category <span className="text-bfp-red">*</span></label>
-                <select name="subCategory" value={formData.subCategory} onChange={handleChange} className="form-input" required>
-                  <option value="" className="text-gray-400">— Select —</option>
-                  {(SUB_CATEGORIES[formData.category] || []).map((sub) => (
-                    <option key={sub} value={sub}>{sub}</option>
-                  ))}
-                </select>
+                <label className="form-label">Sub-Category</label>
+                <div className="form-field-icon-wrap">
+                  <FieldIcon src="/icons/subcategory.svg" />
+                  <select name="subCategory" value={formData.subCategory} onChange={handleChange} className="form-select-icon" required>
+                    <option value="" className="text-gray-400">— Select —</option>
+                    {(SUB_CATEGORIES[formData.category] || []).map((sub) => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             )}
           </div>
           <div className="mt-4">
             <label className="form-label">Description of Incident</label>
-            <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="form-input" placeholder="Brief description of what happened..." />
+            <div className="form-field-icon-wrap">
+              <FieldIcon src="/icons/description.svg" />
+              <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="form-textarea-icon" placeholder="Brief description of what happened..." />
+            </div>
           </div>
         </div>
 
@@ -195,7 +208,10 @@ export default function SpotInvestigationForm() {
           </h2>
           <div>
             <label className="form-label">Recipient</label>
-            <RecipientSelect value={recipientRole} onChange={setRecipientRole} />
+            <div className="form-field-icon-wrap max-w-xs">
+              <FieldIcon src="/icons/recipient.svg" />
+              <RecipientSelect value={recipientRole} onChange={setRecipientRole} className="form-select-icon" />
+            </div>
           </div>
         </div>
 
@@ -213,7 +229,10 @@ export default function SpotInvestigationForm() {
           <div className="space-y-4">
             <div>
               <label className="form-label">Attach File</label>
-              <input type="file" multiple onChange={handleTextBlastFileChange} className="form-input" />
+              <div className="form-field-icon-wrap">
+                <FieldIcon src="/icons/attachment.svg" />
+                <input type="file" multiple onChange={handleTextBlastFileChange} className="form-input-icon file:mr-3 file:rounded-lg file:border-0 file:bg-bfp-navy file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white" />
+              </div>
               {textBlastFiles.length > 0 && (
                 <ul className="mt-3 space-y-1 text-sm text-gray-600">
                   {textBlastFiles.map((file) => (
@@ -225,13 +244,16 @@ export default function SpotInvestigationForm() {
 
             <div>
               <label className="form-label">Message</label>
-              <textarea
-                value={textBlastMessage}
-                onChange={(e) => setTextBlastMessage(e.target.value)}
-                rows={3}
-                className="form-input"
-                placeholder="Optional note"
-              />
+              <div className="form-field-icon-wrap">
+                <FieldIcon src="/icons/text-blast.svg" />
+                <textarea
+                  value={textBlastMessage}
+                  onChange={(e) => setTextBlastMessage(e.target.value)}
+                  rows={3}
+                  className="form-textarea-icon"
+                  placeholder="Optional note"
+                />
+              </div>
             </div>
 
             {textBlastStatus && (
