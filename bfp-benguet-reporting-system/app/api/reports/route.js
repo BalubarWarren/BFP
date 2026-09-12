@@ -95,6 +95,19 @@ export async function GET(request) {
     const municipalityId = searchParams.get('municipalityId');
     const view = searchParams.get('view'); // incoming | outgoing | all
 
+    // A reviewer's "reviewed" copy needs to survive later reviewers touching the same report —
+    // see the AuditLog write in POST /api/reports/[id]/approve for why this can't just be
+    // Report.reviewedById (which is intentionally overwritten by every subsequent review).
+    let reviewedReportIds = null;
+    if (view === 'outgoing' && (MUNICIPAL_REVIEWER_ROLES.includes(user.role) || PROVINCIAL_REVIEWER_ROLES.includes(user.role))) {
+      const reviewLogs = await prisma.auditLog.findMany({
+        where: { userId: user.id, action: { in: ['APPROVE_REPORT', 'RETURN_REPORT'] } },
+        select: { reportId: true },
+        distinct: ['reportId'],
+      });
+      reviewedReportIds = reviewLogs.map((log) => log.reportId).filter((id) => id !== null);
+    }
+
     let whereCondition = {};
 
     // RBAC: Investigators can only see their own reports
@@ -107,7 +120,7 @@ export async function GET(request) {
       // Municipal reviewers: show outgoing reports they reviewed, or incoming reports assigned to
       // their account/role in their municipality.
       if (view === 'outgoing') {
-        whereCondition.reviewedById = user.id;
+        whereCondition.id = { in: reviewedReportIds };
       } else {
         whereCondition.OR = [
           {
@@ -134,7 +147,7 @@ export async function GET(request) {
     } else if (PROVINCIAL_REVIEWER_ROLES.includes(user.role)) {
       // Provincial/legacy reviewers: show outgoing or reports passed to them by id OR passed to their role
       if (view === 'outgoing') {
-        whereCondition.reviewedById = user.id;
+        whereCondition.id = { in: reviewedReportIds };
       } else {
         whereCondition.OR = [
           { passedToId: user.id },

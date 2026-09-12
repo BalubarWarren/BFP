@@ -4,6 +4,10 @@ import { getUserFromRequest } from '../../../../lib/auth';
 import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { getDemoReportById, isDemoReportId } from '../../../../lib/demo-reports';
 import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES, isReportRecipient } from '../../../../lib/report-access';
+import { deleteAttachments } from '../../../../lib/storage';
+import { parseJsonField } from '../../../../lib/utils';
+
+const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
 export async function GET(request, { params }) {
   try {
@@ -279,5 +283,52 @@ export async function PATCH(request, { params }) {
       { error: 'Failed to update report' },
       { status: 500 }
     );
+  }
+}
+
+// Lets the original submitter retract their own report, or an admin remove any report. Once a
+// report has received final approval (APPROVED with nothing left to forward), it's treated as
+// part of the official record and only an admin can remove it.
+export async function DELETE(request, { params }) {
+  try {
+    const user = await getUserFromRequest(request);
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (isDemoReportId(params.id)) {
+      return NextResponse.json({ error: 'Demo reports cannot be deleted' }, { status: 400 });
+    }
+
+    const reportId = parseInt(params.id);
+    const report = await prisma.report.findUnique({ where: { id: reportId } });
+
+    if (!report) {
+      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
+    }
+
+    const isAdmin = ADMIN_ROLES.includes(user.role);
+    const isOwner = report.submittedById === user.id;
+
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const isFinallyApproved = report.status === REPORT_STATUS.APPROVED && !report.passedToId;
+    if (!isAdmin && isFinallyApproved) {
+      return NextResponse.json(
+        { error: 'This report has received final approval and can no longer be deleted.' },
+        { status: 400 }
+      );
+    }
+
+    await deleteAttachments(parseJsonField(report.attachments, []));
+    await prisma.report.delete({ where: { id: reportId } });
+
+    return NextResponse.json({ message: 'Report deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting report:', error);
+    return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });
   }
 }

@@ -94,3 +94,23 @@ export async function saveAttachments(files, folder) {
     })
   );
 }
+
+// Best-effort cleanup of the physical files backing a report's attachments — used when a report
+// is deleted. Attachment objects only carry the public URL (not the storage path), so the path
+// is recovered from it; a failure here is logged but never blocks the caller, since a stray file
+// left in the bucket is far less harmful than failing to delete the report record itself.
+export async function deleteAttachments(attachments) {
+  const paths = (attachments || [])
+    .map((attachment) => attachment?.url?.split(`/${BUCKET}/`)[1])
+    .filter(Boolean);
+
+  if (!paths.length) return;
+
+  try {
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.storage.from(BUCKET).remove(paths);
+    if (error) console.error('Failed to delete attachment files:', error);
+  } catch (error) {
+    console.error('Failed to delete attachment files:', error);
+  }
+}

@@ -12,6 +12,7 @@ import AttachmentList from '../../../../components/reports/AttachmentList';
 import CaseFollowUpCta from '../../../../components/reports/CaseFollowUpCta';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
 import PageHeader from '../../../../components/common/PageHeader';
+import ConfirmDeleteModal from '../../../../components/reports/ConfirmDeleteModal';
 
 export default function MunicipalReportsPage() {
   const toast = useToast();
@@ -24,6 +25,9 @@ export default function MunicipalReportsPage() {
   const [reportDetail, setReportDetail] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   useEffect(() => {
     fetchReports();
@@ -50,6 +54,26 @@ export default function MunicipalReportsPage() {
 
   const canTextBlast = (report) =>
     report?.reportType === 'SPOT_INVESTIGATION' && report?.status === 'APPROVED' && !report?.passedToId;
+
+  const canDelete = (report) => !(report?.status === 'APPROVED' && !report?.passedToId);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      const token = sessionStorage.getItem('token');
+      await axios.delete(`/api/reports/${deleteTarget.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      setDeleteTarget(null);
+      closeReport();
+      toast.success('Report deleted successfully.');
+      fetchReports();
+    } catch (err) {
+      setDeleteError(err.response?.data?.error || 'Failed to delete report.');
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   const statusCounts = reports.reduce(
     (counts, report) => ({
@@ -173,7 +197,16 @@ export default function MunicipalReportsPage() {
 
             </div>
 
-            <div className="flex justify-end border-t bg-gray-50 p-6">
+            <div className="flex justify-end gap-3 border-t bg-gray-50 p-6">
+              {canDelete(selectedReport) && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(selectedReport)}
+                  className="btn btn-danger"
+                >
+                  Delete
+                </button>
+              )}
               <button onClick={closeReport} className="btn btn-secondary">Close</button>
             </div>
           </div>
@@ -284,12 +317,21 @@ export default function MunicipalReportsPage() {
                     </td>
                     <td className="px-5 py-4 text-sm">
                       {report.status === 'DRAFT' && (
-                        <Link
-                          href={`/municipal/reports/${report.id}/edit`}
-                          className="font-semibold text-bfp-navy hover:underline"
-                        >
-                          Edit
-                        </Link>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <Link
+                            href={`/municipal/reports/${report.id}/edit`}
+                            className="font-semibold text-bfp-navy hover:underline"
+                          >
+                            Edit
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(report)}
+                            className="btn btn-danger px-3 py-1 text-sm"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       )}
                       {report.status === 'RETURNED' && (
                         <div className="flex flex-wrap items-center gap-3">
@@ -305,6 +347,13 @@ export default function MunicipalReportsPage() {
                             className="font-semibold text-bfp-navy hover:underline"
                           >
                             View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTarget(report)}
+                            className="btn btn-danger px-3 py-1 text-sm"
+                          >
+                            Delete
                           </button>
                           <div>
                             <p className="font-semibold text-red-600">Needs Revision</p>
@@ -335,6 +384,15 @@ export default function MunicipalReportsPage() {
                               {blastLoadingId === report.id ? 'Sending...' : 'Text Blast'}
                             </button>
                           )}
+                          {canDelete(report) && (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(report)}
+                              className="btn btn-danger px-3 py-1 text-sm"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                       )}
                       <ReportProgressBar progress={getReportProgress(report)} compact />
@@ -349,6 +407,19 @@ export default function MunicipalReportsPage() {
           </div>
         )}
       </div>
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          message={`Delete this ${formatReportType(deleteTarget.reportType)} report? This cannot be undone.`}
+          loading={deleteLoading}
+          error={deleteError}
+          onConfirm={handleDelete}
+          onCancel={() => {
+            setDeleteTarget(null);
+            setDeleteError('');
+          }}
+        />
+      )}
     </div>
   );
 }

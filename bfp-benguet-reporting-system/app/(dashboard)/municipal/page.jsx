@@ -13,6 +13,7 @@ import AttachmentList from '../../../components/reports/AttachmentList';
 import CaseFollowUpCta from '../../../components/reports/CaseFollowUpCta';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 import PageHeader from '../../../components/common/PageHeader';
+import ConfirmDeleteModal from '../../../components/reports/ConfirmDeleteModal';
 
 export default function MunicipalDashboard() {
   const toast = useToast();
@@ -28,6 +29,9 @@ export default function MunicipalDashboard() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -159,6 +163,26 @@ export default function MunicipalDashboard() {
       toast.error(error.response?.data?.error || 'Failed to send text blast');
     } finally {
       setBlastLoadingId(null);
+    }
+  };
+
+  const canDelete = (report) => !isFinallyApproved(report);
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      const token = sessionStorage.getItem('token');
+      await axios.delete(`/api/reports/${deleteTarget.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      setDeleteTarget(null);
+      closeView();
+      toast.success('Report deleted successfully.');
+      fetchReports();
+    } catch (err) {
+      setDeleteError(err.response?.data?.error || 'Failed to delete report.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -305,6 +329,15 @@ export default function MunicipalDashboard() {
                   {blastLoadingId === selectedReport.id ? 'Sending...' : (
                     <span className="flex items-center gap-1.5"><MessageSquare className="w-4 h-4" /> Text Blast</span>
                   )}
+                </button>
+              )}
+              {canDelete(selectedReport) && (
+                <button
+                  type="button"
+                  onClick={() => setDeleteTarget(selectedReport)}
+                  className="btn btn-danger"
+                >
+                  Delete
                 </button>
               )}
               <button onClick={closeView} className="btn btn-secondary">Close</button>
@@ -538,6 +571,15 @@ export default function MunicipalDashboard() {
                               {blastLoadingId === report.id ? 'Sending...' : 'Text Blast'}
                             </button>
                           )}
+                          {canDelete(report) && (
+                            <button
+                              type="button"
+                              onClick={() => setDeleteTarget(report)}
+                              className="btn btn-danger text-sm py-1 px-3"
+                            >
+                              Delete
+                            </button>
+                          )}
                         </div>
                         <ReportProgressBar progress={getReportProgress(report)} compact />
                         {['SPOT_INVESTIGATION', 'PROGRESS_INVESTIGATION'].includes(report.reportType) && isFinallyApproved(report) && (
@@ -568,6 +610,19 @@ export default function MunicipalDashboard() {
           )}
         </div>
       </div>
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          message={`Delete this ${formatReportType(deleteTarget.reportType)} report? This cannot be undone.`}
+          loading={deleteLoading}
+          error={deleteError}
+          onConfirm={handleDelete}
+          onCancel={() => {
+            setDeleteTarget(null);
+            setDeleteError('');
+          }}
+        />
+      )}
     </div>
   );
 }

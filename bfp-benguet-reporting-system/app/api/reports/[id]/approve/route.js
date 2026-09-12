@@ -158,6 +158,21 @@ export async function POST(request, { params }) {
       },
     });
 
+    // reviewedById only ever holds the *current/last* reviewer — every subsequent review
+    // overwrites it, which is exactly what the resubmit-routing logic in PATCH /api/reports/[id]
+    // needs. But it also means an earlier reviewer (e.g. the Municipal Chief IIS) loses their own
+    // "Reports Reviewed" copy the moment the next reviewer acts. This AuditLog row is a permanent,
+    // append-only record of the action that GET /api/reports?view=outgoing reads from instead, so
+    // every reviewer who has ever approved/returned this report keeps a visible copy going forward.
+    await prisma.auditLog.create({
+      data: {
+        action: action === 'approve' ? 'APPROVE_REPORT' : 'RETURN_REPORT',
+        userId: user.id,
+        reportId: report.id,
+        changes: JSON.stringify({ reviewerRole: user.role, remarks: remarks || null }),
+      },
+    });
+
     // Notify next reviewer when forwarded (only Provincial Chief IIS case now)
     if (action === 'approve' && nextPassedToId && newStatus === REPORT_STATUS.SUBMITTED) {
       await prisma.notification.create({

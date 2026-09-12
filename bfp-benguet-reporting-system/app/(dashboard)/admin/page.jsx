@@ -6,6 +6,8 @@ import { Undo2, Check, CheckCircle2, MapPin, User, Calendar, Tag, ChevronUp, Che
 import StatusBadge from '../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
 import PageHeader from '../../../components/common/PageHeader';
+import ConfirmDeleteModal from '../../../components/reports/ConfirmDeleteModal';
+import { useToast } from '../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError } from '../../../lib/utils';
 
 const ROLE_LABELS = {
@@ -99,6 +101,7 @@ function WorkflowTracker({ report }) {
 }
 
 export default function AdminDashboard() {
+  const toast = useToast();
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -109,6 +112,9 @@ export default function AdminDashboard() {
   const [municipalities, setMunicipalities] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -145,6 +151,24 @@ export default function AdminDashboard() {
       }
     } finally {
       if (!silent) setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleteLoading(true);
+    setDeleteError('');
+    try {
+      const token = sessionStorage.getItem('token');
+      await axios.delete(`/api/reports/${deleteTarget.id}`, { headers: { Authorization: `Bearer ${token}` } });
+      setDeleteTarget(null);
+      setExpandedId(null);
+      toast.success('Report deleted successfully.');
+      fetchAll({ silent: true });
+    } catch (err) {
+      setDeleteError(err.response?.data?.error || 'Failed to delete report.');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -346,6 +370,21 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     </div>
+
+                    {!report.isDemo && (
+                      <div className="mt-4 flex justify-end border-t border-gray-200 pt-4">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeleteTarget(report);
+                          }}
+                          className="btn btn-danger text-sm py-1 px-3"
+                        >
+                          Delete Report
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -353,6 +392,19 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          message={`Delete this ${fmtType(deleteTarget.reportType)} report submitted by ${deleteTarget.submittedBy?.name || 'this user'}? This cannot be undone.`}
+          loading={deleteLoading}
+          error={deleteError}
+          onConfirm={handleDelete}
+          onCancel={() => {
+            setDeleteTarget(null);
+            setDeleteError('');
+          }}
+        />
+      )}
     </div>
   );
 }
