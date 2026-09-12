@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Search, ClipboardList, Send, MessageSquare } from 'lucide-react';
@@ -19,7 +19,9 @@ export default function SpotInvestigationForm() {
   const [success, setSuccess] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
+  const [attachmentHighlight, setAttachmentHighlight] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const attachmentInputRef = useRef(null);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
   const [textBlastFiles, setTextBlastFiles] = useState([]);
   const [textBlastMessage, setTextBlastMessage] = useState('');
@@ -46,6 +48,13 @@ export default function SpotInvestigationForm() {
 
   const handleAttachmentChange = (e) => {
     setAttachments(Array.from(e.target.files || []));
+    setAttachmentHighlight(false);
+  };
+
+  const goToAttachments = () => {
+    setShowAttachmentWarning(false);
+    attachmentInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    attachmentInputRef.current?.focus();
   };
 
   const handleTextBlastFileChange = (e) => {
@@ -85,7 +94,11 @@ export default function SpotInvestigationForm() {
     e.preventDefault();
     if (!formData.category) { setError('Please select a fire category.'); return; }
     if (!formData.subCategory) { setError('Please select a sub-category.'); return; }
-    if (!attachments.length) { setShowAttachmentWarning(true); return; }
+    if (!attachments.length) {
+      setShowAttachmentWarning(true);
+      setAttachmentHighlight(true);
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -178,7 +191,12 @@ export default function SpotInvestigationForm() {
           </div>
         </div>
 
-        <AttachmentInput files={attachments} onChange={handleAttachmentChange} />
+        <AttachmentInput
+          ref={attachmentInputRef}
+          files={attachments}
+          onChange={handleAttachmentChange}
+          highlight={attachmentHighlight}
+        />
 
         <div className="bg-white rounded-lg shadow-md p-6">
           <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
@@ -243,7 +261,7 @@ export default function SpotInvestigationForm() {
       )}
 
       {showAttachmentWarning && (
-        <AttachmentWarningModal onConfirm={() => setShowAttachmentWarning(false)} />
+        <AttachmentWarningModal onConfirm={goToAttachments} />
       )}
     </div>
   );

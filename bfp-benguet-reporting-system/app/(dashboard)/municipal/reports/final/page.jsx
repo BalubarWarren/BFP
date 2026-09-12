@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { CheckCircle2, FileText, Send, User } from 'lucide-react';
@@ -19,7 +19,9 @@ export default function FinalInvestigationForm() {
   const [success, setSuccess] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
+  const [attachmentHighlight, setAttachmentHighlight] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const attachmentInputRef = useRef(null);
   const [incidents, setIncidents] = useState([]);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
 
@@ -53,12 +55,23 @@ export default function FinalInvestigationForm() {
 
   const handleAttachmentChange = (e) => {
     setAttachments(Array.from(e.target.files || []));
+    setAttachmentHighlight(false);
+  };
+
+  const goToAttachments = () => {
+    setShowAttachmentWarning(false);
+    attachmentInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    attachmentInputRef.current?.focus();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.respondingOfficer) { setError('Please enter the reporting officer name.'); return; }
-    if (!attachments.length) { setShowAttachmentWarning(true); return; }
+    if (!attachments.length) {
+      setShowAttachmentWarning(true);
+      setAttachmentHighlight(true);
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -166,7 +179,12 @@ export default function FinalInvestigationForm() {
           </div>
         </div>
 
-        <AttachmentInput files={attachments} onChange={handleAttachmentChange} />
+        <AttachmentInput
+          ref={attachmentInputRef}
+          files={attachments}
+          onChange={handleAttachmentChange}
+          highlight={attachmentHighlight}
+        />
 
         <div className="flex gap-3">
           <button type="submit" disabled={loading} className="btn btn-primary px-8">
@@ -186,7 +204,7 @@ export default function FinalInvestigationForm() {
       )}
 
       {showAttachmentWarning && (
-        <AttachmentWarningModal onConfirm={() => setShowAttachmentWarning(false)} />
+        <AttachmentWarningModal onConfirm={goToAttachments} />
       )}
     </div>
   );

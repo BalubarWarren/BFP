@@ -1,5 +1,6 @@
 'use client';
 
+import { forwardRef, useImperativeHandle, useRef } from 'react';
 import { Paperclip, X, AlertTriangle } from 'lucide-react';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -17,20 +18,33 @@ const getFileIssue = (file) => {
   return null;
 };
 
-export default function AttachmentInput({ files, onChange }) {
+const AttachmentInput = forwardRef(function AttachmentInput({ files, onChange, highlight }, ref) {
+  const containerRef = useRef(null);
+  const fileInputRef = useRef(null);
   const invalidCount = files.filter((file) => getFileIssue(file)).length;
+
+  // Lets a parent form scroll to and focus this field when the user tries to submit
+  // without an attachment, instead of just showing an error they have to go find.
+  useImperativeHandle(ref, () => ({
+    scrollIntoView: (opts) => containerRef.current?.scrollIntoView(opts),
+    focus: () => fileInputRef.current?.focus(),
+  }));
 
   const removeFile = (index) => {
     onChange({ target: { files: files.filter((_, i) => i !== index) } });
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
+    <div
+      ref={containerRef}
+      className={`bg-white rounded-lg shadow-md p-6 transition-shadow ${highlight ? 'ring-2 ring-bfp-red' : ''}`}
+    >
       <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
         <Paperclip className="w-5 h-5" /> Attachments
       </h2>
       <label className="form-label">Attach Files</label>
       <input
+        ref={fileInputRef}
         type="file"
         multiple
         accept={ACCEPT_ATTR}
@@ -76,4 +90,6 @@ export default function AttachmentInput({ files, onChange }) {
       )}
     </div>
   );
-}
+});
+
+export default AttachmentInput;

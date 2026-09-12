@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { FileEdit, ClipboardList, Send } from 'lucide-react';
@@ -19,7 +19,9 @@ export default function MinimalDamageFireIncidentReportForm() {
   const [success, setSuccess] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
+  const [attachmentHighlight, setAttachmentHighlight] = useState(false);
   const [attachments, setAttachments] = useState([]);
+  const attachmentInputRef = useRef(null);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
 
   const [formData, setFormData] = useState({
@@ -41,13 +43,24 @@ export default function MinimalDamageFireIncidentReportForm() {
 
   const handleAttachmentChange = (e) => {
     setAttachments(Array.from(e.target.files || []));
+    setAttachmentHighlight(false);
+  };
+
+  const goToAttachments = () => {
+    setShowAttachmentWarning(false);
+    attachmentInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    attachmentInputRef.current?.focus();
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.generalCategory) { setError('Please select a fire category.'); return; }
     if (!formData.subCategory) { setError('Please select a sub-category.'); return; }
-    if (!attachments.length) { setShowAttachmentWarning(true); return; }
+    if (!attachments.length) {
+      setShowAttachmentWarning(true);
+      setAttachmentHighlight(true);
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -136,7 +149,12 @@ export default function MinimalDamageFireIncidentReportForm() {
             </div>
           </div>
 
-          <AttachmentInput files={attachments} onChange={handleAttachmentChange} />
+          <AttachmentInput
+            ref={attachmentInputRef}
+            files={attachments}
+            onChange={handleAttachmentChange}
+            highlight={attachmentHighlight}
+          />
 
         <div className="flex gap-3">
           <button type="submit" disabled={loading} className="btn btn-primary px-8">
@@ -156,7 +174,7 @@ export default function MinimalDamageFireIncidentReportForm() {
       )}
 
       {showAttachmentWarning && (
-        <AttachmentWarningModal onConfirm={() => setShowAttachmentWarning(false)} />
+        <AttachmentWarningModal onConfirm={goToAttachments} />
       )}
     </div>
   );
