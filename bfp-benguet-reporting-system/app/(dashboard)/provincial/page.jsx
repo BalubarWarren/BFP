@@ -10,6 +10,7 @@ import {
   LayoutGrid, MapPin, Inbox, FileSearch,
 } from 'lucide-react';
 import PageHeader from '../../../components/common/PageHeader';
+import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CATEGORY_CHART_COLORS } from '../../../lib/constants';
@@ -281,6 +282,7 @@ export default function ProvincialDashboard() {
   const [reportsByCategory, setReportsByCategory] = useState({});
   const [histReportsByCategory, setHistReportsByCategory] = useState({});
   const [categoryModal, setCategoryModal] = useState(null); // { field, label } | null
+  useEscapeKey(() => setCategoryModal(null), !!categoryModal);
 
   // Sub-category breakdown view: only sub-categories with an actual reported count are shown.
   const [showSubCategories, setShowSubCategories] = useState(false);

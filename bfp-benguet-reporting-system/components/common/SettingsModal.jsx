@@ -5,6 +5,7 @@ import axios from 'axios';
 import { X, Sun, Moon, Monitor, KeyRound, LogOut } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { useToast } from './ToastProvider';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const THEME_OPTIONS = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -17,6 +18,7 @@ const emptyPasswordForm = { currentPassword: '', newPassword: '', confirmPasswor
 export default function SettingsModal({ onClose, onLogout }) {
   const { theme, setTheme } = useTheme();
   const toast = useToast();
+  useEscapeKey(onClose);
   const [passwordForm, setPasswordForm] = useState(emptyPasswordForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

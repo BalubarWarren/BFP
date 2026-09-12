@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Undo2, Send, ShieldCheck, Flame } from 'lucide-react';
+import { Undo2 } from 'lucide-react';
 import StatusBadge from '../../../../../../components/common/StatusBadge';
 
 const ROLE_LABELS = {
@@ -12,22 +12,6 @@ const ROLE_LABELS = {
   MUNICIPAL_FIRE_MARSHAL: 'Municipal Fire Marshal',
   PROVINCIAL_CHIEF_IIS: 'Provincial Chief IIS',
 };
-
-// Who the investigator can forward a corrected report to, aside from returning it to whoever sent it back.
-const SUBMIT_TARGETS = [
-  {
-    value: 'MUNICIPAL_FIRE_MARSHAL',
-    label: 'Municipal Fire Marshal',
-    description: 'Final municipal review before it goes to the province.',
-    icon: Flame,
-  },
-  {
-    value: 'PROVINCIAL_CHIEF_IIS',
-    label: 'Provincial Chief IIS',
-    description: 'Provincial-level review.',
-    icon: ShieldCheck,
-  },
-];
 
 const roleLabel = (role) => ROLE_LABELS[role] || role?.replace(/_/g, ' ') || 'the reviewer';
 
@@ -38,8 +22,6 @@ export default function EditReturnedReportPage() {
   const [error, setError] = useState('');
   const [corrections, setCorrections] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [showSubmitPicker, setShowSubmitPicker] = useState(false);
-  const [submitTarget, setSubmitTarget] = useState('MUNICIPAL_FIRE_MARSHAL');
 
   useEffect(() => {
     const fetchReport = async () => {
@@ -64,7 +46,12 @@ export default function EditReturnedReportPage() {
 
   const returnedByRole = report?.reviewedBy?.role;
 
-  const resubmit = async (passedToRole) => {
+  // A corrected report only ever goes back to the same reviewer tier that returned it — the
+  // server enforces this (see the RETURNED-resubmit block in PATCH /api/reports/[id]), so
+  // there's no "submit ahead" option here; letting the investigator pick Fire Marshal or
+  // Provincial Chief IIS directly from this screen was what let a returned report skip the
+  // reviewer who flagged the correction in the first place.
+  const resubmit = async () => {
     setSubmitting(true);
     try {
       setError('');
@@ -80,8 +67,6 @@ export default function EditReturnedReportPage() {
         {
           content: JSON.stringify(newContent),
           status: 'SUBMITTED',
-          // Omitting passedToRole tells the server to auto-route back to whoever returned it.
-          ...(passedToRole && { passedToRole }),
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -124,21 +109,12 @@ export default function EditReturnedReportPage() {
             <div className="flex flex-wrap gap-3">
               <button
                 type="button"
-                onClick={() => resubmit(null)}
-                disabled={submitting}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
-              >
-                <Undo2 className="h-4 w-4" />
-                Return to {roleLabel(returnedByRole)}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowSubmitPicker(true)}
+                onClick={() => resubmit()}
                 disabled={submitting}
                 className="inline-flex items-center gap-2 rounded-lg bg-bfp-navy px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-bfp-navy/90 disabled:opacity-50"
               >
-                <Send className="h-4 w-4" />
-                Submit
+                <Undo2 className="h-4 w-4" />
+                {submitting ? 'Submitting…' : `Return to ${roleLabel(returnedByRole)}`}
               </button>
               <button
                 type="button"
@@ -151,67 +127,6 @@ export default function EditReturnedReportPage() {
           </div>
         </div>
       </div>
-
-      {/* Submit — choose recipient */}
-      {showSubmitPicker && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          onClick={() => setShowSubmitPicker(false)}
-        >
-          <div className="modal-pop-in w-full max-w-sm rounded-xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="border-b border-gray-100 p-6">
-              <p className="text-xs font-semibold uppercase tracking-wide text-bfp-red">Submit Report</p>
-              <h2 className="text-lg font-bold text-bfp-navy">Who should receive this next?</h2>
-            </div>
-
-            <div className="space-y-2 p-6">
-              {SUBMIT_TARGETS.map((option) => {
-                const Icon = option.icon;
-                const selected = submitTarget === option.value;
-                return (
-                  <label
-                    key={option.value}
-                    className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-                      selected ? 'border-bfp-navy bg-bfp-navy/5' : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="submitTarget"
-                      value={option.value}
-                      checked={selected}
-                      onChange={() => setSubmitTarget(option.value)}
-                      className="mt-1"
-                    />
-                    <Icon className="h-4 w-4 mt-0.5 text-bfp-navy flex-shrink-0" />
-                    <span>
-                      <span className="block text-sm font-semibold text-gray-800">{option.label}</span>
-                      <span className="block text-xs text-gray-500">{option.description}</span>
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-
-            <div className="flex gap-3 p-6 pt-0">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowSubmitPicker(false);
-                  resubmit(submitTarget);
-                }}
-                disabled={submitting}
-                className="btn btn-primary px-6"
-              >
-                {submitting ? 'Submitting…' : 'Confirm & Submit'}
-              </button>
-              <button type="button" onClick={() => setShowSubmitPicker(false)} className="btn btn-secondary px-6">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { CheckCircle2, FileText, Send, User } from 'lucide-react';
-import AttachmentInput from '../../../../../components/reports/AttachmentInput';
+import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
 import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessModal';
 import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
@@ -19,6 +19,7 @@ export default function FinalInvestigationForm() {
   const [success, setSuccess] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
+  const [attachmentWarningKind, setAttachmentWarningKind] = useState('missing');
   const [attachmentHighlight, setAttachmentHighlight] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const attachmentInputRef = useRef(null);
@@ -68,6 +69,13 @@ export default function FinalInvestigationForm() {
     e.preventDefault();
     if (!formData.respondingOfficer) { setError('Please enter the reporting officer name.'); return; }
     if (!attachments.length) {
+      setAttachmentWarningKind('missing');
+      setShowAttachmentWarning(true);
+      setAttachmentHighlight(true);
+      return;
+    }
+    if (hasInvalidAttachments(attachments)) {
+      setAttachmentWarningKind('invalid');
       setShowAttachmentWarning(true);
       setAttachmentHighlight(true);
       return;
@@ -204,7 +212,11 @@ export default function FinalInvestigationForm() {
       )}
 
       {showAttachmentWarning && (
-        <AttachmentWarningModal onConfirm={goToAttachments} />
+        <AttachmentWarningModal
+          onConfirm={goToAttachments}
+          title={attachmentWarningKind === 'invalid' ? 'Invalid Attachment' : undefined}
+          message={attachmentWarningKind === 'invalid' ? 'One or more attached files are too large or an unsupported type. Remove or replace them before submitting.' : undefined}
+        />
       )}
     </div>
   );

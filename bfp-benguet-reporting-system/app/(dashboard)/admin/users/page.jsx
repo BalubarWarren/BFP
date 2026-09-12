@@ -6,6 +6,7 @@ import { Users, UserPlus, Pencil, Power, Trash2 } from 'lucide-react';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../../components/common/ToastProvider';
 import PageHeader from '../../../../components/common/PageHeader';
+import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 import { isAuthError } from '../../../../lib/utils';
 
 const ROLE_OPTIONS = [
@@ -137,6 +138,9 @@ export default function UserManagementPage() {
     setEditingUser(null);
     setEditForm(null);
   };
+
+  useEscapeKey(closeEdit, !!editingUser && !savingEdit);
+  useEscapeKey(() => setDeleteTarget(null), !!deleteTarget && !deleting);
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();

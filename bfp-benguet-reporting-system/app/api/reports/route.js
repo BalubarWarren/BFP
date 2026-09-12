@@ -46,13 +46,19 @@ const getInvestigationRecipientWhere = (municipalityId) => ({
   ].filter((condition) => condition.role),
 });
 
-const resolveRecipientByRole = async (role, municipalityId) => {
+// `excludeUserId` keeps a reviewer-tier submitter (Chief IIS, Fire Marshal, etc.) from ever being
+// resolved as their own report's recipient — without it, a municipality with only one holder of a
+// role could route a report straight back to whoever just submitted it.
+const resolveRecipientByRole = async (role, municipalityId, excludeUserId) => {
+  const notSelf = excludeUserId ? { id: { not: excludeUserId } } : {};
+
   if (MUNICIPAL_REVIEWER_ROLES.includes(role)) {
     return prisma.user.findFirst({
       where: {
         role,
         municipalityId,
         isActive: true,
+        ...notSelf,
       },
     });
   }
@@ -62,6 +68,7 @@ const resolveRecipientByRole = async (role, municipalityId) => {
       where: {
         role: ROLES.PROVINCIAL_CHIEF_IIS,
         isActive: true,
+        ...notSelf,
       },
     });
   }
@@ -71,6 +78,7 @@ const resolveRecipientByRole = async (role, municipalityId) => {
       where: {
         role,
         isActive: true,
+        ...notSelf,
       },
     });
   }
@@ -266,7 +274,6 @@ export async function POST(request) {
       reportingOfficerRank,
       stationCommanderName,
       passedToRole: requestedPassedToRole,
-      passedToId: requestedPassedToId,
     } = body;
 
     const parsedMunicipalityId = parseInt(municipalityId);
@@ -310,14 +317,18 @@ export async function POST(request) {
       );
     }
 
-    let passedToRole = requestedPassedToRole || null;
-    let passedToId = requestedPassedToId ? parseInt(requestedPassedToId) : null;
+    // The recipient is always resolved server-side from a role — a raw client-supplied
+    // passedToId is never trusted, since nothing would otherwise stop a reviewer-tier submitter
+    // (Chief IIS, Fire Marshal, etc.) from routing a report straight to their own account and
+    // self-approving it via /approve.
+    let passedToRole = null;
+    let passedToId = null;
 
     const defaultRecipientRole = user.role === ROLES.INVESTIGATOR ? ROLES.MUNICIPAL_CHIEF_IIS : null;
     const targetRecipientRole = requestedPassedToRole || defaultRecipientRole;
 
     if (targetRecipientRole) {
-      const recipient = await resolveRecipientByRole(targetRecipientRole, parsedMunicipalityId);
+      const recipient = await resolveRecipientByRole(targetRecipientRole, parsedMunicipalityId, user.id);
 
       if (!recipient || !canReceiveRoleInMunicipality(recipient, parsedMunicipalityId)) {
         return NextResponse.json(

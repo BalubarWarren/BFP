@@ -365,3 +365,62 @@ body {
 .dark .text-green-700 {
   @apply text-green-300;
 }
+
+/* The same light-chip pattern (bg-*-50/100 with text-*-800) shows up as colored category tiles
+   on the provincial dashboard and elsewhere — e.g. text-red-800 on bg-red-100 previously stayed
+   dark-on-dark once only the background half of that pair was inverted above, making a couple of
+   the monitoring-board tiles unreadable in dark mode. */
+.dark .bg-red-50 {
+  @apply bg-red-950/40;
+}
+
+.dark .text-red-800 {
+  @apply text-red-300;
+}
+
+.dark .bg-green-50 {
+  @apply bg-green-950/40;
+}
+
+.dark .text-green-800 {
+  @apply text-green-300;
+}
+
+.dark .bg-blue-50 {
+  @apply bg-blue-950/40;
+}
+
+.dark .bg-blue-100 {
+  @apply bg-blue-900/30;
+}
+
+.dark .text-blue-800 {
+  @apply text-blue-300;
+}
+
+.dark .bg-orange-50 {
+  @apply bg-orange-950/40;
+}
+
+.dark .bg-orange-100 {
+  @apply bg-orange-900/30;
+}
+
+.dark .text-orange-800 {
+  @apply text-orange-300;
+}
+
+.dark .bg-yellow-50 {
+  @apply bg-yellow-950/40;
+}
+
+.dark .bg-yellow-100 {
+  @apply bg-yellow-900/30;
+}
+
+/* StatusBadge's SUBMITTED/PENDING/CONTROLLED variants (lib/utils.js) pair dark amber text with a
+   translucent amber background — the translucent tint still reads fine over a dark page, but the
+   text itself needs the same lighten-for-dark-backgrounds treatment as the colors above. */
+.dark .text-amber-800 {
+  @apply text-amber-300;
+}

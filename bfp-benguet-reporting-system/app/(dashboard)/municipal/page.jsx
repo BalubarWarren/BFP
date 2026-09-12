@@ -14,6 +14,7 @@ import CaseFollowUpCta from '../../../components/reports/CaseFollowUpCta';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 import PageHeader from '../../../components/common/PageHeader';
 import ConfirmDeleteModal from '../../../components/reports/ConfirmDeleteModal';
+import { useEscapeKey } from '../../../hooks/useEscapeKey';
 
 export default function MunicipalDashboard() {
   const toast = useToast();
@@ -126,6 +127,11 @@ export default function MunicipalDashboard() {
     setForwardTarget(null);
     setForwardRole('');
   };
+
+  // Only the topmost open modal should close on Escape — the delete confirmation and forward
+  // modal both stack on top of the report-detail view without closing it underneath.
+  useEscapeKey(closeView, !!selectedReport && !forwardTarget && !deleteTarget);
+  useEscapeKey(closeForward, !!forwardTarget);
 
   const confirmForward = async () => {
     if (!forwardTarget || !forwardRole) return;
@@ -346,32 +352,18 @@ export default function MunicipalDashboard() {
         </div>
       )}
 
-      {/* Forward (Submit) Modal — choose who receives the approved report next */}
+      {/* Forward (Submit) Modal — the next reviewer tier is fully determined by who last
+          approved this report (the server enforces this regardless of what's sent), so this is
+          a confirmation, not a choice — offering Fire Marshal/Provincial as interchangeable
+          options here was what let a report skip a review tier. */}
       {forwardTarget && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
           <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-sm">
             <div className="p-6 border-b">
               <h3 className="text-lg font-bold text-bfp-navy">Submit Report</h3>
-              <p className="text-sm text-gray-500 mt-1">Choose who should receive this report next.</p>
-            </div>
-            <div className="p-6 space-y-3">
-              {Object.entries(FORWARD_ROLE_LABELS).map(([role, label]) => (
-                <label
-                  key={role}
-                  className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer ${
-                    forwardRole === role ? 'border-bfp-navy bg-bfp-navy/5' : 'border-gray-200'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name="forwardRole"
-                    value={role}
-                    checked={forwardRole === role}
-                    onChange={() => setForwardRole(role)}
-                  />
-                  <span className="font-medium text-gray-800">{label}</span>
-                </label>
-              ))}
+              <p className="text-sm text-gray-500 mt-1">
+                This report will be sent to the <strong>{FORWARD_ROLE_LABELS[forwardRole] || 'next reviewer'}</strong>.
+              </p>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
               <button onClick={closeForward} className="btn btn-secondary" disabled={forwardLoading}>Cancel</button>

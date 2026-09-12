@@ -3,7 +3,7 @@ import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { getDemoReportById, isDemoReportId } from '../../../../lib/demo-reports';
-import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES, isReportRecipient } from '../../../../lib/report-access';
+import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES, isReportRecipient, tierIndexForRole, nextTierRoles, REVIEW_TIERS } from '../../../../lib/report-access';
 import { deleteAttachments } from '../../../../lib/storage';
 import { parseJsonField } from '../../../../lib/utils';
 
@@ -113,8 +113,18 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    // Once a report has received final approval (Provincial Chief IIS, nothing left to forward)
+    // it's the official record — DELETE already refuses to remove one at this point, but PATCH
+    // had no equivalent lock, so the submitter could still silently edit its content afterward.
+    if (report.status === REPORT_STATUS.APPROVED && !report.passedToId) {
+      return NextResponse.json(
+        { error: 'This report has received final approval and can no longer be edited.' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
-    const { content, category, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName, status, passedToRole: requestedPassedToRole, passedToId: requestedPassedToId } = body;
+    const { content, category, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName, status, passedToRole: requestedPassedToRole } = body;
 
     // The only status transition this endpoint may perform is re-submitting; approvals/returns
     // must go through /approve so reviewedById/reviewedAt/remarks stay accurate.
@@ -136,21 +146,26 @@ export async function PATCH(request, { params }) {
       ...(status && { status }),
     };
 
-    // Investigator re-submitting a RETURNED report → let them pick a recipient, same as the
-    // original submission; falls back to auto-routing back to whoever returned it if they don't.
+    // Investigator re-submitting a RETURNED report → they may pick a lateral alternative within
+    // the SAME tier that returned it (e.g. Municipal Chief Operation instead of Chief IIS), but
+    // never a later tier — that would skip the exact reviewer who flagged the correction, which
+    // defeats the point of the return. Falls back to auto-routing back to whoever returned it.
     if (
       user.role === ROLES.INVESTIGATOR &&
       report.status === REPORT_STATUS.RETURNED &&
       status === REPORT_STATUS.SUBMITTED
     ) {
-      const RESUBMIT_ROLES = [
-        ROLES.MUNICIPAL_CHIEF_IIS,
-        ROLES.MUNICIPAL_CHIEF_OPERATION,
-        ROLES.MUNICIPAL_FIRE_MARSHAL,
-        ROLES.PROVINCIAL_CHIEF_IIS,
-      ];
+      const lastReviewer = report.reviewedById
+        ? await prisma.user.findUnique({
+            where: { id: report.reviewedById },
+            select: { id: true, role: true, isActive: true },
+          })
+        : null;
 
-      if (requestedPassedToRole && RESUBMIT_ROLES.includes(requestedPassedToRole)) {
+      const tierIdx = tierIndexForRole(lastReviewer?.role);
+      const sameTierRoles = tierIdx >= 0 ? REVIEW_TIERS[tierIdx] : MUNICIPAL_REVIEWER_ROLES;
+
+      if (requestedPassedToRole && sameTierRoles.includes(requestedPassedToRole)) {
         const recipient = MUNICIPAL_REVIEWER_ROLES.includes(requestedPassedToRole)
           ? await prisma.user.findFirst({
               where: { role: requestedPassedToRole, municipalityId: report.municipalityId, isActive: true },
@@ -168,19 +183,17 @@ export async function PATCH(request, { params }) {
 
         updateData.passedToRole = requestedPassedToRole;
         updateData.passedToId = recipient.id;
-      } else if (report.reviewedById) {
-        const lastReviewer = await prisma.user.findUnique({
-          where: { id: report.reviewedById },
-          select: { id: true, role: true, isActive: true },
-        });
-        if (lastReviewer && lastReviewer.isActive) {
-          updateData.passedToRole = lastReviewer.role;
-          updateData.passedToId = lastReviewer.id;
-        }
+      } else if (lastReviewer && lastReviewer.isActive) {
+        updateData.passedToRole = lastReviewer.role;
+        updateData.passedToId = lastReviewer.id;
       }
     }
 
-    // Investigator forwarding an approved (but not yet finally approved) report → determine next level from last reviewer
+    // Investigator forwarding an approved (but not yet finally approved) report → the next tier
+    // is fully determined by who last approved it. This is never taken from the client — a
+    // client-chosen role previously let a report approved only by the Municipal Chief IIS jump
+    // straight to the Provincial Chief IIS, skipping the Fire Marshal review entirely (and
+    // Provincial approval is final, so that skip could never be caught afterward).
     if (
       user.role === ROLES.INVESTIGATOR &&
       report.status === REPORT_STATUS.APPROVED &&
@@ -198,23 +211,14 @@ export async function PATCH(request, { params }) {
         select: { role: true },
       });
 
-      // Investigator may explicitly choose the next recipient; otherwise fall back
-      // to the automatic escalation path based on who last reviewed the report.
-      const allowedNextRoles = [ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.PROVINCIAL_CHIEF_IIS];
-      let targetRole = allowedNextRoles.includes(requestedPassedToRole) ? requestedPassedToRole : null;
-
-      if (!targetRole) {
-        if (lastReviewer?.role === ROLES.MUNICIPAL_CHIEF_IIS || lastReviewer?.role === ROLES.MUNICIPAL_CHIEF_OPERATION) {
-          targetRole = ROLES.MUNICIPAL_FIRE_MARSHAL;
-        } else if (lastReviewer?.role === ROLES.MUNICIPAL_FIRE_MARSHAL) {
-          targetRole = ROLES.PROVINCIAL_CHIEF_IIS;
-        } else {
-          return NextResponse.json(
-            { error: 'Invalid report state: cannot determine next forwarding step' },
-            { status: 400 }
-          );
-        }
+      const nextRoles = nextTierRoles(lastReviewer?.role);
+      if (!nextRoles) {
+        return NextResponse.json(
+          { error: 'Invalid report state: cannot determine next forwarding step' },
+          { status: 400 }
+        );
       }
+      const targetRole = nextRoles[0];
 
       if (targetRole === ROLES.MUNICIPAL_FIRE_MARSHAL) {
         const marshal = await prisma.user.findFirst({
@@ -316,9 +320,24 @@ export async function DELETE(request, { params }) {
     }
 
     const isFinallyApproved = report.status === REPORT_STATUS.APPROVED && !report.passedToId;
-    if (!isAdmin && isFinallyApproved) {
+
+    // A report an intermediate reviewer already approved-and-bounced-back (status APPROVED,
+    // passedToId pointing back at the submitter to forward it on) isn't "finally approved" yet,
+    // so the check above alone would let the owner delete it — silently destroying that
+    // reviewer's AuditLog-backed "Reports Reviewed" history along with it. Once any reviewer has
+    // actually acted on a report, only an admin may remove it, regardless of its current status.
+    const hasBeenReviewed = await prisma.auditLog.findFirst({
+      where: { reportId, action: { in: ['APPROVE_REPORT', 'RETURN_REPORT'] } },
+      select: { id: true },
+    });
+
+    if (!isAdmin && (isFinallyApproved || hasBeenReviewed)) {
       return NextResponse.json(
-        { error: 'This report has received final approval and can no longer be deleted.' },
+        {
+          error: hasBeenReviewed
+            ? 'This report has already been reviewed and can no longer be deleted. Contact an admin if it needs to be removed.'
+            : 'This report has received final approval and can no longer be deleted.',
+        },
         { status: 400 }
       );
     }

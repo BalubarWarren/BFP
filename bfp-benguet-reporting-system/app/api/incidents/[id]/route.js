@@ -32,7 +32,7 @@ export async function GET(request, { params }) {
 
     // Municipal roles can only view incidents within their municipality
     if (
-      [ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) &&
+      [ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) &&
       incident.municipalityId !== user.municipalityId
     ) {
       return NextResponse.json(
@@ -75,7 +75,7 @@ export async function PATCH(request, { params }) {
 
     // RBAC: Only creator can update for municipal workflow roles
     if (
-      [ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) &&
+      [ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) &&
       incident.createdById !== user.id
     ) {
       return NextResponse.json(

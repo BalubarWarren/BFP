@@ -1,8 +1,11 @@
 'use client';
 
 import { CheckCircle2 } from 'lucide-react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export default function SubmitSuccessModal({ message, onConfirm }) {
+  useEscapeKey(onConfirm);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 px-4">
       <div className="modal-pop-in w-full max-w-sm rounded-lg bg-white p-6 shadow-xl text-center">

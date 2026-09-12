@@ -9,6 +9,7 @@ import {
   Highlight,
   Popup,
 } from 'react-pdf-highlighter';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const PDFJS_VERSION = '4.10.38';
 const WORKER_SRC = `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.mjs`;
@@ -107,6 +108,17 @@ export default function PdfAnnotator({ attachmentUrl, attachmentName, reportId, 
       setError(err.response?.data?.error || 'Failed to delete annotation');
     }
   };
+
+  // Escape closes the viewer, except while the user is actively typing a comment in the
+  // highlight-selection composer — react-pdf-highlighter owns that popup's open/closed state
+  // internally, so rather than reaching into it, this just checks focus: if a comment textarea
+  // has focus when Escape is pressed, let the composer's own Cancel button handle it instead of
+  // silently discarding an in-progress draft by closing the whole modal underneath it.
+  useEscapeKey(() => {
+    const active = document.activeElement;
+    if (active && active.tagName === 'TEXTAREA') return;
+    onClose();
+  });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">

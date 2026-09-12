@@ -9,6 +9,7 @@ import { useToast } from '../../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../../../lib/utils';
 import AttachmentList from '../../../../components/reports/AttachmentList';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
+import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 
 export default function ProvincialReportsPage() {
   const toast = useToast();
@@ -77,6 +78,8 @@ export default function ProvincialReportsPage() {
     setReportDetail(null);
     setComments('');
   };
+
+  useEscapeKey(closeReview, !!selectedReport && !actionLoading);
 
   const handleApprove = async () => {
     setActionLoading(true);

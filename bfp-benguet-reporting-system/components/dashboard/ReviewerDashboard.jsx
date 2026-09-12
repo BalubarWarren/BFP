@@ -10,6 +10,7 @@ import { formatDateTime, isAuthError, parseJsonField } from '../../lib/utils';
 import AttachmentList from '../reports/AttachmentList';
 import TableSkeleton from '../common/TableSkeleton';
 import PageHeader from '../common/PageHeader';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 // Shared by the Municipal Chief IIS/Operation and Municipal Fire Marshal dashboards, which were
 // ~95% byte-identical (same incoming/reviewed tabs, same review modal, same approve/return
@@ -88,6 +89,8 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
     setReportDetail(null);
     setComments('');
   };
+
+  useEscapeKey(closeReview, !!selectedReport && !actionLoading);
 
   const handleApprove = async () => {
     if (selectedReport?.status !== 'SUBMITTED') {

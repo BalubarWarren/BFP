@@ -3,6 +3,7 @@ import prisma from '../../../lib/prisma';
 import { getUserFromRequest } from '../../../lib/auth';
 import { ROLES } from '../../../lib/constants';
 import { createIncidentWithReference } from '../../../lib/incident-reference';
+import { MUNICIPAL_REVIEWER_ROLES } from '../../../lib/report-access';
 
 // Safety cap on list results — orderBy is already createdAt desc, so this returns the most
 // recent incidents rather than silently truncating in an unpredictable order.
@@ -24,8 +25,11 @@ export async function GET(request) {
 
     let whereCondition = {};
 
-    // RBAC: Investigators can only see their own municipality's incidents
-    if (user.role === ROLES.INVESTIGATOR) {
+    // RBAC: investigators and municipal reviewers (Chief IIS, Chief Operation, Fire Marshal) can
+    // only ever see their own municipality's incidents — a client-supplied municipalityId is
+    // ignored for them rather than trusted, unlike provincial/admin roles below who may filter by
+    // any municipality (or see all of them when the param is omitted).
+    if (user.role === ROLES.INVESTIGATOR || MUNICIPAL_REVIEWER_ROLES.includes(user.role)) {
       whereCondition.municipalityId = user.municipalityId;
     } else if (municipalityId) {
       whereCondition.municipalityId = parseInt(municipalityId);
@@ -67,7 +71,7 @@ export async function POST(request) {
     }
 
     // Allow workflow roles to create incidents
-    if (![ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.PROVINCIAL_CHIEF_IIS, ROLES.MARSHAL, ROLES.SUPER_ADMIN].includes(user.role)) {
+    if (![ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.PROVINCIAL_CHIEF_IIS, ROLES.MARSHAL, ROLES.SUPER_ADMIN].includes(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
@@ -100,7 +104,7 @@ export async function POST(request) {
     }
 
     // Municipal roles can only create incidents in their municipality
-    if ([ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) && user.municipalityId !== parseInt(municipalityId)) {
+    if ([ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) && user.municipalityId !== parseInt(municipalityId)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

@@ -13,6 +13,7 @@ import CaseFollowUpCta from '../../../../components/reports/CaseFollowUpCta';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
 import PageHeader from '../../../../components/common/PageHeader';
 import ConfirmDeleteModal from '../../../../components/reports/ConfirmDeleteModal';
+import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 
 export default function MunicipalReportsPage() {
   const toast = useToast();
@@ -115,6 +116,8 @@ export default function MunicipalReportsPage() {
     setSelectedReport(null);
     setReportDetail(null);
   };
+
+  useEscapeKey(closeReport, !!selectedReport && !deleteTarget);
 
   const handleTextBlast = async (report) => {
     setBlastLoadingId(report.id);

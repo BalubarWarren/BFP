@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Menu, Bell, Settings } from 'lucide-react';
 import ProfilePanel from './ProfilePanel';
 import SettingsModal from './SettingsModal';
+import { useOutsideClick } from '../../hooks/useOutsideClick';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export default function Header({ user, onToggleSidebar }) {
   const router = useRouter();
@@ -14,6 +16,13 @@ export default function Header({ user, onToggleSidebar }) {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const notificationsRef = useRef(null);
+  const profileRef = useRef(null);
+
+  useOutsideClick(notificationsRef, () => setShowNotifications(false), showNotifications);
+  useOutsideClick(profileRef, () => setShowProfile(false), showProfile);
+  useEscapeKey(() => setShowNotifications(false), showNotifications);
+  useEscapeKey(() => setShowProfile(false), showProfile);
 
   const handleLogout = () => {
     sessionStorage.removeItem('token');
@@ -97,7 +106,7 @@ export default function Header({ user, onToggleSidebar }) {
         {/* Right side - Notifications & User */}
         <div className="flex items-center gap-4">
           {/* Notifications */}
-          <div className="relative">
+          <div className="relative" ref={notificationsRef}>
             <button
               onClick={() => setShowNotifications(!showNotifications)}
               className="relative p-2 text-gray-600 hover:text-gray-900"
@@ -172,7 +181,7 @@ export default function Header({ user, onToggleSidebar }) {
           </button>
 
           {/* User Avatar / Profile */}
-          <div className="relative">
+          <div className="relative" ref={profileRef}>
             <button
               onClick={() => setShowProfile(!showProfile)}
               className="flex items-center gap-2"

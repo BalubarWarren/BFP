@@ -49,9 +49,26 @@ export async function POST(request) {
       );
     }
 
+    // reportId is otherwise trusted as-is with no ownership check — without this, an
+    // investigator could attach a daily-report entry to any arbitrary report (including one
+    // submitted by someone else, in another municipality), polluting the monitoring-board
+    // aggregates that get attributed to that report.
+    const parsedReportId = parseInt(reportId);
+    const linkedReport = await prisma.report.findUnique({
+      where: { id: parsedReportId },
+      select: { submittedById: true, municipalityId: true },
+    });
+
+    if (!linkedReport || linkedReport.submittedById !== user.id || linkedReport.municipalityId !== user.municipalityId) {
+      return NextResponse.json(
+        { error: 'reportId must refer to one of your own reports in your municipality' },
+        { status: 400 }
+      );
+    }
+
     const entry = await prisma.dailyReportEntry.create({
       data: {
-        reportId: parseInt(reportId),
+        reportId: parsedReportId,
         municipalityId: parseInt(municipalityId),
         reportDate: new Date(reportDate),
         residentialCount: parseInt(residentialCount) || 0,

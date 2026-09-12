@@ -12,11 +12,16 @@ const ACCEPT_ATTR = '.jpg,.jpeg,.png,.webp,.gif,.heic,.pdf,image/jpeg,image/png,
 
 const formatSize = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
-const getFileIssue = (file) => {
+// Exported so the report forms can block Submit client-side instead of just flagging a file red
+// here and letting the request round-trip to the server before failing — the server (lib/storage.js)
+// still enforces the same rules independently, since a client-side check alone isn't trustworthy.
+export const getFileIssue = (file) => {
   if (file.size > MAX_FILE_SIZE) return `exceeds the 10MB limit (${formatSize(file.size)})`;
   if (!ALLOWED_MIME_TYPES.includes(file.type)) return 'unsupported file type — only images and PDFs are allowed';
   return null;
 };
+
+export const hasInvalidAttachments = (files) => files.some((file) => getFileIssue(file));
 
 const AttachmentInput = forwardRef(function AttachmentInput({ files, onChange, highlight }, ref) {
   const containerRef = useRef(null);

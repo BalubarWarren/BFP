@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Search, ClipboardList, Send, MessageSquare } from 'lucide-react';
 import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
-import AttachmentInput from '../../../../../components/reports/AttachmentInput';
+import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
 import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessModal';
 import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
@@ -19,6 +19,7 @@ export default function SpotInvestigationForm() {
   const [success, setSuccess] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
+  const [attachmentWarningKind, setAttachmentWarningKind] = useState('missing');
   const [attachmentHighlight, setAttachmentHighlight] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const attachmentInputRef = useRef(null);
@@ -95,6 +96,13 @@ export default function SpotInvestigationForm() {
     if (!formData.category) { setError('Please select a fire category.'); return; }
     if (!formData.subCategory) { setError('Please select a sub-category.'); return; }
     if (!attachments.length) {
+      setAttachmentWarningKind('missing');
+      setShowAttachmentWarning(true);
+      setAttachmentHighlight(true);
+      return;
+    }
+    if (hasInvalidAttachments(attachments)) {
+      setAttachmentWarningKind('invalid');
       setShowAttachmentWarning(true);
       setAttachmentHighlight(true);
       return;
@@ -261,7 +269,11 @@ export default function SpotInvestigationForm() {
       )}
 
       {showAttachmentWarning && (
-        <AttachmentWarningModal onConfirm={goToAttachments} />
+        <AttachmentWarningModal
+          onConfirm={goToAttachments}
+          title={attachmentWarningKind === 'invalid' ? 'Invalid Attachment' : undefined}
+          message={attachmentWarningKind === 'invalid' ? 'One or more attached files are too large or an unsupported type. Remove or replace them before submitting.' : undefined}
+        />
       )}
     </div>
   );

@@ -142,8 +142,17 @@ export async function POST(request, { params }) {
     };
     const reviewerLabel = REVIEWER_ROLE_LABELS[user.role] || user.role.replace(/_/g, ' ');
 
-    const updatedReport = await prisma.report.update({
-      where: { id: parseInt(params.id) },
+    // isReportRecipient matches by role (not just passedToId), so two different accounts holding
+    // the same reviewer role can both legitimately load this report and act on it concurrently.
+    // Guarding the update with the exact status/passedToId we just read means only the first of
+    // two racing approve/reject calls actually applies — the loser gets a clear conflict instead
+    // of silently overwriting the winner's result with mismatched notifications/audit trail.
+    const updateResult = await prisma.report.updateMany({
+      where: {
+        id: report.id,
+        status: report.status,
+        passedToId: report.passedToId,
+      },
       data: {
         status: newStatus,
         reviewedAt: new Date(),
@@ -152,6 +161,17 @@ export async function POST(request, { params }) {
         passedToRole: nextPassedToRole,
         passedToId: nextPassedToId,
       },
+    });
+
+    if (updateResult.count === 0) {
+      return NextResponse.json(
+        { error: 'This report was already acted on by another reviewer. Refresh to see its current status.' },
+        { status: 409 }
+      );
+    }
+
+    const updatedReport = await prisma.report.findUnique({
+      where: { id: report.id },
       include: {
         submittedBy: true,
         municipality: true,
@@ -172,18 +192,6 @@ export async function POST(request, { params }) {
         changes: JSON.stringify({ reviewerRole: user.role, remarks: remarks || null }),
       },
     });
-
-    // Notify next reviewer when forwarded (only Provincial Chief IIS case now)
-    if (action === 'approve' && nextPassedToId && newStatus === REPORT_STATUS.SUBMITTED) {
-      await prisma.notification.create({
-        data: {
-          userId: nextPassedToId,
-          message: `A ${updatedReport.reportType} report from ${updatedReport.municipality.name} is awaiting your review.`,
-          type: NOTIFICATION_TYPES.REPORT_SUBMITTED,
-          reportId: report.id,
-        },
-      });
-    }
 
     // Notify original submitter: approved-pending-forward, finally approved, or returned
     if (newStatus === REPORT_STATUS.APPROVED && !isFinalApproval) {
