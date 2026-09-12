@@ -31,4 +31,29 @@ export async function generateIncidentReference(year = new Date().getFullYear())
   return `BFP-BEN-${year}-${String(sequence).padStart(3, '0')}`;
 }
 
+const isReferenceNumberCollision = (error) => {
+  if (error.code !== 'P2002') return false;
+  const target = error.meta?.target;
+  return Array.isArray(target) ? target.includes('referenceNumber') : String(target || '').includes('referenceNumber');
+};
+
+// generateIncidentReference reads the last reference number and increments it with no
+// DB-level lock or sequence backing it, so two submissions in the same moment can compute the
+// same "next" number. Rather than serializing every incident creation to prevent that (or adding
+// a dedicated sequence table), this retries with a freshly recomputed number on the rare unique
+// constraint collision — the same accept-and-retry approach as any optimistic-concurrency scheme.
+export async function createIncidentWithReference(data, { maxAttempts = 3, include } = {}) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    const referenceNumber = await generateIncidentReference();
+    try {
+      return await prisma.incident.create({
+        data: { ...data, referenceNumber },
+        ...(include && { include }),
+      });
+    } catch (error) {
+      if (!isReferenceNumberCollision(error) || attempt === maxAttempts) throw error;
+    }
+  }
+}
+
 export default generateIncidentReference;

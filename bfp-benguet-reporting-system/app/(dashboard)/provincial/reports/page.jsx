@@ -6,7 +6,7 @@ import { Flame } from 'lucide-react';
 import StatusBadge from '../../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../../components/common/ToastProvider';
-import { formatDateTime, isAuthError } from '../../../../lib/utils';
+import { formatDateTime, isAuthError, parseJsonField } from '../../../../lib/utils';
 import AttachmentList from '../../../../components/reports/AttachmentList';
 
 export default function ProvincialReportsPage() {
@@ -117,11 +117,7 @@ export default function ProvincialReportsPage() {
     }
   };
 
-  const parseAttachments = (attachments) => {
-    if (!attachments) return [];
-    try { return typeof attachments === 'string' ? JSON.parse(attachments) : attachments; }
-    catch { return []; }
-  };
+  const parseAttachments = (attachments) => parseJsonField(attachments, []);
 
   const matchesSearch = (report) =>
     !search || report.incident?.referenceNumber?.toLowerCase().includes(search.toLowerCase());

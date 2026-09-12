@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
 import { getUserFromRequest } from '../../../lib/auth';
 import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '../../../lib/constants';
-import generateIncidentReference from '../../../lib/incident-reference';
+import { createIncidentWithReference } from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
 import { saveAttachments } from '../../../lib/storage';
+import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES } from '../../../lib/report-access';
 
 // Safety cap on list results — orderBy is already createdAt desc, so this returns the most
 // recent reports rather than silently truncating in an unpredictable order.
@@ -15,18 +16,6 @@ const INVESTIGATION_REPORT_TYPES = [
   'SPOT_INVESTIGATION',
   'PROGRESS_INVESTIGATION',
   'FINAL_INVESTIGATION',
-];
-
-const MUNICIPAL_REVIEWER_ROLES = [
-  ROLES.MUNICIPAL_CHIEF_IIS,
-  ROLES.MUNICIPAL_CHIEF_OPERATION,
-  ROLES.MUNICIPAL_FIRE_MARSHAL,
-];
-
-const PROVINCIAL_REVIEWER_ROLES = [
-  ROLES.PROVINCIAL_CHIEF_IIS,
-  ROLES.MARSHAL,
-  ROLES.CHIEF_INVESTIGATOR_IIS,
 ];
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
@@ -290,6 +279,13 @@ export async function POST(request) {
       );
     }
 
+    if (!attachments.length) {
+      return NextResponse.json(
+        { error: 'At least one attachment is required.' },
+        { status: 400 }
+      );
+    }
+
     // Municipal roles can only submit for their own municipality
     if (
       [ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) &&
@@ -326,18 +322,14 @@ export async function POST(request) {
     // overdue-check job) have a stable case to hang off of.
     let effectiveIncidentId = parsedIncidentId;
     if (reportType === 'SPOT_INVESTIGATION' && !effectiveIncidentId) {
-      const referenceNumber = await generateIncidentReference();
-      const incident = await prisma.incident.create({
-        data: {
-          referenceNumber,
-          municipalityId: parsedMunicipalityId,
-          dateOfIncident: new Date(parsedContent.dateOfIncident || reportDate),
-          timeOfIncident: parsedContent.timeOfIncident || null,
-          generalCategory: category,
-          subCategory: subCategory || null,
-          description: parsedContent.description || null,
-          createdById: user.id,
-        },
+      const incident = await createIncidentWithReference({
+        municipalityId: parsedMunicipalityId,
+        dateOfIncident: new Date(parsedContent.dateOfIncident || reportDate),
+        timeOfIncident: parsedContent.timeOfIncident || null,
+        generalCategory: category,
+        subCategory: subCategory || null,
+        description: parsedContent.description || null,
+        createdById: user.id,
       });
       effectiveIncidentId = incident.id;
     }

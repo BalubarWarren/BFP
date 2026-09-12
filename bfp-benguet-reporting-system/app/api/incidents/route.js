@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
 import { getUserFromRequest } from '../../../lib/auth';
 import { ROLES } from '../../../lib/constants';
-import generateIncidentReference from '../../../lib/incident-reference';
+import { createIncidentWithReference } from '../../../lib/incident-reference';
 
 // Safety cap on list results — orderBy is already createdAt desc, so this returns the most
 // recent incidents rather than silently truncating in an unpredictable order.
@@ -107,12 +107,8 @@ export async function POST(request) {
       );
     }
 
-    // Generate incident reference number
-    const referenceNumber = await generateIncidentReference();
-
-    const incident = await prisma.incident.create({
-      data: {
-        referenceNumber,
+    const incident = await createIncidentWithReference(
+      {
         municipalityId: parseInt(municipalityId),
         dateOfIncident: new Date(dateOfIncident),
         timeOfIncident,
@@ -128,11 +124,8 @@ export async function POST(request) {
         estimatedDamage: estimatedDamage ? parseFloat(estimatedDamage) : null,
         createdById: user.id,
       },
-      include: {
-        municipality: true,
-        createdBy: true,
-      },
-    });
+      { include: { municipality: true, createdBy: true } }
+    );
 
     return NextResponse.json(
       {

@@ -5,14 +5,18 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
 import { Clock, FileText, Send } from 'lucide-react';
 import AttachmentInput from '../../../../../components/reports/AttachmentInput';
+import RecipientSelect from '../../../../../components/reports/RecipientSelect';
+import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessModal';
+import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 
 export default function ProgressInvestigationForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [user, setUser] = useState(null);
+  const { getEffectiveUser } = useEffectiveUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [attachments, setAttachments] = useState([]);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
@@ -23,8 +27,6 @@ export default function ProgressInvestigationForm() {
   });
 
   useEffect(() => {
-    const userData = sessionStorage.getItem('user');
-    if (userData) setUser(JSON.parse(userData));
     fetchIncidents();
   }, []);
 
@@ -49,23 +51,13 @@ export default function ProgressInvestigationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!attachments.length) { setError('Please attach at least one file before submitting.'); return; }
 
     setLoading(true);
     setError('');
     try {
       const token = sessionStorage.getItem('token');
-      let effectiveUser = user;
-      if (!effectiveUser) {
-        try {
-          const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-          if (meRes.ok) {
-            const meJson = await meRes.json();
-            effectiveUser = meJson.user;
-            sessionStorage.setItem('user', JSON.stringify(effectiveUser));
-            setUser(effectiveUser);
-          }
-        } catch (e) {}
-      }
+      const effectiveUser = await getEffectiveUser();
       if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
       const payload = new FormData();
       payload.append('reportType', 'PROGRESS_INVESTIGATION');
@@ -82,7 +74,7 @@ export default function ProgressInvestigationForm() {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setSuccess('Progress Investigation Report submitted successfully.');
-      setTimeout(() => router.push('/municipal'), 1500);
+      setShowSuccessModal(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit report.');
     } finally {
@@ -134,12 +126,7 @@ export default function ProgressInvestigationForm() {
             </h2>
             <div>
               <label className="form-label">Recipient</label>
-              <select value={recipientRole} onChange={(e) => setRecipientRole(e.target.value)} className="form-select max-w-xs">
-                <option value="MUNICIPAL_CHIEF_IIS">Municipal Chief IIS</option>
-                <option value="MUNICIPAL_CHIEF_OPERATION">Municipal Chief Operation</option>
-                <option value="MUNICIPAL_FIRE_MARSHAL">Municipal Fire Marshal</option>
-                <option value="PROVINCIAL_CHIEF_IIS">Provincial Chief IIS</option>
-              </select>
+              <RecipientSelect value={recipientRole} onChange={setRecipientRole} />
             </div>
           </div>
 
@@ -154,6 +141,13 @@ export default function ProgressInvestigationForm() {
           </button>
         </div>
       </form>
+
+      {showSuccessModal && (
+        <SubmitSuccessModal
+          message={success}
+          onConfirm={() => router.push('/municipal')}
+        />
+      )}
     </div>
   );
 }

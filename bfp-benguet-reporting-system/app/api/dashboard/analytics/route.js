@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { ROLES } from '../../../../lib/constants';
+import { PROVINCIAL_REVIEWER_ROLES } from '../../../../lib/report-access';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -11,10 +12,6 @@ const CATEGORY_LABEL_MAP = {
   NON_STRUCTURAL: 'Non-Structural',
   TRANSPORT: 'Transport',
 };
-
-// A report only counts toward these charts once it has actually reached the province level —
-// matches the monitoring board's rule (see app/api/dashboard/monitoring-board/route.js).
-const PROVINCIAL_REVIEWER_ROLES = [ROLES.PROVINCIAL_CHIEF_IIS, ROLES.MARSHAL, ROLES.CHIEF_INVESTIGATOR_IIS];
 
 // Builds a (start, end) -> category totals function that combines Daily Report tallies with
 // individually filed Spot Investigation/MDFIR reports — pulling the latter in once up front
@@ -85,23 +82,9 @@ export async function GET(request) {
     });
     const getPeriodTotals = makeGetPeriodTotals(categorizedReports);
 
-    const { searchParams } = new URL(request.url);
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-
-    let dateFilter = {};
     const now = new Date();
     const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const currentYear = new Date(now.getFullYear(), 0, 1);
-
-    if (startDate && endDate) {
-      dateFilter = {
-        createdAt: {
-          gte: new Date(startDate),
-          lte: new Date(endDate),
-        },
-      };
-    }
 
     // KPI: Total incidents this month
     const thisMonthIncidents = await prisma.incident.count({

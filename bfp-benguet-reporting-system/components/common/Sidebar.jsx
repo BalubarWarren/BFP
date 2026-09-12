@@ -18,8 +18,19 @@ export default function Sidebar({ isOpen, user }) {
     router.push('/login');
   };
 
-  const isMarshal = user?.role === 'MARSHAL';
-  const isProvincialChiefIIS = user?.role === 'PROVINCIAL_CHIEF_IIS';
+  // Every role whose ROLE_HOME_PATH/isRouteAllowedForRole (lib/constants.js) points at
+  // /provincial — including the legacy/regional roles that previously had no sidebar links
+  // at all once logged in.
+  const PROVINCIAL_DASHBOARD_ROLES = [
+    'MARSHAL',
+    'PROVINCIAL_CHIEF_IIS',
+    'CHIEF_INVESTIGATOR_IIS',
+    'PROVINCIAL_CHIEF_INVESTIGATOR',
+    'REGION_IIS',
+    'REGIONAL_CHIEF_OPERATION',
+    'PIO',
+  ];
+  const isProvincialDashboardRole = PROVINCIAL_DASHBOARD_ROLES.includes(user?.role);
   const isInvestigator = user?.role === 'INVESTIGATOR';
   const isMunicipalChiefIIS = user?.role === 'MUNICIPAL_CHIEF_IIS';
   const isMunicipalChiefOperation = user?.role === 'MUNICIPAL_CHIEF_OPERATION';
@@ -54,26 +65,9 @@ export default function Sidebar({ isOpen, user }) {
           {/* Navigation */}
           <nav className="flex-1 p-4">
             <div className="space-y-2">
-              {/* Provincial Dashboard — MARSHAL */}
-              {isMarshal && (
-                <>
-                  <Link
-                    href="/provincial"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
-                  </Link>
-                  <Link
-                    href="/provincial/reports"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <FileText className="w-4 h-4 flex-shrink-0" /> Fire Incident Reports
-                  </Link>
-                </>
-              )}
-
-              {/* Provincial Chief IIS */}
-              {isProvincialChiefIIS && (
+              {/* Provincial Dashboard — Marshal, Provincial Chief IIS, and every other
+                  provincial/regional reviewer role (see PROVINCIAL_DASHBOARD_ROLES above) */}
+              {isProvincialDashboardRole && (
                 <>
                   <Link
                     href="/provincial"

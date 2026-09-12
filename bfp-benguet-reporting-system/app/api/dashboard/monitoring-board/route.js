@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { ROLES, REPORT_STATUS } from '../../../../lib/constants';
+import { PROVINCIAL_REVIEWER_ROLES } from '../../../../lib/report-access';
 
 const CATEGORY_FIELD_MAP = {
   RESIDENTIAL: 'residential',
@@ -9,10 +10,6 @@ const CATEGORY_FIELD_MAP = {
   NON_STRUCTURAL: 'nonStructural',
   TRANSPORT: 'transport',
 };
-
-// A report only counts toward the provincial monitoring board once it has actually
-// reached the province level — not while it's still sitting with a municipal reviewer.
-const PROVINCIAL_REVIEWER_ROLES = [ROLES.PROVINCIAL_CHIEF_IIS, ROLES.MARSHAL, ROLES.CHIEF_INVESTIGATOR_IIS];
 
 const emptySubCategories = () => ({ residential: {}, nonResidential: {}, nonStructural: {}, transport: {} });
 

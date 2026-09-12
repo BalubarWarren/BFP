@@ -56,9 +56,21 @@ export async function PATCH(request) {
     const body = await request.json();
     const { notificationId, isRead } = body;
 
-    const notification = await prisma.notification.update({
-      where: { id: parseInt(notificationId) },
+    // Scoped to the requesting user's own id so one account can't flip another's notifications.
+    const result = await prisma.notification.updateMany({
+      where: { id: parseInt(notificationId), userId: user.id },
       data: { isRead },
+    });
+
+    if (result.count === 0) {
+      return NextResponse.json(
+        { error: 'Notification not found' },
+        { status: 404 }
+      );
+    }
+
+    const notification = await prisma.notification.findUnique({
+      where: { id: parseInt(notificationId) },
     });
 
     return NextResponse.json({ notification });

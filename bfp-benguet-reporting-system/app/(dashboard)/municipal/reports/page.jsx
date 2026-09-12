@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { FileText } from 'lucide-react';
 import StatusBadge from '../../../../components/common/StatusBadge';
 import { useToast } from '../../../../components/common/ToastProvider';
-import { formatDateTime } from '../../../../lib/utils';
+import { formatDateTime, parseJsonField } from '../../../../lib/utils';
 import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../../components/reports/AttachmentList';
 import CaseFollowUpCta from '../../../../components/reports/CaseFollowUpCta';
@@ -69,15 +69,6 @@ export default function MunicipalReportsPage() {
       .toLowerCase()
       .replace(/\b\w/g, (letter) => letter.toUpperCase()) || '-';
 
-  const parseJson = (value, fallback) => {
-    if (!value) return fallback;
-    if (typeof value !== 'string') return value;
-    try {
-      return JSON.parse(value);
-    } catch {
-      return fallback;
-    }
-  };
 
   const openReport = async (report) => {
     setSelectedReport(report);
@@ -159,7 +150,7 @@ export default function MunicipalReportsPage() {
 
               <div className="rounded-lg bg-gray-50 p-4">
                 <h3 className="mb-3 font-bold text-bfp-navy">Attachments</h3>
-                {parseJson(reportDetail?.attachments || selectedReport.attachments, []).length ? (
+                {parseJsonField(reportDetail?.attachments || selectedReport.attachments, []).length ? (
                   <AttachmentList
                     attachments={reportDetail?.attachments || selectedReport.attachments}
                     reportId={selectedReport.id}

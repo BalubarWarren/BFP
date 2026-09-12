@@ -8,7 +8,9 @@ const REVIEW_TIER_LABELS = ['Municipal Chief IIS', 'Municipal Fire Marshal', 'Pr
 const roleTierIndex = (role) => {
   if (role === 'MUNICIPAL_CHIEF_IIS' || role === 'MUNICIPAL_CHIEF_OPERATION') return 0;
   if (role === 'MUNICIPAL_FIRE_MARSHAL') return 1;
-  if (role === 'PROVINCIAL_CHIEF_IIS') return 2;
+  // MARSHAL and CHIEF_INVESTIGATOR_IIS are legacy roles kept for compatibility that act as
+  // the same final/provincial-level approver as PROVINCIAL_CHIEF_IIS elsewhere in the app.
+  if (role === 'PROVINCIAL_CHIEF_IIS' || role === 'MARSHAL' || role === 'CHIEF_INVESTIGATOR_IIS') return 2;
   return null;
 };
 

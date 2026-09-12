@@ -34,6 +34,13 @@ export async function POST(request) {
       reportingOfficer,
     } = body;
 
+    if (!reportId || !municipalityId || !reportDate || !reportingOfficer) {
+      return NextResponse.json(
+        { error: 'Missing required fields' },
+        { status: 400 }
+      );
+    }
+
     // RBAC: Can only create for their own municipality
     if (user.municipalityId !== parseInt(municipalityId)) {
       return NextResponse.json(

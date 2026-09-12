@@ -7,7 +7,7 @@ import { FileEdit, Search, Clock, CheckCircle2, MessageSquare, FileText } from '
 import StatusBadge from '../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../components/common/ToastProvider';
-import { formatDateTime, isAuthError } from '../../../lib/utils';
+import { formatDateTime, isAuthError, parseJsonField } from '../../../lib/utils';
 import ReportProgressBar, { getReportProgress } from '../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../components/reports/AttachmentList';
 import CaseFollowUpCta from '../../../components/reports/CaseFollowUpCta';
@@ -160,11 +160,7 @@ export default function MunicipalDashboard() {
     }
   };
 
-  const parseAttachments = (attachments) => {
-    if (!attachments) return [];
-    try { return typeof attachments === 'string' ? JSON.parse(attachments) : attachments; }
-    catch { return []; }
-  };
+  const parseAttachments = (attachments) => parseJsonField(attachments, []);
 
   const formatReportType = (type) =>
     type

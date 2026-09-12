@@ -21,6 +21,19 @@ export function formatDateTime(date) {
   });
 }
 
+// Safely parses a value that may already be an array/object (already deserialized), a JSON
+// string, or null/undefined — used for the JSON-serialized attachments/content fields the API
+// returns. Previously reimplemented independently in several page components.
+export function parseJsonField(value, fallback = []) {
+  if (!value) return fallback;
+  if (typeof value !== 'string') return value;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
 export function isAuthError(err) {
   const status = err?.response?.status;
   return status === 401 || status === 403;

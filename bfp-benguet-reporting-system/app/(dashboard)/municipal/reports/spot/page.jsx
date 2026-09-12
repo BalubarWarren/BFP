@@ -1,18 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Search, ClipboardList, Send, MessageSquare } from 'lucide-react';
 import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
 import AttachmentInput from '../../../../../components/reports/AttachmentInput';
+import RecipientSelect from '../../../../../components/reports/RecipientSelect';
+import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessModal';
+import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 
 export default function SpotInvestigationForm() {
   const router = useRouter();
-  const [user, setUser] = useState(null);
+  const { getEffectiveUser } = useEffectiveUser();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [attachments, setAttachments] = useState([]);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
   const [textBlastFiles, setTextBlastFiles] = useState([]);
@@ -28,11 +32,6 @@ export default function SpotInvestigationForm() {
     subCategory: '',
     description: '',
   });
-
-  useEffect(() => {
-    const userData = sessionStorage.getItem('user');
-    if (userData) setUser(JSON.parse(userData));
-  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -84,26 +83,13 @@ export default function SpotInvestigationForm() {
     e.preventDefault();
     if (!formData.category) { setError('Please select a fire category.'); return; }
     if (!formData.subCategory) { setError('Please select a sub-category.'); return; }
+    if (!attachments.length) { setError('Please attach at least one file before submitting.'); return; }
 
     setLoading(true);
     setError('');
     try {
       const token = sessionStorage.getItem('token');
-      let effectiveUser = user;
-      if (!effectiveUser) {
-        // try to refresh user from API using token
-        try {
-          const meRes = await fetch('/api/auth/me', { headers: { Authorization: `Bearer ${token}` } });
-          if (meRes.ok) {
-            const meJson = await meRes.json();
-            effectiveUser = meJson.user;
-            sessionStorage.setItem('user', JSON.stringify(effectiveUser));
-            setUser(effectiveUser);
-          }
-        } catch (e) {
-          // ignore and continue; submission will fail with clearer error
-        }
-      }
+      const effectiveUser = await getEffectiveUser();
       if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
       const payload = new FormData();
       payload.append('reportType', 'SPOT_INVESTIGATION');
@@ -121,7 +107,7 @@ export default function SpotInvestigationForm() {
 
       await axios.post('/api/reports', payload, { headers: { Authorization: `Bearer ${token}` } });
       setSuccess('Spot Investigation Report submitted successfully.');
-      setTimeout(() => router.push('/municipal'), 1500);
+      setShowSuccessModal(true);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to submit report.');
     } finally {
@@ -186,12 +172,7 @@ export default function SpotInvestigationForm() {
           </h2>
           <div>
             <label className="form-label">Recipient</label>
-            <select value={recipientRole} onChange={(e) => setRecipientRole(e.target.value)} className="form-select max-w-xs">
-              <option value="MUNICIPAL_CHIEF_IIS">Municipal Chief IIS</option>
-              <option value="MUNICIPAL_CHIEF_OPERATION">Municipal Chief Operation</option>
-              <option value="MUNICIPAL_FIRE_MARSHAL">Municipal Fire Marshal</option>
-              <option value="PROVINCIAL_CHIEF_IIS">Provincial Chief IIS</option>
-            </select>
+            <RecipientSelect value={recipientRole} onChange={setRecipientRole} />
           </div>
         </div>
 
@@ -251,6 +232,13 @@ export default function SpotInvestigationForm() {
           </button>
         </div>
       </form>
+
+      {showSuccessModal && (
+        <SubmitSuccessModal
+          message={success}
+          onConfirm={() => router.push('/municipal')}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
+import prisma from './prisma';
 
 const JWT_EXPIRY = process.env.JWT_EXPIRY || '24h';
 
@@ -61,14 +62,26 @@ export function getTokenFromRequest(request) {
   return authHeader.slice(7);
 }
 
-// Get user from request
+// Get user from request — re-reads the user from the database on every call rather than
+// trusting the JWT's snapshot, so an admin deactivating/reassigning a user takes effect
+// immediately instead of only after their existing token expires (up to JWT_EXPIRY later).
 export async function getUserFromRequest(request) {
   const token = getTokenFromRequest(request);
   if (!token) return null;
-  
+
+  let decoded;
   try {
-    return await verifyToken(token);
+    decoded = await verifyToken(token);
   } catch (error) {
     return null;
   }
+
+  const user = await prisma.user.findUnique({
+    where: { id: decoded.id },
+    select: { id: true, email: true, name: true, role: true, rank: true, municipalityId: true, isActive: true },
+  });
+
+  if (!user || !user.isActive) return null;
+
+  return user;
 }

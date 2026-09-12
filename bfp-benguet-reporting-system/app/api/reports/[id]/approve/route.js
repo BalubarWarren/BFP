@@ -3,28 +3,7 @@ import prisma from '../../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../../lib/auth';
 import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '../../../../../lib/constants';
 import { getDemoReportById, isDemoReportId } from '../../../../../lib/demo-reports';
-
-const MUNICIPAL_REVIEWER_ROLES = [
-  ROLES.MUNICIPAL_CHIEF_IIS,
-  ROLES.MUNICIPAL_CHIEF_OPERATION,
-  ROLES.MUNICIPAL_FIRE_MARSHAL,
-];
-
-const PROVINCIAL_REVIEWER_ROLES = [
-  ROLES.PROVINCIAL_CHIEF_IIS,
-  ROLES.MARSHAL,
-  ROLES.CHIEF_INVESTIGATOR_IIS,
-];
-
-const isReportRecipient = (report, user) => {
-  if (report.passedToId === user.id) return true;
-  if (report.passedToRole !== user.role) return false;
-  if (PROVINCIAL_REVIEWER_ROLES.includes(user.role)) return true;
-  if (MUNICIPAL_REVIEWER_ROLES.includes(user.role)) {
-    return report.municipalityId === user.municipalityId;
-  }
-  return false;
-};
+import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES, isReportRecipient } from '../../../../../lib/report-access';
 
 export async function POST(request, { params }) {
   try {
@@ -156,9 +135,12 @@ export async function POST(request, { params }) {
     const nextStepLabel = user.role === ROLES.MUNICIPAL_FIRE_MARSHAL
       ? 'Provincial Chief IIS'
       : 'Municipal Fire Marshal';
-    const reviewerLabel = user.role === ROLES.MUNICIPAL_FIRE_MARSHAL
-      ? 'Municipal Fire Marshal'
-      : 'Municipal Chief IIS';
+    const REVIEWER_ROLE_LABELS = {
+      [ROLES.MUNICIPAL_CHIEF_IIS]: 'Municipal Chief IIS',
+      [ROLES.MUNICIPAL_CHIEF_OPERATION]: 'Municipal Chief Operation',
+      [ROLES.MUNICIPAL_FIRE_MARSHAL]: 'Municipal Fire Marshal',
+    };
+    const reviewerLabel = REVIEWER_ROLE_LABELS[user.role] || user.role.replace(/_/g, ' ');
 
     const updatedReport = await prisma.report.update({
       where: { id: parseInt(params.id) },

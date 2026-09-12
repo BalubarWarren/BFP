@@ -5,6 +5,13 @@ import { ROLES } from '../../../../lib/constants';
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
+class ForeignReportConflictError extends Error {
+  constructor(referenceNumber) {
+    super('Incident has reports submitted by another user');
+    this.referenceNumber = referenceNumber;
+  }
+}
+
 const MUNICIPAL_ROLES = [
   ROLES.INVESTIGATOR,
   ROLES.MUNICIPAL_CHIEF_IIS,
@@ -143,29 +150,53 @@ export async function DELETE(request, { params }) {
       }
     }
 
-    const incidentWithForeignReport = await prisma.report.findFirst({
-      where: {
-        incident: { createdById: targetId },
-        submittedById: { not: targetId },
-      },
-      include: { incident: { select: { referenceNumber: true } } },
-    });
+    const MAX_DELETE_ATTEMPTS = 3;
+    try {
+      // The foreign-report check and the deletes run inside the same Serializable transaction so
+      // a report submitted by someone else against one of this user's incidents between the
+      // check and the delete aborts the whole transaction instead of still being destroyed.
+      // Serializable can itself abort with a write-conflict error (P2034) whenever it detects
+      // any concurrent transaction touching the same rows, even with no real foreign-report
+      // conflict — that's retried like any optimistic-concurrency scheme, same as the
+      // incident-reference collision retry in lib/incident-reference.js.
+      for (let attempt = 1; attempt <= MAX_DELETE_ATTEMPTS; attempt += 1) {
+        try {
+          await prisma.$transaction(
+            async (tx) => {
+              const incidentWithForeignReport = await tx.report.findFirst({
+                where: {
+                  incident: { createdById: targetId },
+                  submittedById: { not: targetId },
+                },
+                include: { incident: { select: { referenceNumber: true } } },
+              });
 
-    if (incidentWithForeignReport) {
-      return NextResponse.json(
-        {
-          error: `Cannot delete: incident ${incidentWithForeignReport.incident?.referenceNumber || '(unknown)'} created by this user has reports submitted by other users`,
-        },
-        { status: 409 }
-      );
+              if (incidentWithForeignReport) {
+                throw new ForeignReportConflictError(incidentWithForeignReport.incident?.referenceNumber);
+              }
+
+              await tx.annotation.deleteMany({ where: { authorId: targetId } });
+              await tx.report.deleteMany({ where: { submittedById: targetId } });
+              await tx.incident.deleteMany({ where: { createdById: targetId } });
+              await tx.user.delete({ where: { id: targetId } });
+            },
+            { isolationLevel: 'Serializable' }
+          );
+          break;
+        } catch (error) {
+          if (error.code === 'P2034' && attempt < MAX_DELETE_ATTEMPTS) continue;
+          throw error;
+        }
+      }
+    } catch (error) {
+      if (error instanceof ForeignReportConflictError) {
+        return NextResponse.json(
+          { error: `Cannot delete: incident ${error.referenceNumber || '(unknown)'} created by this user has reports submitted by other users` },
+          { status: 409 }
+        );
+      }
+      throw error;
     }
-
-    await prisma.$transaction([
-      prisma.annotation.deleteMany({ where: { authorId: targetId } }),
-      prisma.report.deleteMany({ where: { submittedById: targetId } }),
-      prisma.incident.deleteMany({ where: { createdById: targetId } }),
-      prisma.user.delete({ where: { id: targetId } }),
-    ]);
 
     return NextResponse.json({ message: 'Account deleted successfully' });
   } catch (error) {

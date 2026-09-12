@@ -3,28 +3,7 @@ import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { getDemoReportById, isDemoReportId } from '../../../../lib/demo-reports';
-
-const MUNICIPAL_REVIEWER_ROLES = [
-  ROLES.MUNICIPAL_CHIEF_IIS,
-  ROLES.MUNICIPAL_CHIEF_OPERATION,
-  ROLES.MUNICIPAL_FIRE_MARSHAL,
-];
-
-const PROVINCIAL_REVIEWER_ROLES = [
-  ROLES.PROVINCIAL_CHIEF_IIS,
-  ROLES.MARSHAL,
-  ROLES.CHIEF_INVESTIGATOR_IIS,
-];
-
-const isReportRecipient = (report, user) => {
-  if (report.passedToId === user.id) return true;
-  if (report.passedToRole !== user.role) return false;
-  if (PROVINCIAL_REVIEWER_ROLES.includes(user.role)) return true;
-  if (MUNICIPAL_REVIEWER_ROLES.includes(user.role)) {
-    return report.municipalityId === user.municipalityId;
-  }
-  return false;
-};
+import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES, isReportRecipient } from '../../../../lib/report-access';
 
 export async function GET(request, { params }) {
   try {
