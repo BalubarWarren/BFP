@@ -1,13 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Menu, Bell } from 'lucide-react';
+import { Menu, Bell, Settings } from 'lucide-react';
+import ProfilePanel from './ProfilePanel';
+import SettingsModal from './SettingsModal';
 
 export default function Header({ user, onToggleSidebar }) {
+  const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    router.push('/login');
+  };
 
   useEffect(() => {
     if (user) {
@@ -150,18 +162,48 @@ export default function Header({ user, onToggleSidebar }) {
             )}
           </div>
 
-          {/* User Avatar */}
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-bfp-red rounded-full flex items-center justify-center text-white font-bold">
-              {user?.name?.charAt(0)}
-            </div>
-            <div className="hidden sm:block">
-              <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-              <p className="text-xs text-gray-500">{user?.role?.replace('_', ' ')}</p>
-            </div>
+          {/* Settings */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="p-2 text-gray-600 hover:text-gray-900"
+            aria-label="Settings"
+          >
+            <Settings className="w-6 h-6" />
+          </button>
+
+          {/* User Avatar / Profile */}
+          <div className="relative">
+            <button
+              onClick={() => setShowProfile(!showProfile)}
+              className="flex items-center gap-2"
+              aria-label="Profile"
+            >
+              <div className="w-10 h-10 bg-bfp-red rounded-full flex items-center justify-center text-white font-bold">
+                {user?.name?.charAt(0)}
+              </div>
+              <div className="hidden sm:block text-left">
+                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
+                <p className="text-xs text-gray-500">{user?.role?.replace('_', ' ')}</p>
+              </div>
+            </button>
+
+            {showProfile && (
+              <ProfilePanel
+                user={user}
+                onOpenSettings={() => {
+                  setShowProfile(false);
+                  setShowSettings(true);
+                }}
+                onLogout={handleLogout}
+              />
+            )}
           </div>
         </div>
       </div>
+
+      {showSettings && (
+        <SettingsModal onClose={() => setShowSettings(false)} onLogout={handleLogout} />
+      )}
     </header>
   );
 }
