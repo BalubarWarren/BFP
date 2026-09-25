@@ -5,13 +5,15 @@ import { QRCodeCanvas } from 'qrcode.react';
 import { QrCode, Copy, Download, Check } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
-// Built from NEXT_PUBLIC_API_URL (the same env var lib/email.js uses for links in emails) rather
-// than window.location.origin — this renders as part of a 'use client' component's initial
-// server-rendered HTML, where `window` doesn't exist yet, and the canonical app URL is what
-// should be in the code either way regardless of which hostname an admin happens to be on.
-const APP_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
-export const buildVerifyUrl = (qrToken) => `${APP_URL}/verify/${qrToken}`;
+// window.location.origin, not NEXT_PUBLIC_API_URL — this component is only ever mounted client-
+// side, after a user clicks "QR Code" (see the `{qrTarget && <ReportQrModal .../>}` guard in the
+// Reports archive page), so it never appears in server-rendered HTML and `window` is always
+// available here. That also makes it immune to NEXT_PUBLIC_API_URL being missing or stale at
+// build time — which is exactly what broke every QR code in production: NEXT_PUBLIC_API_URL is
+// baked into the client bundle at build time, not read at runtime, so a build where it wasn't
+// set produced QR codes that encoded a bare "/verify/<token>" with no domain — meaningless to a
+// phone camera with no "current page" to resolve a relative path against.
+const buildVerifyUrl = (qrToken) => `${window.location.origin}/verify/${qrToken}`;
 
 // Shown for a report on the shared Reports archive (see app/(dashboard)/reports/page.jsx) once
 // it has a qrToken — scanning the code opens /verify/[qrToken], a public page (no login) that
