@@ -24,9 +24,9 @@ export default function LoginForm({
           <div className="inline-block mb-4">
             <BFPCrest size={88} />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-1 tracking-widest uppercase">BFP Benguet</h1>
-          <p className="text-bfp-gold text-sm font-semibold uppercase tracking-wide">Bureau of Fire Protection</p>
-          <p className="text-white/60 text-sm mt-1">Fire Incident Reporting System</p>
+          <h1 className="text-3xl font-bold text-white mb-1 tracking-widest uppercase">FireTrack</h1>
+          <p className="text-bfp-gold text-sm font-semibold uppercase tracking-wide">Bureau of Fire Protection &mdash; Benguet</p>
+          <p className="text-white/60 text-sm mt-1">Fire Incident Report Tracking System</p>
         </div>
 
         {/* Card */}

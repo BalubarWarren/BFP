@@ -442,7 +442,7 @@ export default function ProvincialDashboard() {
       .map((link) => `<link rel="stylesheet" href="${link.href}">`)
       .join('');
     const printWin = window.open('', '_blank');
-    printWin.document.write(`<!DOCTYPE html><html><head><title>BFP Benguet Dashboard</title>${stylesheets}<style>body{padding:32px;font-family:sans-serif}button{display:none!important}</style></head><body>${el.outerHTML}</body></html>`);
+    printWin.document.write(`<!DOCTYPE html><html><head><title>FireTrack — Benguet Dashboard</title>${stylesheets}<style>body{padding:32px;font-family:sans-serif}button{display:none!important}</style></head><body>${el.outerHTML}</body></html>`);
     printWin.document.close();
     printWin.onload = () => { printWin.focus(); printWin.print(); };
   };
@@ -457,7 +457,7 @@ export default function ProvincialDashboard() {
     ]);
     const doc = new jsPDF();
     doc.setFontSize(14);
-    doc.text('BFP Benguet Fire Incident Report', 14, 16);
+    doc.text('FireTrack — BFP Benguet Fire Incident Report', 14, 16);
     doc.setFontSize(11);
     doc.setTextColor(100);
     doc.text(title, 14, 23);

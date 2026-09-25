@@ -17,8 +17,8 @@ const FEATURES = [
   },
   {
     icon: BarChart3,
-    title: 'Automated Reporting',
-    description: 'Instantly generate official, standardized BFP formatted reports for documentation.',
+    title: 'Approval Tracking',
+    description: 'Follow each report through the municipal and provincial review chain to final approval.',
   },
 ];
 
@@ -32,7 +32,7 @@ export default function LandingPage() {
       <nav className="flex items-center justify-between px-6 sm:px-10 py-5">
         <div className="flex items-center gap-2.5">
           <BFPCrest size={32} />
-          <span className="font-bold tracking-wide text-white">BFP BENGUET</span>
+          <span className="font-bold tracking-wide text-white">FIRETRACK</span>
         </div>
         <Link
           href="/login"
@@ -48,11 +48,11 @@ export default function LandingPage() {
           <BFPCrest size={84} />
         </div>
         <h1 className="max-w-2xl text-3xl font-bold tracking-wide text-white sm:text-4xl">
-          Fire Incident Reporting System
+          Fire Incident Report Tracking System
         </h1>
         <p className="mx-auto mt-4 max-w-xl text-white/60">
           A centralized platform for authorized personnel to log incidents, manage evidence, and
-          generate official dispatch reports for the Bureau of Fire Protection - Benguet.
+          track every report through each level of review for the Bureau of Fire Protection - Benguet.
         </p>
         <Link
           href="/login"

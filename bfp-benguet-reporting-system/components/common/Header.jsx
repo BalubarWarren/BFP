@@ -110,7 +110,7 @@ export default function Header({ user, onToggleSidebar }) {
         {/* Center - Page info */}
         <div className="flex-1 text-center">
           <h1 className="text-xl font-bold text-bfp-navy">
-            Fire Incident Reporting System
+            Fire Incident Report Tracking System
           </h1>
         </div>
 

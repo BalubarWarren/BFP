@@ -5,8 +5,8 @@ import { ThemeProvider } from '../components/common/ThemeProvider';
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 
 export const metadata = {
-  title: 'BFP Benguet Fire Incident Reporting System',
-  description: 'Digital fire incident reporting portal for Benguet Province',
+  title: 'FireTrack — Fire Incident Report Tracking System',
+  description: 'FireTrack — fire incident report tracking for BFP Benguet: submit, review and trace every report through the approval chain.',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
