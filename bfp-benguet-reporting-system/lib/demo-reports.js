@@ -1206,6 +1206,9 @@ export function filterDemoReports(reports, { reportType, status, view } = {}) {
     if (status && r.status !== status) return false;
     if (view === 'outgoing') return Boolean(r.reviewedById);
     if (view === 'incoming') return r.status === 'SUBMITTED' && Boolean(r.passedToId);
+    // Mirrors isFinallyApprovedReport() in lib/report-access.js — without this the archive view
+    // would fall through to `return true` and show every demo report regardless of status.
+    if (view === 'approved') return r.status === 'APPROVED' && !r.passedToId && !r.passedToRole;
     return true;
   });
 }

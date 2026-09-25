@@ -1,4 +1,4 @@
-import { ROLES } from './constants';
+import { ROLES, REPORT_STATUS, APPROVED_REPORTS_ROLES } from './constants';
 
 // Shared across every report-related API route so a rule change (e.g. adding a new reviewer
 // role) only needs to happen in one place instead of being kept in sync across several files.
@@ -45,4 +45,49 @@ export const nextTierRoles = (lastReviewerRole) => {
   const idx = tierIndexForRole(lastReviewerRole);
   if (idx === -1 || idx >= REVIEW_TIERS.length - 1) return null;
   return REVIEW_TIERS[idx + 1];
+};
+
+// ---------------------------------------------------------------------------
+// Approved-report archive (the shared "Reports" dashboard)
+// ---------------------------------------------------------------------------
+
+// A report that has cleared the whole review ladder. The final approver (Provincial Chief IIS)
+// is the only reviewer who leaves nothing to forward, so POST /api/reports/[id]/approve nulls
+// passedToRole/passedToId for them while every municipal approval routes the report back to the
+// investigator with both set — which makes APPROVED + no recipient the signature of a final
+// approval. Kept here so the archive, the edit lock, and the delete lock all agree on it.
+export const FINALLY_APPROVED_WHERE = {
+  status: REPORT_STATUS.APPROVED,
+  passedToId: null,
+  passedToRole: null,
+};
+
+export const isFinallyApprovedReport = (report) =>
+  report?.status === REPORT_STATUS.APPROVED && !report.passedToId && !report.passedToRole;
+
+// The roles that share the approved-report archive live in lib/constants.js next to the route
+// guard and the nav link, so the client and the API can never drift apart on who gets in.
+// Provincial Chief IIS files the reports there by giving final approval; the two municipal
+// reviewers who signed off earlier in the chain get read access to the finished record instead of
+// losing sight of it once it leaves their queue.
+export { APPROVED_REPORTS_ROLES };
+
+export const canViewApprovedArchive = (user) => APPROVED_REPORTS_ROLES.includes(user?.role);
+
+// Municipal members of the archive stay scoped to their own municipality, exactly as they are in
+// every other report view — only the provincial reviewer sees all thirteen municipalities.
+export const approvedArchiveWhere = (user) => {
+  if (MUNICIPAL_REVIEWER_ROLES.includes(user.role)) {
+    return { ...FINALLY_APPROVED_WHERE, municipalityId: user.municipalityId };
+  }
+  return { ...FINALLY_APPROVED_WHERE };
+};
+
+// Whether `user` may read a specific finished report through the archive.
+export const canViewReportViaArchive = (report, user) => {
+  if (!canViewApprovedArchive(user) || !isFinallyApprovedReport(report)) return false;
+  if (MUNICIPAL_REVIEWER_ROLES.includes(user.role)) {
+    return report.municipalityId === user.municipalityId;
+  }
+  return true;
 };

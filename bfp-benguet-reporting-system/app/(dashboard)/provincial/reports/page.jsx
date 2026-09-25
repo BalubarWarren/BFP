@@ -146,7 +146,7 @@ export default function ProvincialReportsPage() {
 
   return (
     <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold text-bfp-navy">Provincial Chief IIS — Reports</h1>
+      <h1 className="text-3xl font-bold text-bfp-navy">Provincial Chief IIS — Report Review</h1>
 
       {sessionExpired && <SessionExpiredBanner />}
 

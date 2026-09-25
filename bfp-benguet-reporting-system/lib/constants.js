@@ -336,10 +336,30 @@ export const ROLE_HOME_PATH = {
   SUPER_ADMIN: '/provincial',
 };
 
+// The shared Reports archive of finally-approved reports. Unlike every other dashboard section
+// this one is not owned by a single tier, so it lives at its own top-level path and is opened to
+// the three roles below. lib/report-access.js imports this same list to enforce it server-side,
+// so a role added here gets the nav link, the route, and the API in one edit.
+export const APPROVED_REPORTS_PATH = '/reports';
+
+export const APPROVED_REPORTS_ROLES = [
+  ROLES.PROVINCIAL_CHIEF_IIS,
+  ROLES.MUNICIPAL_FIRE_MARSHAL,
+  ROLES.MUNICIPAL_CHIEF_IIS,
+];
+
+export const canViewApprovedReports = (role) => APPROVED_REPORTS_ROLES.includes(role);
+
 // Whether a given pathname belongs to the dashboard section a role is allowed to view.
 // Used to bounce a signed-in user back to their own dashboard if the URL they're on
 // (e.g. left over from a previous session in the same browser) belongs to a different role.
 export function isRouteAllowedForRole(role, pathname) {
+  // The shared archive is reachable from several tiers at once, so it's checked ahead of the
+  // per-tier prefixes rather than repeated inside each of their cases.
+  if (pathname.startsWith(APPROVED_REPORTS_PATH)) {
+    return canViewApprovedReports(role);
+  }
+
   switch (role) {
     case 'INVESTIGATOR':
       return pathname === '/municipal' || pathname.startsWith('/municipal/reports');

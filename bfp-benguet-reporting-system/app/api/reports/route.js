@@ -5,7 +5,12 @@ import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '../../../lib/constants
 import { createIncidentWithReference } from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
 import { saveAttachments } from '../../../lib/storage';
-import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES } from '../../../lib/report-access';
+import {
+  MUNICIPAL_REVIEWER_ROLES,
+  PROVINCIAL_REVIEWER_ROLES,
+  canViewApprovedArchive,
+  approvedArchiveWhere,
+} from '../../../lib/report-access';
 
 // Safety cap on list results — orderBy is already createdAt desc, so this returns the most
 // recent reports rather than silently truncating in an unpredictable order.
@@ -101,7 +106,7 @@ export async function GET(request) {
     const reportType = searchParams.get('reportType');
     const status = searchParams.get('status');
     const municipalityId = searchParams.get('municipalityId');
-    const view = searchParams.get('view'); // incoming | outgoing | all
+    const view = searchParams.get('view'); // incoming | outgoing | approved | all
 
     // A reviewer's "reviewed" copy needs to survive later reviewers touching the same report —
     // see the AuditLog write in POST /api/reports/[id]/approve for why this can't just be
@@ -118,8 +123,17 @@ export async function GET(request) {
 
     let whereCondition = {};
 
-    // RBAC: Investigators can only see their own reports
-    if (user.role === ROLES.INVESTIGATOR) {
+    // The shared Reports archive: every report that cleared final (Provincial Chief IIS) approval,
+    // read by the provincial reviewer plus the two municipal reviewers who signed off earlier in
+    // the chain. This branch comes first because it deliberately ignores the per-role "is it
+    // assigned to me" routing below — a finished report is assigned to nobody.
+    if (view === 'approved') {
+      if (!canViewApprovedArchive(user)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+      whereCondition = approvedArchiveWhere(user);
+    } else if (user.role === ROLES.INVESTIGATOR) {
+      // RBAC: Investigators can only see their own reports
       whereCondition.submittedById = user.id;
     } else if (ADMIN_ROLES.includes(user.role)) {
       // Admins see ALL reports — no where filter (view=all returns everything)
@@ -179,7 +193,10 @@ export async function GET(request) {
 
     // Optional filters
     if (reportType) whereCondition.reportType = reportType;
-    if (status) whereCondition.status = status;
+    // `status` is ignored for the approved archive — letting it through would overwrite the
+    // status: APPROVED the archive's where clause is built on, turning a read-only archive of
+    // finished reports into an unrestricted list of every report in the province.
+    if (status && view !== 'approved') whereCondition.status = status;
     if (municipalityId && (PROVINCIAL_REVIEWER_ROLES.includes(user.role) || ADMIN_ROLES.includes(user.role))) {
       whereCondition.municipalityId = parseInt(municipalityId);
     }
@@ -210,6 +227,7 @@ export async function GET(request) {
         reviewedById: true,
         submittedById: true,
         attachments: true,
+        qrToken: true,
         createdAt: true,
         updatedAt: true,
         incidentId: true,

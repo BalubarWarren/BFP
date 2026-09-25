@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
-  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History,
+  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History, Archive,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
+import { APPROVED_REPORTS_PATH, canViewApprovedReports } from '../../lib/constants';
 
 export default function Sidebar({ isOpen, user }) {
   const router = useRouter();
@@ -36,6 +37,9 @@ export default function Sidebar({ isOpen, user }) {
   const isMunicipalChiefOperation = user?.role === 'MUNICIPAL_CHIEF_OPERATION';
   const isMunicipalFireMarshal = user?.role === 'MUNICIPAL_FIRE_MARSHAL';
   const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
+  // Shared across three tiers (Provincial Chief IIS, Municipal Fire Marshal, Municipal Chief IIS),
+  // so this link is rendered once below the role-specific blocks rather than inside each of them.
+  const showApprovedReports = canViewApprovedReports(user?.role);
 
   return (
     <>
@@ -56,8 +60,8 @@ export default function Sidebar({ isOpen, user }) {
             <div className="flex items-center gap-3">
               <BFPCrest size={44} className="flex-shrink-0" />
               <div>
-                <h1 className="font-bold text-lg leading-tight tracking-wide">BFP Benguet</h1>
-                <p className="text-xs text-bfp-gold tracking-wide uppercase">Incident Reporting</p>
+                <h1 className="font-bold text-lg leading-tight tracking-wide">FireTrack</h1>
+                <p className="text-xs text-bfp-gold tracking-wide uppercase">Report Tracking</p>
               </div>
             </div>
           </div>
@@ -184,6 +188,19 @@ export default function Sidebar({ isOpen, user }) {
                     <History className="w-4 h-4 flex-shrink-0" /> Activity Log
                   </Link>
                 </>
+              )}
+
+              {/* Shared archive of reports that cleared final approval by the Provincial Chief IIS */}
+              {showApprovedReports && (
+                <div className="mt-4 pt-4 border-t border-bfp-gold/30">
+                  <Link
+                    href={APPROVED_REPORTS_PATH}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
+                  >
+                    <Archive className="w-4 h-4 flex-shrink-0" /> Reports
+                  </Link>
+                  <p className="mt-1 px-4 text-xs text-white/50">Approved &amp; filed records</p>
+                </div>
               )}
             </div>
           </nav>

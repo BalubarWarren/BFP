@@ -23,7 +23,7 @@ export default function MunicipalChiefDashboardPage() {
   return (
     <ReviewerDashboard
       title={`${roleTitle} Dashboard`}
-      description="Review assigned reports. If corrections are needed, return the report to the investigator. If the report is complete, approve it — it will be returned to the investigator who will then submit it to the Municipal Fire Marshal."
+      description="Review assigned reports. If corrections are needed, return the report to the investigator. If the report is complete, approve it — it will be returned to the investigator who will then submit it to the Municipal Fire Marshal. Once the Provincial Chief IIS gives final approval, the report is filed in the shared Reports archive."
       incomingSectionTitle={`Reports Submitted to ${roleTitle}`}
       nextStepLabel="Municipal Fire Marshal"
     />

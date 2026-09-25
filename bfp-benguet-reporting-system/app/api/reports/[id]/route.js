@@ -3,7 +3,15 @@ import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { getDemoReportById, isDemoReportId } from '../../../../lib/demo-reports';
-import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES, isReportRecipient, tierIndexForRole, nextTierRoles, REVIEW_TIERS } from '../../../../lib/report-access';
+import {
+  MUNICIPAL_REVIEWER_ROLES,
+  PROVINCIAL_REVIEWER_ROLES,
+  isReportRecipient,
+  tierIndexForRole,
+  nextTierRoles,
+  REVIEW_TIERS,
+  canViewReportViaArchive,
+} from '../../../../lib/report-access';
 import { deleteAttachments } from '../../../../lib/storage';
 import { parseJsonField } from '../../../../lib/utils';
 
@@ -57,6 +65,10 @@ export async function GET(request, { params }) {
     const isSubmitter = report.submittedById === user.id;
     const isRecipient = isReportRecipient(report, user);
     const isSuperAdmin = user.role === ROLES.SUPER_ADMIN;
+    // Final approval clears passedToRole/passedToId, so the reviewers who signed off along the way
+    // stop being "recipients" of the finished report. The shared Reports archive gives the three
+    // archive roles read access to it (municipal ones still only within their own municipality).
+    const isArchiveReader = canViewReportViaArchive(report, user);
     const hasTextBlastAccess = await prisma.notification.findFirst({
       where: {
         userId: user.id,
@@ -68,7 +80,7 @@ export async function GET(request, { params }) {
       },
     });
 
-    if (!isSubmitter && !isRecipient && !isSuperAdmin && !hasTextBlastAccess) {
+    if (!isSubmitter && !isRecipient && !isSuperAdmin && !isArchiveReader && !hasTextBlastAccess) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
