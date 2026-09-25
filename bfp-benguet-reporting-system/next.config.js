@@ -48,6 +48,22 @@ const CSP = [
   'upgrade-insecure-requests',
 ].join('; ');
 
+// Vercel serves every response (including prerendered/cached pages) with
+// Access-Control-Allow-Origin: * by default at the platform level — confirmed live: our other
+// headers below DO get merged into that same response, but nothing here was ever declaring a
+// value for this one, so Vercel's own default passed straight through unblocked. Nothing in this
+// app needs cross-origin reads (no third-party site legitimately fetches its pages or its API),
+// so scoping it to the app's own origin is functionally equivalent to disabling CORS entirely —
+// a same-origin request never needed this header to succeed in the first place — while giving
+// scanners a concrete, intentional value instead of a wildcard.
+//
+// VERCEL_URL is set automatically by Vercel on every build (no manual configuration, so it can't
+// go stale the way NEXT_PUBLIC_API_URL did for the QR codes — see ReportQrModal.jsx) and always
+// reflects the exact domain THIS deployment is served from, production or preview alike.
+const SELF_ORIGIN = process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : (process.env.NEXT_PUBLIC_API_URL || '');
+
 const SECURITY_HEADERS = [
   { key: 'Content-Security-Policy', value: CSP },
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -58,6 +74,7 @@ const SECURITY_HEADERS = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  ...(SELF_ORIGIN ? [{ key: 'Access-Control-Allow-Origin', value: SELF_ORIGIN }] : []),
 ];
 
 /** @type {import('next').NextConfig} */
