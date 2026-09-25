@@ -25,13 +25,20 @@ const PDFJS_CDN_ORIGIN = 'https://unpkg.com';
 // documented trade-off rather than an oversight.
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  // pdfjs-dist doesn't load its worker via `new Worker('https://unpkg.com/...')` directly — it
+  // fetches the script text and constructs the worker from a `blob:` URL instead (visible as
+  // "Creating a worker from 'blob:...'" if this ever regresses), and falls back to loading the
+  // same script as a plain <script> ("fake worker" mode, main-thread parsing) when worker
+  // creation is blocked. Both paths need to be allowed or the PDF viewer breaks: script-src
+  // needs unpkg.com for the fallback, worker-src needs both unpkg.com and blob: for the normal
+  // path.
+  `script-src 'self' 'unsafe-inline' ${PDFJS_CDN_ORIGIN}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:" + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
   "font-src 'self'",
   `connect-src 'self' ${PDFJS_CDN_ORIGIN}` + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
   "frame-src 'self'" + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
-  `worker-src 'self' ${PDFJS_CDN_ORIGIN}`,
+  `worker-src 'self' blob: ${PDFJS_CDN_ORIGIN}`,
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

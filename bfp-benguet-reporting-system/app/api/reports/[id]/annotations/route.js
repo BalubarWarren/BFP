@@ -2,16 +2,26 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../../lib/auth';
 import { ROLES } from '../../../../../lib/constants';
-import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES, isReportRecipient } from '../../../../../lib/report-access';
+import {
+  MUNICIPAL_REVIEWER_ROLES,
+  PROVINCIAL_REVIEWER_ROLES,
+  isReportRecipient,
+  canViewReportViaArchive,
+} from '../../../../../lib/report-access';
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
 const allowedReviewers = [...MUNICIPAL_REVIEWER_ROLES, ...PROVINCIAL_REVIEWER_ROLES];
 
+// A finally-approved report has no passedToId/passedToRole (see isFinallyApprovedReport in
+// lib/report-access.js), so isReportRecipient alone stops matching once a report leaves the
+// review chain — without canViewReportViaArchive here, the Reports archive's PDF viewer could
+// open the attachment but 403 loading the annotations layered on top of it.
 const canViewReport = (report, user) =>
   report.submittedById === user.id ||
   report.reviewedById === user.id ||
   isReportRecipient(report, user) ||
+  canViewReportViaArchive(report, user) ||
   ADMIN_ROLES.includes(user.role);
 
 export async function GET(request, { params }) {
