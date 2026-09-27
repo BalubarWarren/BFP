@@ -117,6 +117,13 @@ export default function UserManagementPage() {
       setFormData(emptyForm);
       fetchAll();
     } catch (err) {
+      // Without this check, an expired/invalid session surfaced here as the bare word
+      // "Unauthorized" (the API's generic message for "no valid token") with no indication that
+      // logging in again — not fixing the form — is what's actually needed.
+      if (isAuthError(err)) {
+        setSessionExpired(true);
+        return;
+      }
       setCreateError(err.response?.data?.error || 'Failed to create account.');
     } finally {
       setCreating(false);
@@ -166,6 +173,10 @@ export default function UserManagementPage() {
       closeEdit();
       fetchAll();
     } catch (err) {
+      if (isAuthError(err)) {
+        setSessionExpired(true);
+        return;
+      }
       setEditError(err.response?.data?.error || 'Failed to update account.');
     } finally {
       setSavingEdit(false);
@@ -182,6 +193,10 @@ export default function UserManagementPage() {
       toast.success(user.isActive ? `${user.name} deactivated.` : `${user.name} reactivated.`);
       fetchAll();
     } catch (err) {
+      if (isAuthError(err)) {
+        setSessionExpired(true);
+        return;
+      }
       toast.error(err.response?.data?.error || 'Failed to update account status.');
     }
   };
@@ -195,6 +210,10 @@ export default function UserManagementPage() {
       setDeleteTarget(null);
       fetchAll();
     } catch (err) {
+      if (isAuthError(err)) {
+        setSessionExpired(true);
+        return;
+      }
       toast.error(err.response?.data?.error || 'Failed to delete account.');
     } finally {
       setDeleting(false);
