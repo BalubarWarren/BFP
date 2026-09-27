@@ -34,7 +34,6 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
               <button
                 type="button"
                 onClick={() => setOpenAttachment(attachment)}
-                title={`${canAnnotate ? 'Review & Annotate' : 'View'}: ${attachment.name}`}
                 className="btn btn-secondary inline-flex max-w-[12rem] items-center gap-1.5 px-2.5 py-1.5 text-xs"
               >
                 <Highlighter className="w-3.5 h-3.5 flex-shrink-0" />
