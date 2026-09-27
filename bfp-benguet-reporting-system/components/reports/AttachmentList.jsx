@@ -34,13 +34,11 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
               <button
                 type="button"
                 onClick={() => setOpenAttachment(attachment)}
-                title={attachment.name}
-                className="btn btn-secondary flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-xs"
+                title={`${canAnnotate ? 'Review & Annotate' : 'View'}: ${attachment.name}`}
+                className="btn btn-secondary inline-flex max-w-[12rem] items-center gap-1.5 px-2.5 py-1.5 text-xs"
               >
                 <Highlighter className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">
-                  {canAnnotate ? 'Review & Annotate' : 'View'}: {attachment.name}
-                </span>
+                <span className="truncate">{attachment.name}</span>
               </button>
             ) : (
               <a
@@ -48,7 +46,7 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
                 target="_blank"
                 rel="noreferrer"
                 title={attachment.name}
-                className="btn btn-secondary flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-xs no-underline"
+                className="btn btn-secondary inline-flex max-w-[12rem] items-center gap-1.5 px-2.5 py-1.5 text-xs no-underline"
               >
                 <span className="truncate">{attachment.name}</span>
               </a>
