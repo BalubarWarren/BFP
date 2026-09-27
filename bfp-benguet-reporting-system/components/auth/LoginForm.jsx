@@ -2,6 +2,7 @@
 
 import { Eye, EyeOff } from 'lucide-react';
 import BFPCrest from '../common/BFPCrest';
+import GoogleSignInButton from './GoogleSignInButton';
 
 export default function LoginForm({
   email,
@@ -13,6 +14,7 @@ export default function LoginForm({
   error,
   loading,
   handleSubmit,
+  handleGoogleCredential,
 }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-bfp-navy via-bfp-navy to-black px-4 relative overflow-hidden">
@@ -82,6 +84,19 @@ export default function LoginForm({
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
           </form>
+
+          {/* Matches GoogleSignInButton's own check (it renders nothing without a configured
+              client ID) — otherwise this "or" divider would show with nothing below it. */}
+          {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+            <>
+              <div className="flex items-center gap-3 my-2">
+                <div className="h-px flex-1 bg-gray-200" />
+                <span className="text-xs font-medium uppercase tracking-wide text-gray-400">or</span>
+                <div className="h-px flex-1 bg-gray-200" />
+              </div>
+              <GoogleSignInButton onCredential={handleGoogleCredential} />
+            </>
+          )}
         </div>
       </div>
     </div>

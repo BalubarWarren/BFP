@@ -16,6 +16,11 @@ const SUPABASE_ORIGIN = (() => {
 // error beyond the browser console).
 const PDFJS_CDN_ORIGIN = 'https://unpkg.com';
 
+// The "Sign in with Google" button on the login page (components/auth/GoogleSignInButton.jsx)
+// loads Google's Identity Services script, which renders the button/account-chooser inside its
+// own iframe and makes its own background requests — all from this one origin.
+const GOOGLE_IDENTITY_ORIGIN = 'https://accounts.google.com';
+
 // Content-Security-Policy: 'unsafe-inline' is kept for script-src/style-src rather than moving
 // to a nonce-based policy — Next.js App Router injects its own per-request inline scripts for
 // RSC streaming/hydration (see app/verify/[token]/page.jsx's rendered output for an example),
@@ -32,12 +37,12 @@ const CSP = [
   // creation is blocked. Both paths need to be allowed or the PDF viewer breaks: script-src
   // needs unpkg.com for the fallback, worker-src needs both unpkg.com and blob: for the normal
   // path.
-  `script-src 'self' 'unsafe-inline' ${PDFJS_CDN_ORIGIN}`,
+  `script-src 'self' 'unsafe-inline' ${PDFJS_CDN_ORIGIN} ${GOOGLE_IDENTITY_ORIGIN}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data:" + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
   "font-src 'self'",
-  `connect-src 'self' ${PDFJS_CDN_ORIGIN}` + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
-  "frame-src 'self'" + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
+  `connect-src 'self' ${PDFJS_CDN_ORIGIN} ${GOOGLE_IDENTITY_ORIGIN}` + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
+  `frame-src 'self' ${GOOGLE_IDENTITY_ORIGIN}` + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
   `worker-src 'self' blob: ${PDFJS_CDN_ORIGIN}`,
   "object-src 'none'",
   "base-uri 'self'",
