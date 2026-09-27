@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import axios from 'axios';
 import { X, Trash2 } from 'lucide-react';
 import {
@@ -120,7 +121,16 @@ export default function PdfAnnotator({ attachmentUrl, attachmentName, reportId, 
     onClose();
   });
 
-  return (
+  // Rendered via a portal straight into <body> — this is opened from AttachmentList, which gets
+  // embedded inside animated table rows (`.row-fade-in`, used across every reports table) on
+  // nearly every page that shows attachments. That animation's fill-mode leaves a permanent
+  // (if visually inert) `transform: translateY(0)` on the row after it finishes, and ANY
+  // transform on an ancestor creates a new CSS containing block that silently confines
+  // `position: fixed` descendants to that ancestor's box instead of the viewport — which is
+  // exactly why this modal was rendering squashed into the table row instead of covering the
+  // screen. A portal sidesteps the problem entirely by not being a DOM descendant of that row
+  // (or of anything else with its own transform/filter) in the first place.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
       <div className="modal-pop-in flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
         <div className="flex items-center justify-between border-b p-4">
@@ -223,6 +233,7 @@ export default function PdfAnnotator({ attachmentUrl, attachmentName, reportId, 
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
