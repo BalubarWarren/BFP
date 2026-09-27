@@ -29,19 +29,28 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
     <>
       <ul className={`space-y-2 text-sm ${className}`}>
         {files.map((attachment) => (
-          <li key={attachment.url} className="flex items-center gap-2">
+          <li key={attachment.url}>
             {isPdf(attachment) ? (
               <button
                 type="button"
                 onClick={() => setOpenAttachment(attachment)}
-                className="inline-flex items-center gap-1.5 font-medium text-bfp-navy hover:underline"
+                title={attachment.name}
+                className="btn btn-secondary flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-xs"
               >
-                <Highlighter className="w-3.5 h-3.5" />
-                {canAnnotate ? 'Review & Annotate' : 'View'}: {attachment.name}
+                <Highlighter className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">
+                  {canAnnotate ? 'Review & Annotate' : 'View'}: {attachment.name}
+                </span>
               </button>
             ) : (
-              <a href={attachment.url} target="_blank" rel="noreferrer" className="font-medium text-bfp-navy hover:underline">
-                {attachment.name}
+              <a
+                href={attachment.url}
+                target="_blank"
+                rel="noreferrer"
+                title={attachment.name}
+                className="btn btn-secondary flex w-full items-center justify-start gap-2 px-3 py-2 text-left text-xs no-underline"
+              >
+                <span className="truncate">{attachment.name}</span>
               </a>
             )}
           </li>
