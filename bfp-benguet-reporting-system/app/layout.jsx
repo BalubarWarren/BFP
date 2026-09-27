@@ -1,5 +1,19 @@
 import { Inter } from 'next/font/google';
 import '../styles/globals.css';
+// react-pdf-highlighter (used by components/reports/PdfAnnotator.jsx for "Review & Annotate" /
+// viewing a report's PDF attachments) ships its layout CSS as separate files rather than one
+// bundled stylesheet, and never imported them itself — without these, pdf.js's text layer
+// renders as unpositioned, unstyled text instead of being precisely overlaid on the rendered
+// page, which is what made the PDF viewer look like garbled, overlapping text bleeding across
+// the whole screen instead of a contained document. Imported globally here (rather than in
+// PdfAnnotator.jsx itself) because Next.js only reliably allows importing plain, non-module CSS
+// from node_modules at the root layout.
+import 'react-pdf-highlighter/dist/style/pdf_viewer.css';
+import 'react-pdf-highlighter/dist/style/PdfHighlighter.css';
+import 'react-pdf-highlighter/dist/style/Highlight.css';
+import 'react-pdf-highlighter/dist/style/AreaHighlight.css';
+import 'react-pdf-highlighter/dist/style/Tip.css';
+import 'react-pdf-highlighter/dist/style/MouseSelection.css';
 import { ThemeProvider } from '../components/common/ThemeProvider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
