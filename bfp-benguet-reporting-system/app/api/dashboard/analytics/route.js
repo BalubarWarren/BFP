@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
-import { ROLES } from '../../../../lib/constants';
+import { DASHBOARD_VIEWER_ROLES, ROLES } from '../../../../lib/constants';
 import { PROVINCIAL_REVIEWER_ROLES } from '../../../../lib/report-access';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -64,7 +64,7 @@ export async function GET(request) {
     }
 
     // Allow provincial, municipal workflow viewers, and admins
-    if (![ROLES.MARSHAL, ROLES.PROVINCIAL_CHIEF_IIS, ROLES.CHIEF_INVESTIGATOR_IIS, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.SUPER_ADMIN, ROLES.ADMIN].includes(user.role)) {
+    if (!DASHBOARD_VIEWER_ROLES.includes(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }

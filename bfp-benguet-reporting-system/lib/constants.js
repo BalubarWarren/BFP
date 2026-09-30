@@ -320,6 +320,11 @@ export const DEADLINES = {
 };
 
 // The dashboard each role lands on after login (or after refreshing on a route it doesn't own)
+// Roles allowed to load the dashboard data (monitoring board + analytics). Every role whose home
+// is /provincial must be in here — otherwise its own landing page 403s on load. Investigators are
+// the only role without dashboard access.
+export const DASHBOARD_VIEWER_ROLES = Object.values(ROLES).filter((role) => role !== ROLES.INVESTIGATOR);
+
 export const ROLE_HOME_PATH = {
   MARSHAL: '/provincial',
   PROVINCIAL_CHIEF_IIS: '/provincial',

@@ -64,6 +64,8 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
 
       setIncomingReports(incomingResponse.data.reports || []);
       setOutgoingReports(outgoingResponse.data.reports || []);
+      // Clear a previous failure message once a later refresh succeeds.
+      setError('');
     } catch (err) {
       if (isAuthError(err)) {
         clearInterval(pollRef.current);

@@ -8,6 +8,7 @@ import ProfilePanel from './ProfilePanel';
 import SettingsModal from './SettingsModal';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { clearSession } from '../../lib/session';
 
 export default function Header({ user, onToggleSidebar }) {
   const router = useRouter();
@@ -25,8 +26,7 @@ export default function Header({ user, onToggleSidebar }) {
   useEscapeKey(() => setShowProfile(false), showProfile);
 
   const handleLogout = () => {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
+    clearSession();
     router.push('/login');
   };
 

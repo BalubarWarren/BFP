@@ -9,13 +9,13 @@ import {
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
 import { APPROVED_REPORTS_PATH, canViewApprovedReports } from '../../lib/constants';
+import { clearSession } from '../../lib/session';
 
 export default function Sidebar({ isOpen, user }) {
   const router = useRouter();
 
   const handleLogout = () => {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
+    clearSession();
     router.push('/login');
   };
 

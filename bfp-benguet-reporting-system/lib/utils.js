@@ -34,9 +34,11 @@ export function parseJsonField(value, fallback = []) {
   }
 }
 
+// Only 401 means the login itself is no longer valid. A 403 means "signed in, but not allowed to
+// do this" — treating it as an ended session told users to log out and back in, which never
+// helped (the same account gets the same 403 again).
 export function isAuthError(err) {
-  const status = err?.response?.status;
-  return status === 401 || status === 403;
+  return err?.response?.status === 401;
 }
 
 export function getStatusColor(status) {

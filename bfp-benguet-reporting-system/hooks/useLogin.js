@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { ROLE_HOME_PATH } from '../lib/constants';
+import { saveSession, safeNextPath } from '../lib/session';
 
 export function useLogin() {
   const router = useRouter();
@@ -15,12 +16,23 @@ export function useLogin() {
 
   const toggleShowPassword = () => setShowPassword((prev) => !prev);
 
+  // Sent here by lib/session.js's redirectToLogin after a session ended — say so, rather than
+  // leaving the user wondering why they're on the login page.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get('expired') === '1') {
+      setError('Your session has ended. Please sign in again to continue where you left off.');
+    }
+  }, []);
+
   // Shared by both sign-in paths — same sessionStorage writes and same "go to this role's home
   // dashboard" redirect that every other part of the app already expects after login.
+  // Returns to the page the user was on when their session ended (the `next` parameter set by
+  // redirectToLogin in lib/session.js); the dashboard layout still bounces them to their own
+  // home if that page belongs to a different role.
   const completeLogin = (user, token) => {
-    sessionStorage.setItem('token', token);
-    sessionStorage.setItem('user', JSON.stringify(user));
-    router.push(ROLE_HOME_PATH[user.role] || '/provincial');
+    saveSession(token, user);
+    const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
+    router.push(next || ROLE_HOME_PATH[user.role] || '/provincial');
   };
 
   const handleSubmit = async (e) => {

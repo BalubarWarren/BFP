@@ -244,6 +244,21 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+const ANALYTICS_REFRESH_MS = 5 * 60 * 1000;
+
+// One automatic retry for failures that are likely transient (network error, timeout, 5xx) —
+// never for 4xx, which won't change on a retry.
+const getWithRetry = async (url, headers) => {
+  try {
+    return await axios.get(url, { headers });
+  } catch (err) {
+    const status = err.response?.status;
+    if (status && status < 500) throw err;
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    return axios.get(url, { headers });
+  }
+};
+
 export default function ProvincialDashboard() {
   const [monitoringBoard, setMonitoringBoard] = useState([]);
   const [totals, setTotals] = useState({});
@@ -354,38 +369,66 @@ export default function ProvincialDashboard() {
     );
   }, [charts.comparison?.availableYears?.join(',')]);
 
+  // The monitoring board is the live part (polled every 15s); the analytics charts are heavy
+  // (a dozen queries) and change slowly, so they're only re-fetched every few minutes.
+  const lastAnalyticsAtRef = useRef(0);
+
   const fetchDashboardData = async ({ silent } = {}) => {
-    try {
-      if (!silent) setLoading(true);
-      const token = sessionStorage.getItem('token');
+    if (!silent) setLoading(true);
+    const token = sessionStorage.getItem('token');
+    const headers = { Authorization: `Bearer ${token}` };
+    const needsAnalytics = !silent || Date.now() - lastAnalyticsAtRef.current > ANALYTICS_REFRESH_MS;
 
-      const [boardResponse, analyticsResponse] = await Promise.all([
-        axios.get('/api/dashboard/monitoring-board', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-        axios.get('/api/dashboard/analytics', {
-          headers: { Authorization: `Bearer ${token}` },
-        }),
-      ]);
+    // Each part loads (and fails) on its own — one slow or failed request no longer blanks the
+    // whole dashboard — and a failure is retried once, since the usual cause is a transient cold
+    // start or a momentarily busy database rather than a real error.
+    const [boardResult, analyticsResult] = await Promise.allSettled([
+      getWithRetry('/api/dashboard/monitoring-board', headers),
+      needsAnalytics ? getWithRetry('/api/dashboard/analytics', headers) : Promise.resolve(null),
+    ]);
 
-      setMonitoringBoard(boardResponse.data.monitoringBoard);
-      setTotals(boardResponse.data.totals);
-      setReportsByCategory(boardResponse.data.reportsByCategory || {});
-      setSubCategoryTotals(boardResponse.data.subCategoryTotals || {});
-      setAsOf(boardResponse.data.asOf);
-      setKpis(analyticsResponse.data.kpis);
-      setCharts(analyticsResponse.data.charts || {});
-    } catch (err) {
-      if (isAuthError(err)) {
-        clearInterval(pollRef.current);
-        setSessionExpired(true);
-        return;
-      }
-      console.error('Error fetching dashboard:', err);
-      if (!silent) setError('Failed to load dashboard data');
-    } finally {
+    const failures = [boardResult, analyticsResult].filter((result) => result.status === 'rejected');
+    if (failures.some((result) => isAuthError(result.reason))) {
+      clearInterval(pollRef.current);
+      setSessionExpired(true);
       if (!silent) setLoading(false);
+      return;
     }
+
+    if (boardResult.status === 'fulfilled') {
+      const { data } = boardResult.value;
+      setMonitoringBoard(data.monitoringBoard);
+      setTotals(data.totals);
+      setReportsByCategory(data.reportsByCategory || {});
+      setSubCategoryTotals(data.subCategoryTotals || {});
+      setAsOf(data.asOf);
+    }
+    if (analyticsResult.status === 'fulfilled' && analyticsResult.value) {
+      const { data } = analyticsResult.value;
+      setKpis(data.kpis);
+      setCharts(data.charts || {});
+      lastAnalyticsAtRef.current = Date.now();
+    }
+
+    if (failures.length) {
+      failures.forEach((result) => console.error('Error fetching dashboard:', result.reason));
+      // A background refresh that fails keeps showing the last good data without an alarm; only
+      // a load the user is waiting on reports the failure.
+      if (!silent) {
+        setError(
+          boardResult.status === 'rejected' && analyticsResult.status === 'rejected'
+            ? 'Could not load the dashboard. It will keep retrying automatically.'
+            : boardResult.status === 'rejected'
+              ? 'Could not load the monitoring board. It will keep retrying automatically.'
+              : 'Could not load the charts. They will keep retrying automatically.'
+        );
+      }
+    } else {
+      // Clear a previous failure message once a later refresh succeeds.
+      setError('');
+    }
+
+    if (!silent) setLoading(false);
   };
 
   const fetchHistoricalData = async () => {
@@ -409,8 +452,8 @@ export default function ProvincialDashboard() {
       }
 
       const params = new URLSearchParams({ startDate, endDate });
-      const resp = await axios.get(`/api/dashboard/monitoring-board?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const resp = await getWithRetry(`/api/dashboard/monitoring-board?${params}`, {
+        Authorization: `Bearer ${token}`,
       });
       setHistData(resp.data.monitoringBoard);
       setHistTotals(resp.data.totals);

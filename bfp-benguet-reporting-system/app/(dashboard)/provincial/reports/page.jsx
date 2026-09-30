@@ -51,6 +51,8 @@ export default function ProvincialReportsPage() {
       ]);
       setIncomingReports(inRes.data.reports || []);
       setReviewedReports(outRes.data.reports || []);
+      // Clear a previous failure message once a later refresh succeeds.
+      setError('');
     } catch (err) {
       if (isAuthError(err)) {
         clearInterval(pollRef.current);

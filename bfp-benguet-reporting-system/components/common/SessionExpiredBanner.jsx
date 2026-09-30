@@ -1,13 +1,13 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import { clearSession } from '../../lib/session';
 
 export default function SessionExpiredBanner() {
   const router = useRouter();
 
   const handleLogout = () => {
-    sessionStorage.removeItem('token');
-    sessionStorage.removeItem('user');
+    clearSession();
     router.push('/login');
   };
 

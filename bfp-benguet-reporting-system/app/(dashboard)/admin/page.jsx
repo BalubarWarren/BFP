@@ -143,6 +143,8 @@ export default function AdminDashboard() {
       ]);
       setReports(rRes.data.reports || []);
       setMunicipalities(mRes.data.municipalities || []);
+      // Clear a previous failure message once a later refresh succeeds.
+      setError('');
     } catch (err) {
       if (isAuthError(err)) {
         clearInterval(pollRef.current);

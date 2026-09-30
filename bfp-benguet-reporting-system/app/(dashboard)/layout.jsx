@@ -5,6 +5,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import Sidebar from '../../components/common/Sidebar';
 import Header from '../../components/common/Header';
 import { ToastProvider } from '../../components/common/ToastProvider';
+import SessionManager from '../../components/common/SessionManager';
+import { requestSessionFromOtherTabs, redirectToLogin } from '../../lib/session';
 import { ROLE_HOME_PATH, isRouteAllowedForRole } from '../../lib/constants';
 
 export default function DashboardLayout({ children }) {
@@ -15,34 +17,49 @@ export default function DashboardLayout({ children }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
-    // Check authentication
-    const token = sessionStorage.getItem('token');
-    const userData = sessionStorage.getItem('user');
+    let cancelled = false;
 
-    if (!token || !userData) {
-      router.push('/login');
-      return;
-    }
+    const checkAuth = async () => {
+      // A new tab (e.g. opened from a notification email) starts with no session of its own —
+      // borrow the one from another open, logged-in tab before deciding the user is logged out.
+      if (!sessionStorage.getItem('token') || !sessionStorage.getItem('user')) {
+        await requestSessionFromOtherTabs();
+        if (cancelled) return;
+      }
 
-    try {
-      const parsedUser = JSON.parse(userData);
+      const token = sessionStorage.getItem('token');
+      const userData = sessionStorage.getItem('user');
 
-      // The URL may not belong to this user's role (e.g. a stale tab from a previous
-      // session, or a different account logged in on this browser before). Bounce back
-      // to that role's own dashboard instead of rendering the wrong one.
-      if (!isRouteAllowedForRole(parsedUser.role, pathname)) {
-        router.replace(ROLE_HOME_PATH[parsedUser.role] || '/login');
+      if (!token || !userData) {
+        redirectToLogin();
         return;
       }
 
-      setUser(parsedUser);
-    } catch (error) {
-      console.error('Failed to parse user data:', error);
-      router.push('/login');
-      return;
-    }
+      try {
+        const parsedUser = JSON.parse(userData);
 
-    setLoading(false);
+        // The URL may not belong to this user's role (e.g. a stale tab from a previous
+        // session, or a different account logged in on this browser before). Bounce back
+        // to that role's own dashboard instead of rendering the wrong one.
+        if (!isRouteAllowedForRole(parsedUser.role, pathname)) {
+          router.replace(ROLE_HOME_PATH[parsedUser.role] || '/login');
+          return;
+        }
+
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Failed to parse user data:', error);
+        redirectToLogin();
+        return;
+      }
+
+      setLoading(false);
+    };
+
+    checkAuth();
+    return () => {
+      cancelled = true;
+    };
   }, [router, pathname]);
 
   if (loading) {
@@ -58,6 +75,7 @@ export default function DashboardLayout({ children }) {
 
   return (
     <ToastProvider>
+      <SessionManager onUserChange={setUser} />
       <div className="flex h-screen bg-gray-50">
         {/* Sidebar */}
         <Sidebar isOpen={isSidebarOpen} user={user} />
