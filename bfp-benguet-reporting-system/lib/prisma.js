@@ -1,10 +1,32 @@
 import { PrismaClient } from '@prisma/client';
 import { sendEmail, notificationEmail, APP_URL } from './email.js';
 
+// On Vercel every concurrently running function instance gets its own PrismaClient, and Prisma's
+// default pool opens several connections per instance (num_cpus * 2 + 1). With the dashboards
+// polling, that quickly exceeds Supabase's connection cap, after which *every* query fails and
+// every API route 500s. Serverless instances each handle one request at a time, so one connection
+// apiece is enough (the Prisma-recommended setting for serverless). An explicit connection_limit
+// already in DATABASE_URL is left alone. Supabase's transaction pooler (port 6543) additionally
+// needs pgbouncer=true, since it can't hold the prepared statements Prisma uses by default.
+function serverlessDatabaseUrl() {
+  const raw = process.env.DATABASE_URL;
+  if (!raw || !process.env.VERCEL) return undefined;
+  try {
+    const url = new URL(raw);
+    if (!url.searchParams.has('connection_limit')) url.searchParams.set('connection_limit', '1');
+    if (!url.searchParams.has('pool_timeout')) url.searchParams.set('pool_timeout', '20');
+    if (url.port === '6543' && !url.searchParams.has('pgbouncer')) url.searchParams.set('pgbouncer', 'true');
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 let prisma;
 
 if (process.env.NODE_ENV === 'production') {
-  prisma = new PrismaClient();
+  const url = serverlessDatabaseUrl();
+  prisma = new PrismaClient(url ? { datasources: { db: { url } } } : undefined);
 } else {
   if (!global.prisma) {
     global.prisma = new PrismaClient();
