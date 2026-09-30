@@ -5,6 +5,7 @@ import { ROLES, REPORT_STATUS, REPORT_TYPES, NOTIFICATION_TYPES } from '../../..
 import { createIncidentWithReference } from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
 import { saveAttachments, isStoredAttachmentUrl } from '../../../lib/storage';
+import { notifyReportRecipients } from '../../../lib/report-notifications';
 import {
   MUNICIPAL_REVIEWER_ROLES,
   PROVINCIAL_REVIEWER_ROLES,
@@ -455,13 +456,11 @@ export async function POST(request) {
     });
 
     if (passedToId) {
-      await prisma.notification.create({
-        data: {
-          userId: parseInt(passedToId),
-          message: `New ${reportType} report submitted by ${user.name}`,
-          type: NOTIFICATION_TYPES.REPORT_SUBMITTED,
-          reportId: report.id,
-        },
+      await notifyReportRecipients({
+        report,
+        message: `New ${reportType} report submitted by ${user.name}`,
+        type: NOTIFICATION_TYPES.REPORT_SUBMITTED,
+        excludeUserId: user.id,
       });
     } else if (user.role === ROLES.INVESTIGATOR && INVESTIGATION_REPORT_TYPES.includes(reportType)) {
         const recipients = await prisma.user.findMany({

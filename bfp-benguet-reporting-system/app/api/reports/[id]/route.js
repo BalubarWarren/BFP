@@ -13,6 +13,7 @@ import {
   canViewReportViaArchive,
 } from '../../../../lib/report-access';
 import { deleteAttachments } from '../../../../lib/storage';
+import { notifyReportRecipients } from '../../../../lib/report-notifications';
 import { parseJsonField } from '../../../../lib/utils';
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
@@ -313,16 +314,14 @@ export async function PATCH(request, { params }) {
       },
     });
 
-    // Notify next reviewer when report is forwarded after resubmission
+    // Notify every reviewer who can act on the report when it's forwarded or resubmitted
     try {
       if (status === REPORT_STATUS.SUBMITTED && updatedReport.passedToId) {
-        await prisma.notification.create({
-          data: {
-            userId: updatedReport.passedToId,
-            message: `A ${updatedReport.reportType} report from ${updatedReport.municipality?.name} is awaiting your review.`,
-            type: 'REPORT_SUBMITTED',
-            reportId: updatedReport.id,
-          },
+        await notifyReportRecipients({
+          report: updatedReport,
+          message: `A ${updatedReport.reportType} report from ${updatedReport.municipality?.name} is awaiting your review.`,
+          type: NOTIFICATION_TYPES.REPORT_SUBMITTED,
+          excludeUserId: user.id,
         });
       }
     } catch (e) {
