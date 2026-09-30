@@ -1,26 +1,30 @@
-import { Resend } from 'resend';
+import nodemailer from 'nodemailer';
 
-const resendClient = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Sent through a Gmail account's SMTP (free, ~500 emails/day) using a Google App Password —
+// no owned domain required, unlike Resend. GMAIL_APP_PASSWORD is the 16-char App Password,
+// not the account's normal password.
+const GMAIL_USER = process.env.GMAIL_USER;
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, '');
 
-const FROM = process.env.EMAIL_FROM || 'FireTrack Benguet <onboarding@resend.dev>';
+const transporter =
+  GMAIL_USER && GMAIL_APP_PASSWORD
+    ? nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD } })
+    : null;
+
+const FROM = `FireTrack Benguet <${GMAIL_USER}>`;
 const APP_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
 // Fails silently (logs only) — a broken email provider must never break the report/notification
 // flow it's attached to, since email is a notification channel, not the source of truth.
 export async function sendEmail({ to, subject, html }) {
-  if (!resendClient) {
-    console.warn(`[email] RESEND_API_KEY not set — skipping email "${subject}" to ${to}`);
+  if (!transporter) {
+    console.warn(`[email] GMAIL_USER / GMAIL_APP_PASSWORD not set — skipping email "${subject}" to ${to}`);
     return;
   }
   if (!to) return;
 
   try {
-    // The Resend SDK reports API rejections (unverified sender domain, invalid recipient, bad key)
-    // via the returned `error` rather than by throwing, so it has to be checked explicitly.
-    const { error } = await resendClient.emails.send({ from: FROM, to, subject, html });
-    if (error) {
-      console.error(`[email] Resend rejected "${subject}" to ${to}:`, error);
-    }
+    await transporter.sendMail({ from: FROM, to, subject, html });
   } catch (error) {
     console.error(`[email] Failed to send "${subject}" to ${to}:`, error);
   }

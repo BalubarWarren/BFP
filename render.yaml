@@ -28,10 +28,10 @@ services:
         value: 24h
       - key: NODE_ENV
         value: production
-      - key: RESEND_API_KEY
-        sync: false
-      - key: EMAIL_FROM
-        value: "BFP Benguet Reporting <onboarding@resend.dev>"
+      - key: GMAIL_USER
+        sync: false # The Gmail address notification emails are sent from
+      - key: GMAIL_APP_PASSWORD
+        sync: false # Secret — a Google App Password for GMAIL_USER (myaccount.google.com/apppasswords)
       - key: SUPABASE_URL
         sync: false # Set manually in the Render dashboard — same Supabase project as DATABASE_URL
       - key: SUPABASE_SERVICE_ROLE_KEY
