@@ -21,7 +21,6 @@ export default function MunicipalReportsPage() {
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
   const [search, setSearch] = useState('');
-  const [blastLoadingId, setBlastLoadingId] = useState(null);
   const [selectedReport, setSelectedReport] = useState(null);
   const [reportDetail, setReportDetail] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -52,9 +51,6 @@ export default function MunicipalReportsPage() {
       setLoading(false);
     }
   };
-
-  const canTextBlast = (report) =>
-    report?.reportType === 'SPOT_INVESTIGATION' && report?.status === 'APPROVED' && !report?.passedToId;
 
   const canDelete = (report) => !(report?.status === 'APPROVED' && !report?.passedToId);
 
@@ -118,24 +114,6 @@ export default function MunicipalReportsPage() {
   };
 
   useEscapeKey(closeReport, !!selectedReport && !deleteTarget);
-
-  const handleTextBlast = async (report) => {
-    setBlastLoadingId(report.id);
-    try {
-      const token = sessionStorage.getItem('token');
-      const response = await axios.post(
-        `/api/reports/${report.id}/text-blast`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success(response.data.message || 'Text blast sent successfully.');
-      fetchReports();
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to send text blast');
-    } finally {
-      setBlastLoadingId(null);
-    }
-  };
 
   return (
     <div className="p-8 space-y-6">
@@ -377,16 +355,6 @@ export default function MunicipalReportsPage() {
                           >
                             View
                           </button>
-                          {canTextBlast(report) && (
-                            <button
-                              type="button"
-                              onClick={() => handleTextBlast(report)}
-                              className="btn btn-success px-3 py-1 text-sm"
-                              disabled={blastLoadingId === report.id}
-                            >
-                              {blastLoadingId === report.id ? 'Sending...' : 'Text Blast'}
-                            </button>
-                          )}
                           {canDelete(report) && (
                             <button
                               type="button"

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
-import { FileEdit, Search, Clock, CheckCircle2, MessageSquare, FileText, Building2 } from 'lucide-react';
+import { FileEdit, Search, Clock, CheckCircle2, FileText, Building2 } from 'lucide-react';
 import StatusBadge from '../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../components/common/ToastProvider';
@@ -23,7 +23,6 @@ export default function MunicipalDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
   const [reportDetail, setReportDetail] = useState(null);
-  const [blastLoadingId, setBlastLoadingId] = useState(null);
   const [forwardLoading, setForwardLoading] = useState(false);
   const [forwardTarget, setForwardTarget] = useState(null);
   const [forwardRole, setForwardRole] = useState('');
@@ -98,9 +97,6 @@ export default function MunicipalDashboard() {
   const needsForwarding = (report) =>
     report?.status === 'APPROVED' && !!report?.passedToId;
 
-  const canTextBlast = (report) =>
-    report?.reportType === 'SPOT_INVESTIGATION' && isFinallyApproved(report);
-
   // Returns a human-readable label for who approved the report and what the next step is
   const getApprovalInfo = (report) => {
     const detail = reportDetail || report;
@@ -155,24 +151,6 @@ export default function MunicipalDashboard() {
       toast.error(err.response?.data?.error || 'Failed to forward report');
     } finally {
       setForwardLoading(false);
-    }
-  };
-
-  const handleTextBlast = async (report) => {
-    setBlastLoadingId(report.id);
-    try {
-      const token = sessionStorage.getItem('token');
-      const response = await axios.post(
-        `/api/reports/${report.id}/text-blast`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success(response.data.message || 'Text blast sent successfully.');
-      fetchReports();
-    } catch (error) {
-      toast.error(error.response?.data?.error || 'Failed to send text blast');
-    } finally {
-      setBlastLoadingId(null);
     }
   };
 
@@ -327,18 +305,6 @@ export default function MunicipalDashboard() {
                   className="btn btn-primary"
                 >
                   → Submit Report
-                </button>
-              )}
-              {canTextBlast(selectedReport) && (
-                <button
-                  type="button"
-                  onClick={() => handleTextBlast(selectedReport)}
-                  className="btn btn-success"
-                  disabled={blastLoadingId === selectedReport.id}
-                >
-                  {blastLoadingId === selectedReport.id ? 'Sending...' : (
-                    <span className="flex items-center gap-1.5"><MessageSquare className="w-4 h-4" /> Text Blast</span>
-                  )}
                 </button>
               )}
               {canDelete(selectedReport) && (
@@ -555,16 +521,6 @@ export default function MunicipalDashboard() {
                               className="btn btn-primary text-sm py-1 px-3"
                             >
                               Submit
-                            </button>
-                          )}
-                          {canTextBlast(report) && (
-                            <button
-                              type="button"
-                              onClick={() => handleTextBlast(report)}
-                              className="btn btn-success text-sm py-1 px-3"
-                              disabled={blastLoadingId === report.id}
-                            >
-                              {blastLoadingId === report.id ? 'Sending...' : 'Text Blast'}
                             </button>
                           )}
                           {canDelete(report) && (
