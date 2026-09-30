@@ -9,6 +9,7 @@ import RecipientSelect from '../../../../../components/reports/RecipientSelect';
 import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessModal';
 import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
 import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
+import BackButton from '../../../../../components/common/BackButton';
 
 export default function FinalInvestigationForm() {
   const router = useRouter();
@@ -117,9 +118,7 @@ export default function FinalInvestigationForm() {
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <div className="mb-6">
-        <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-bfp-navy mb-2 flex items-center gap-1">
-          ← Back
-        </button>
+        <BackButton className="mb-3" />
         <h1 className="flex items-center gap-2 text-2xl font-bold text-bfp-navy"><CheckCircle2 className="w-6 h-6" /> Final Investigation Report</h1>
         <p className="text-gray-500 text-sm mt-1">Completed investigation report with cause of fire and final findings.</p>
       </div>

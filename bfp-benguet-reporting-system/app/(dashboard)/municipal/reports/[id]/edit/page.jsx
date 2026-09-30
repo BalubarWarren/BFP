@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Undo2 } from 'lucide-react';
 import StatusBadge from '../../../../../../components/common/StatusBadge';
+import BackButton from '../../../../../../components/common/BackButton';
 
 const ROLE_LABELS = {
   MUNICIPAL_CHIEF_IIS: 'Municipal Chief IIS',
@@ -85,7 +86,7 @@ export default function EditReturnedReportPage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <button onClick={() => router.back()} className="text-sm text-gray-500 hover:text-bfp-navy mb-4 transition-colors">← Back</button>
+      <BackButton fallbackHref="/municipal/reports" className="mb-4" />
       <h1 className="text-2xl font-bold text-bfp-navy mb-2">Edit Returned Report</h1>
       <p className="text-gray-600 mb-4">Status: <StatusBadge status={report.status} /></p>
 
