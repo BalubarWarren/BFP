@@ -15,7 +15,12 @@ export async function sendEmail({ to, subject, html }) {
   if (!to) return;
 
   try {
-    await resendClient.emails.send({ from: FROM, to, subject, html });
+    // The Resend SDK reports API rejections (unverified sender domain, invalid recipient, bad key)
+    // via the returned `error` rather than by throwing, so it has to be checked explicitly.
+    const { error } = await resendClient.emails.send({ from: FROM, to, subject, html });
+    if (error) {
+      console.error(`[email] Resend rejected "${subject}" to ${to}:`, error);
+    }
   } catch (error) {
     console.error(`[email] Failed to send "${subject}" to ${to}:`, error);
   }

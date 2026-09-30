@@ -27,7 +27,9 @@ if (!global.__notificationEmailMiddlewareRegistered) {
     if (params.model === 'Notification' && (params.action === 'create' || params.action === 'createMany')) {
       const notifications = params.action === 'create' ? [params.args.data] : params.args.data;
 
-      Promise.all(
+      // Awaited (not fire-and-forget) because on serverless hosts like Vercel the function can be
+      // frozen as soon as the response is sent, silently dropping any still-pending email.
+      await Promise.all(
         notifications.map(async (data) => {
           const email = await emailForNotificationRecipient(data.userId);
           if (!email) return;
