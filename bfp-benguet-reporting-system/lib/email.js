@@ -6,13 +6,35 @@ import nodemailer from 'nodemailer';
 const GMAIL_USER = process.env.GMAIL_USER;
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD?.replace(/\s/g, '');
 
+// Pooled so a notification fanned out to many recipients at once (e.g. a text blast) reuses a
+// few SMTP connections instead of opening one per email, which Gmail throttles.
 const transporter =
   GMAIL_USER && GMAIL_APP_PASSWORD
-    ? nodemailer.createTransport({ service: 'gmail', auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD } })
+    ? nodemailer.createTransport({
+        service: 'gmail',
+        pool: true,
+        maxConnections: 3,
+        auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+      })
     : null;
 
 const FROM = `FireTrack Benguet <${GMAIL_USER}>`;
-const APP_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+// VERCEL_PROJECT_PRODUCTION_URL is set automatically by Vercel at runtime, so links in emails
+// point at the live site even when NEXT_PUBLIC_API_URL is missing or stale (see ReportQrModal.jsx).
+export const APP_URL = process.env.VERCEL_PROJECT_PRODUCTION_URL
+  ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+  : process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+
+// Names, remarks and text-blast messages are typed by users — escape them so they can't inject
+// HTML (fake links, hidden content) into an email that looks like it came from the system.
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 
 // Fails silently (logs only) — a broken email provider must never break the report/notification
 // flow it's attached to, since email is a notification channel, not the source of truth.
@@ -48,12 +70,12 @@ export function welcomeAccountEmail({ name, email, password, roleLabel }) {
   return {
     subject: 'Your FireTrack account',
     html: layout(`
-      <p>Hi ${name},</p>
+      <p>Hi ${escapeHtml(name)},</p>
       <p>An administrator has created an account for you on FireTrack, the BFP Benguet fire incident report tracking system.</p>
       <table style="width: 100%; border-collapse: collapse; margin: 16px 0;">
-        <tr><td style="padding: 4px 0; color: #6b7280;">Role</td><td style="padding: 4px 0; font-weight: bold;">${roleLabel}</td></tr>
-        <tr><td style="padding: 4px 0; color: #6b7280;">Email</td><td style="padding: 4px 0; font-weight: bold;">${email}</td></tr>
-        <tr><td style="padding: 4px 0; color: #6b7280;">Temporary Password</td><td style="padding: 4px 0; font-weight: bold;">${password}</td></tr>
+        <tr><td style="padding: 4px 0; color: #6b7280;">Role</td><td style="padding: 4px 0; font-weight: bold;">${escapeHtml(roleLabel)}</td></tr>
+        <tr><td style="padding: 4px 0; color: #6b7280;">Email</td><td style="padding: 4px 0; font-weight: bold;">${escapeHtml(email)}</td></tr>
+        <tr><td style="padding: 4px 0; color: #6b7280;">Temporary Password</td><td style="padding: 4px 0; font-weight: bold;">${escapeHtml(password)}</td></tr>
       </table>
       <p>Please log in and change your password as soon as possible.</p>
       <p><a href="${APP_URL}/login" style="display: inline-block; background: #CC0000; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">Log In</a></p>
@@ -62,11 +84,12 @@ export function welcomeAccountEmail({ name, email, password, roleLabel }) {
   };
 }
 
-export function notificationEmail({ message, reportUrl }) {
+export function notificationEmail({ message, note, reportUrl }) {
   return {
     subject: 'FireTrack — New Notification',
     html: layout(`
-      <p>${message}</p>
+      <p>${escapeHtml(message)}</p>
+      ${note ? `<p style="white-space: pre-wrap; background: #f3f4f6; padding: 12px; border-radius: 6px;">${escapeHtml(note)}</p>` : ''}
       ${reportUrl ? `<p><a href="${reportUrl}" style="display: inline-block; background: #1A2B4A; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">View in System</a></p>` : ''}
       <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">You're receiving this because you have an account on FireTrack, the BFP Benguet fire incident report tracking system.</p>
     `),

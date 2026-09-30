@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
-import { getUserFromRequest } from '../../../lib/auth';
-import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '../../../lib/constants';
+import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../lib/auth';
+import { ROLES, REPORT_STATUS, REPORT_TYPES, NOTIFICATION_TYPES } from '../../../lib/constants';
 import { createIncidentWithReference } from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
-import { saveAttachments } from '../../../lib/storage';
+import { saveAttachments, isStoredAttachmentUrl } from '../../../lib/storage';
 import {
   MUNICIPAL_REVIEWER_ROLES,
   PROVINCIAL_REVIEWER_ROLES,
@@ -333,6 +333,12 @@ export async function POST(request) {
       }
     } else {
       attachments = parseJsonField(body.attachments, []);
+      // JSON submissions carry pre-built attachment objects rather than files — only accept ones
+      // pointing at our own storage bucket, since reviewers open these URLs as links (a
+      // `javascript:` or phishing URL here would otherwise be one click away for them).
+      if (!Array.isArray(attachments) || !attachments.every((attachment) => isStoredAttachmentUrl(attachment?.url))) {
+        return NextResponse.json({ error: 'Invalid attachment' }, { status: 400 });
+      }
     }
 
     // Validate required fields
@@ -341,6 +347,26 @@ export async function POST(request) {
         { error: 'Missing required fields' },
         { status: 400 }
       );
+    }
+
+    if (!Object.values(REPORT_TYPES).includes(reportType)) {
+      return NextResponse.json({ error: 'Invalid report type' }, { status: 400 });
+    }
+
+    if (Number.isNaN(parsedMunicipalityId) || Number.isNaN(new Date(reportDate).getTime())) {
+      return NextResponse.json({ error: 'Invalid municipality or report date' }, { status: 400 });
+    }
+
+    // A client-supplied incidentId must belong to the same municipality — otherwise a report
+    // could be filed under another municipality's case.
+    if (parsedIncidentId) {
+      const incident = await prisma.incident.findUnique({
+        where: { id: parsedIncidentId },
+        select: { municipalityId: true },
+      });
+      if (!incident || incident.municipalityId !== parsedMunicipalityId) {
+        return NextResponse.json({ error: 'Invalid incident for this municipality' }, { status: 400 });
+      }
     }
 
     if (!attachments.length) {
@@ -422,9 +448,9 @@ export async function POST(request) {
       },
       include: {
         municipality: true,
-        submittedBy: true,
+        submittedBy: { select: PUBLIC_USER_SELECT },
         incident: true,
-        passedTo: true,
+        passedTo: { select: PUBLIC_USER_SELECT },
       },
     });
 

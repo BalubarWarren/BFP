@@ -1,5 +1,5 @@
 import { PrismaClient } from '@prisma/client';
-import { sendEmail, notificationEmail } from './email.js';
+import { sendEmail, notificationEmail, APP_URL } from './email.js';
 
 let prisma;
 
@@ -20,7 +20,24 @@ const emailForNotificationRecipient = async (userId) => {
   return user?.email || null;
 };
 
-if (!global.__notificationEmailMiddlewareRegistered) {
+// Text-blast notifications store a JSON payload in `message` (see POST /api/reports/text-blast
+// and parseNotificationMessage in components/common/Header.jsx) — unpack it so the email shows
+// the actual text instead of raw JSON.
+const readableNotification = (message) => {
+  try {
+    const payload = JSON.parse(message);
+    if (payload?.kind === 'TEXT_BLAST') {
+      return { message: payload.message || 'Text blast received.', note: payload.note || '' };
+    }
+  } catch {
+    // Plain-text notification.
+  }
+  return { message, note: '' };
+};
+
+// Flag lives on the client itself (not `global`): in production each module instance creates its
+// own PrismaClient, and a global flag would leave every client after the first without emails.
+if (!prisma.__notificationEmailMiddlewareRegistered) {
   prisma.$use(async (params, next) => {
     const result = await next(params);
 
@@ -33,10 +50,10 @@ if (!global.__notificationEmailMiddlewareRegistered) {
         notifications.map(async (data) => {
           const email = await emailForNotificationRecipient(data.userId);
           if (!email) return;
-          const reportUrl = data.reportId
-            ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'}/municipal/reports`
-            : null;
-          const { subject, html } = notificationEmail({ message: data.message, reportUrl });
+          const { message, note } = readableNotification(data.message);
+          // The site root sends a signed-in user to their own role's dashboard (reviewers don't
+          // use /municipal/reports), so it's the one link that works for every recipient.
+          const { subject, html } = notificationEmail({ message, note, reportUrl: APP_URL });
           await sendEmail({ to: email, subject, html });
         })
       ).catch((error) => console.error('[email] Notification email dispatch failed:', error));
@@ -44,7 +61,7 @@ if (!global.__notificationEmailMiddlewareRegistered) {
 
     return result;
   });
-  global.__notificationEmailMiddlewareRegistered = true;
+  prisma.__notificationEmailMiddlewareRegistered = true;
 }
 
 export default prisma;

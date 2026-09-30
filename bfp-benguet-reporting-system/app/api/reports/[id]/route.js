@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
-import { getUserFromRequest } from '../../../../lib/auth';
+import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../../lib/auth';
 import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { getDemoReportById, isDemoReportId } from '../../../../lib/demo-reports';
 import {
@@ -42,8 +42,8 @@ export async function GET(request, { params }) {
       where: { id: parseInt(params.id) },
       include: {
         municipality: true,
-        submittedBy: true,
-        reviewedBy: true,
+        submittedBy: { select: PUBLIC_USER_SELECT },
+        reviewedBy: { select: PUBLIC_USER_SELECT },
         incident: true,
       },
     });
@@ -80,7 +80,15 @@ export async function GET(request, { params }) {
       },
     });
 
-    if (!isSubmitter && !isRecipient && !isSuperAdmin && !isArchiveReader && !hasTextBlastAccess) {
+    // A reviewer's "Reports Reviewed" list (GET /api/reports?view=outgoing) is built from these
+    // AuditLog rows — without the same check here, opening a report from that list 403s as soon
+    // as the report has moved on to the next reviewer.
+    const hasReviewedReport = await prisma.auditLog.findFirst({
+      where: { userId: user.id, reportId: report.id, action: { in: ['APPROVE_REPORT', 'RETURN_REPORT'] } },
+      select: { id: true },
+    });
+
+    if (!isSubmitter && !isRecipient && !isSuperAdmin && !isArchiveReader && !hasTextBlastAccess && !hasReviewedReport) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -147,6 +155,19 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    // Content may only change while the report is back in the submitter's hands for correction.
+    // Otherwise a report could be edited while a reviewer is looking at it, or after a municipal
+    // approval and before forwarding — so the next tier would review content the earlier
+    // reviewer never approved.
+    const isEditingFields = [content, category, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName]
+      .some((value) => value !== undefined);
+    if (isEditingFields && ![REPORT_STATUS.RETURNED, REPORT_STATUS.DRAFT].includes(report.status)) {
+      return NextResponse.json(
+        { error: 'Report details can only be edited while the report is returned for revision' },
+        { status: 400 }
+      );
+    }
+
     // Allow submitter to re-submit a returned report and optionally forward to a specific municipal role
     let updateData = {
       ...(content && { content }),
@@ -198,6 +219,25 @@ export async function PATCH(request, { params }) {
       } else if (lastReviewer && lastReviewer.isActive) {
         updateData.passedToRole = lastReviewer.role;
         updateData.passedToId = lastReviewer.id;
+      } else if (lastReviewer) {
+        // The reviewer who returned it has since been deactivated — hand it to another active
+        // holder of the same role instead of leaving it assigned to the investigator, where
+        // nobody could ever review it.
+        const replacement = await prisma.user.findFirst({
+          where: {
+            role: lastReviewer.role,
+            isActive: true,
+            ...(MUNICIPAL_REVIEWER_ROLES.includes(lastReviewer.role) && { municipalityId: report.municipalityId }),
+          },
+        });
+        if (!replacement) {
+          return NextResponse.json(
+            { error: `No active ${lastReviewer.role.replace(/_/g, ' ')} account is available to receive this report` },
+            { status: 400 }
+          );
+        }
+        updateData.passedToRole = replacement.role;
+        updateData.passedToId = replacement.id;
       }
     }
 
@@ -268,7 +308,7 @@ export async function PATCH(request, { params }) {
       data: updateData,
       include: {
         municipality: true,
-        submittedBy: true,
+        submittedBy: { select: PUBLIC_USER_SELECT },
         incident: true,
       },
     });

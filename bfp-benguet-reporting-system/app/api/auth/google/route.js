@@ -45,8 +45,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Google account email is not verified.' }, { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: payload.email },
+    // Case-insensitive: Google always returns the address lowercased, but an admin may have typed
+    // it with capitals when creating the account.
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: payload.email, mode: 'insensitive' } },
       include: { municipality: true },
     });
 

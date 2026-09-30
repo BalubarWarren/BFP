@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
-import { getUserFromRequest } from '../../../lib/auth';
+import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../lib/auth';
 import { ROLES } from '../../../lib/constants';
 import { createIncidentWithReference } from '../../../lib/incident-reference';
 import { MUNICIPAL_REVIEWER_ROLES } from '../../../lib/report-access';
@@ -128,7 +128,7 @@ export async function POST(request) {
         estimatedDamage: estimatedDamage ? parseFloat(estimatedDamage) : null,
         createdById: user.id,
       },
-      { include: { municipality: true, createdBy: true } }
+      { include: { municipality: true, createdBy: { select: PUBLIC_USER_SELECT } } }
     );
 
     return NextResponse.json(

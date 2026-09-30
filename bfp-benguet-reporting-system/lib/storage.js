@@ -95,6 +95,14 @@ export async function saveAttachments(files, folder) {
   );
 }
 
+// Whether `url` is a public URL of a file in our own attachments bucket (i.e. something
+// saveAttachments could have produced) rather than an arbitrary client-supplied link.
+export function isStoredAttachmentUrl(url) {
+  if (typeof url !== 'string' || !process.env.SUPABASE_URL) return false;
+  const prefix = `${process.env.SUPABASE_URL.replace(/\/+$/, '')}/storage/v1/object/public/${BUCKET}/`;
+  return url.startsWith(prefix) && !url.slice(prefix.length).includes('..');
+}
+
 // Best-effort cleanup of the physical files backing a report's attachments — used when a report
 // is deleted. Attachment objects only carry the public URL (not the storage path), so the path
 // is recovered from it; a failure here is logged but never blocks the caller, since a stray file

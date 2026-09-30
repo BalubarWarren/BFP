@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { NOTIFICATION_TYPES, ROLES } from '../../../../lib/constants';
-import { saveAttachments } from '../../../../lib/storage';
+
+const TEXT_BLAST_MAX_LENGTH = 1000;
 
 const TEXT_BLAST_RECIPIENT_ROLES = [
   ROLES.MUNICIPAL_CHIEF_IIS,
@@ -26,18 +27,20 @@ export async function POST(request) {
       );
     }
 
-    const formData = await request.formData();
-    let attachments;
-    try {
-      attachments = await saveAttachments(formData.getAll('attachments'), 'text-blasts');
-    } catch (uploadError) {
-      return NextResponse.json({ error: uploadError.message }, { status: 400 });
-    }
-    const note = String(formData.get('message') || '').trim();
+    // Text blasts are text-only — no file attachments.
+    const body = await request.json().catch(() => ({}));
+    const note = String(body?.message || '').trim();
 
-    if (!attachments.length) {
+    if (!note) {
       return NextResponse.json(
-        { error: 'Attach at least one file before sending the text blast' },
+        { error: 'Type a message before sending the text blast' },
+        { status: 400 }
+      );
+    }
+
+    if (note.length > TEXT_BLAST_MAX_LENGTH) {
+      return NextResponse.json(
+        { error: `Text blast message must be ${TEXT_BLAST_MAX_LENGTH} characters or fewer` },
         { status: 400 }
       );
     }
@@ -74,7 +77,6 @@ export async function POST(request) {
       kind: 'TEXT_BLAST',
       message: `Spot Investigation text blast from ${sender.name}${sender.municipality?.name ? ` (${sender.municipality.name})` : ''}.`,
       note,
-      attachments,
     };
 
     await prisma.notification.createMany({
@@ -92,7 +94,6 @@ export async function POST(request) {
         changes: JSON.stringify({
           source: 'SPOT_INVESTIGATION_FORM',
           recipientCount: recipientIds.length,
-          attachmentCount: attachments.length,
           recipientRoles: TEXT_BLAST_RECIPIENT_ROLES,
         }),
       },
@@ -101,7 +102,6 @@ export async function POST(request) {
     return NextResponse.json({
       message: `Text blast sent to ${recipientIds.length} recipient${recipientIds.length === 1 ? '' : 's'}.`,
       recipientCount: recipientIds.length,
-      attachments,
     });
   } catch (error) {
     console.error('Error sending Spot Investigation text blast:', error);

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
-import { getUserFromRequest } from '../../../../lib/auth';
+import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../../lib/auth';
 import { ROLES } from '../../../../lib/constants';
 
 export async function GET(request, { params }) {
@@ -18,7 +18,7 @@ export async function GET(request, { params }) {
       where: { id: parseInt(params.id) },
       include: {
         municipality: true,
-        createdBy: true,
+        createdBy: { select: PUBLIC_USER_SELECT },
         reports: true,
       },
     });
@@ -99,7 +99,7 @@ export async function PATCH(request, { params }) {
       },
       include: {
         municipality: true,
-        createdBy: true,
+        createdBy: { select: PUBLIC_USER_SELECT },
       },
     });
 

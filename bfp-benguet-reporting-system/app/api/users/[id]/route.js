@@ -66,6 +66,22 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    // Same guard as DELETE below: demoting or deactivating the last active Super Admin would lock
+    // everyone out of admin-tier account management for good.
+    const isRemovingSuperAdmin =
+      existingUser.role === ROLES.SUPER_ADMIN &&
+      existingUser.isActive &&
+      ((role !== undefined && role !== ROLES.SUPER_ADMIN) || isActive === false);
+    if (isRemovingSuperAdmin) {
+      const activeSuperAdmins = await prisma.user.count({ where: { role: ROLES.SUPER_ADMIN, isActive: true } });
+      if (activeSuperAdmins <= 1) {
+        return NextResponse.json(
+          { error: 'Cannot demote or deactivate the last active Super Admin account' },
+          { status: 400 }
+        );
+      }
+    }
+
     const effectiveRole = role || existingUser.role;
     const effectiveMunicipalityId = municipalityId !== undefined
       ? (municipalityId ? parseInt(municipalityId) : null)

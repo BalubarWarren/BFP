@@ -60,7 +60,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const { name, email, password, role, rank, municipalityId } = await request.json();
+    const { name, email: rawEmail, password, role, rank, municipalityId } = await request.json();
+    const email = String(rawEmail || '').trim().toLowerCase();
 
     if (!name || !email || !password || !role) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
@@ -90,7 +91,7 @@ export async function POST(request) {
       );
     }
 
-    const existingUser = await prisma.user.findUnique({ where: { email } });
+    const existingUser = await prisma.user.findFirst({ where: { email: { equals: email, mode: 'insensitive' } } });
     if (existingUser) {
       return NextResponse.json({ error: 'Email already exists' }, { status: 409 });
     }

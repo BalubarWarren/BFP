@@ -16,6 +16,18 @@ function getJwtSecret() {
   return process.env.JWT_SECRET;
 }
 
+// The only User fields safe to return to a client. `include: { submittedBy: true }` and the like
+// return the whole row — passwordHash included — so every relation to User that ends up in an
+// API response must use `{ select: PUBLIC_USER_SELECT }` instead.
+export const PUBLIC_USER_SELECT = {
+  id: true,
+  name: true,
+  email: true,
+  role: true,
+  rank: true,
+  municipalityId: true,
+};
+
 // Generate JWT token
 export function generateToken(user) {
   return jwt.sign(

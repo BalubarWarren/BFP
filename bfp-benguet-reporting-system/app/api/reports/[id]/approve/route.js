@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto';
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
-import { getUserFromRequest } from '../../../../../lib/auth';
+import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../../../lib/auth';
 import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '../../../../../lib/constants';
 import { getDemoReportById, isDemoReportId } from '../../../../../lib/demo-reports';
 import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES, isReportRecipient } from '../../../../../lib/report-access';
@@ -84,8 +84,8 @@ export async function POST(request, { params }) {
     const report = await prisma.report.findUnique({
       where: { id: parseInt(params.id) },
       include: {
-        submittedBy: true,
-        reviewedBy: true,
+        submittedBy: { select: PUBLIC_USER_SELECT },
+        reviewedBy: { select: PUBLIC_USER_SELECT },
         municipality: true,
       },
     });
@@ -110,6 +110,16 @@ export async function POST(request, { params }) {
     if (!isReportRecipient(report, user)) {
       return NextResponse.json(
         { error: 'This report is not currently assigned to your account or role' },
+        { status: 403 }
+      );
+    }
+
+    // A municipal approval routes the report back to its submitter (passedToId = submittedById).
+    // When that submitter is itself a reviewer-tier account, isReportRecipient matches them — so
+    // without this they could approve their own report.
+    if (report.submittedById === user.id) {
+      return NextResponse.json(
+        { error: 'You cannot approve or return a report you submitted yourself' },
         { status: 403 }
       );
     }
@@ -185,7 +195,7 @@ export async function POST(request, { params }) {
     const updatedReport = await prisma.report.findUnique({
       where: { id: report.id },
       include: {
-        submittedBy: true,
+        submittedBy: { select: PUBLIC_USER_SELECT },
         municipality: true,
       },
     });

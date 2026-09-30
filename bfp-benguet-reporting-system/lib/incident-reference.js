@@ -90,30 +90,33 @@ export async function createIncidentWithReference(data, { maxAttempts = 3, inclu
   // second of two racing submissions blocks here, then sees the first one's row once it proceeds.
   const lockKey = adviseLockKeyFor(data);
 
-  return prisma.$transaction(async (tx) => {
-    await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
+  // The retry wraps the whole transaction rather than living inside it: in Postgres a failed
+  // statement (the unique-constraint collision) aborts the transaction, so retrying the insert
+  // inside the same one could only ever fail again with "current transaction is aborted".
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
 
-    if (hasDistinguishingContent(data)) {
-      const recentDuplicate = await tx.incident.findFirst({
-        where: duplicateCheckWhere(data),
-        ...(include && { include }),
-      });
-      if (recentDuplicate) return recentDuplicate;
-    }
+        if (hasDistinguishingContent(data)) {
+          const recentDuplicate = await tx.incident.findFirst({
+            where: duplicateCheckWhere(data),
+            ...(include && { include }),
+          });
+          if (recentDuplicate) return recentDuplicate;
+        }
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-      const referenceNumber = await generateIncidentReference(undefined, tx);
-      try {
-        return await tx.incident.create({
+        const referenceNumber = await generateIncidentReference(undefined, tx);
+        return tx.incident.create({
           data: { ...data, referenceNumber },
           ...(include && { include }),
         });
-      } catch (error) {
-        if (!isReferenceNumberCollision(error) || attempt === maxAttempts) throw error;
-      }
+      });
+    } catch (error) {
+      if (!isReferenceNumberCollision(error) || attempt === maxAttempts) throw error;
     }
-    return undefined;
-  });
+  }
+  return undefined;
 }
 
 export default generateIncidentReference;

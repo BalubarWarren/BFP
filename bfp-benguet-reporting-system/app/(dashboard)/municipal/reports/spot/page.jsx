@@ -25,7 +25,6 @@ export default function SpotInvestigationForm() {
   const [attachments, setAttachments] = useState([]);
   const attachmentInputRef = useRef(null);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
-  const [textBlastFiles, setTextBlastFiles] = useState([]);
   const [textBlastMessage, setTextBlastMessage] = useState('');
   const [textBlastLoading, setTextBlastLoading] = useState(false);
   const [textBlastStatus, setTextBlastStatus] = useState('');
@@ -59,13 +58,9 @@ export default function SpotInvestigationForm() {
     attachmentInputRef.current?.focus();
   };
 
-  const handleTextBlastFileChange = (e) => {
-    setTextBlastFiles(Array.from(e.target.files || []));
-  };
-
   const handleTextBlast = async () => {
-    if (!textBlastFiles.length) {
-      setTextBlastStatus('Attach at least one file before sending.');
+    if (!textBlastMessage.trim()) {
+      setTextBlastStatus('Type a message before sending.');
       return;
     }
 
@@ -74,15 +69,12 @@ export default function SpotInvestigationForm() {
 
     try {
       const token = sessionStorage.getItem('token');
-      const payload = new FormData();
-      payload.append('message', textBlastMessage);
-      textBlastFiles.forEach((file) => payload.append('attachments', file));
+      const response = await axios.post(
+        '/api/reports/text-blast',
+        { message: textBlastMessage },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
 
-      const response = await axios.post('/api/reports/text-blast', payload, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      setTextBlastFiles([]);
       setTextBlastMessage('');
       setTextBlastStatus(response.data.message || 'Text blast sent successfully.');
     } catch (err) {
@@ -228,21 +220,6 @@ export default function SpotInvestigationForm() {
           </h2>
           <div className="space-y-4">
             <div>
-              <label className="form-label">Attach File</label>
-              <div className="form-field-icon-wrap">
-                <FieldIcon src="/icons/attachment.svg" />
-                <input type="file" multiple onChange={handleTextBlastFileChange} className="form-input-icon file:mr-3 file:rounded-lg file:border-0 file:bg-bfp-navy file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-white" />
-              </div>
-              {textBlastFiles.length > 0 && (
-                <ul className="mt-3 space-y-1 text-sm text-gray-600">
-                  {textBlastFiles.map((file) => (
-                    <li key={`${file.name}-${file.size}`}>{file.name}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            <div>
               <label className="form-label">Message</label>
               <div className="form-field-icon-wrap">
                 <FieldIcon src="/icons/text-blast.svg" />
@@ -250,8 +227,9 @@ export default function SpotInvestigationForm() {
                   value={textBlastMessage}
                   onChange={(e) => setTextBlastMessage(e.target.value)}
                   rows={3}
+                  maxLength={1000}
                   className="form-textarea-icon"
-                  placeholder="Optional note"
+                  placeholder="Type the text blast message..."
                 />
               </div>
             </div>

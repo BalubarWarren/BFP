@@ -30,8 +30,10 @@ export async function POST(request) {
     }
 
     // Find user
-    const user = await prisma.user.findUnique({
-      where: { email },
+    // Case-insensitive: an admin may have typed the address with different capitalisation than
+    // the user types at login.
+    const user = await prisma.user.findFirst({
+      where: { email: { equals: String(email).trim(), mode: 'insensitive' } },
       include: {
         municipality: true,
       },
