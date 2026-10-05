@@ -4,21 +4,17 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ROLE_HOME_PATH } from '../lib/constants';
 import LandingPage from '../components/common/LandingPage';
-import { requestSessionFromOtherTabs } from '../lib/session';
 
 export default function Home() {
   const router = useRouter();
   const [checkingSession, setCheckingSession] = useState(true);
 
   useEffect(() => {
-    let cancelled = false;
-
-    // Already signed in (in this tab, or in another open tab — e.g. this tab was opened from a
-    // notification email)? Skip the landing page and go straight to the dashboard.
-    const checkSession = async () => {
-      if (!sessionStorage.getItem('token')) await requestSessionFromOtherTabs();
-      if (cancelled) return;
-
+    // Already signed in in this tab? Skip the landing page and go straight to the dashboard.
+    // Deliberately doesn't borrow another open tab's session (unlike the dashboard layout, which
+    // does so notification-email links work): opening the site fresh in a new tab must always
+    // ask for a login.
+    const checkSession = () => {
       const token = sessionStorage.getItem('token');
       const user = sessionStorage.getItem('user');
 
@@ -31,9 +27,6 @@ export default function Home() {
     };
 
     checkSession();
-    return () => {
-      cancelled = true;
-    };
   }, [router]);
 
   if (checkingSession) {
