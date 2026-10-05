@@ -37,10 +37,17 @@ export function saveSession(token, user, { broadcast = true } = {}) {
 }
 
 export function clearSession({ broadcast = true } = {}) {
+  const userId = getStoredUser()?.id;
   sessionStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(USER_KEY);
-  if (broadcast) getChannel()?.postMessage({ type: 'logout', from: TAB_ID });
+  if (broadcast) getChannel()?.postMessage({ type: 'logout', userId, from: TAB_ID });
 }
+
+// Each tab can be signed in as a different account (a new tab asks for its own login), so a tab
+// only follows another tab's logout or token refresh when it's for the same account. Without
+// this, logging in as someone else in a second tab overwrote this tab's token, and this tab's
+// requests started going out as that other account (e.g. an admin page answering "Forbidden").
+const isSameAccount = (userId) => userId != null && userId === getStoredUser()?.id;
 
 // Reads the JWT's own expiry (seconds since epoch) without verifying it — only used to decide
 // when to refresh; the server still verifies every token.
@@ -109,12 +116,12 @@ export function listenForOtherTabs({ onLogout, onSession } = {}) {
       const token = getToken();
       const user = getStoredUser();
       if (token && user) bc.postMessage({ type: 'session', token, user, from: TAB_ID });
-    } else if (type === 'logout') {
+    } else if (type === 'logout' && isSameAccount(event.data.userId)) {
       clearSession({ broadcast: false });
       redirecting = true;
       onLogout?.();
-    } else if (type === 'session' && event.data.token && event.data.user && getToken()) {
-      // Another tab refreshed its token — keep this tab's copy current too.
+    } else if (type === 'session' && event.data.token && getToken() && isSameAccount(event.data.user?.id)) {
+      // Another tab refreshed this same account's token — keep this tab's copy current too.
       saveSession(event.data.token, event.data.user, { broadcast: false });
       onSession?.(event.data.user);
     }
