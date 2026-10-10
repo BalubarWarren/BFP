@@ -1,34 +1,26 @@
 import crypto from 'crypto';
 import prisma from './prisma.js';
 
+// The server runs in UTC, but the year on a reference number should follow Philippine time —
+// otherwise incidents filed between midnight and 8 AM on 1 January got last year's number.
+const manilaYear = () => Number(new Date().toLocaleString('en-US', { timeZone: 'Asia/Manila', year: 'numeric' }));
+
 // Generate incident reference number in format: BFP-BEN-2026-001. Accepts an optional Prisma
 // client/transaction handle so callers already inside a transaction (see createIncidentWithReference
 // below) read a consistent view instead of a separate, un-transacted connection.
-export async function generateIncidentReference(year = new Date().getFullYear(), client = prisma) {
-  const startOfYear = new Date(year, 0, 1);
-  const endOfYear = new Date(year, 11, 31, 23, 59, 59);
-
+export async function generateIncidentReference(year = manilaYear(), client = prisma) {
+  // Keyed on the reference number's own year prefix rather than a createdAt range, which was in
+  // UTC and so disagreed with the (Manila) year printed on the number for 8 hours every New Year.
+  const prefix = `BFP-BEN-${year}-`;
   const incidentsThisYear = await client.incident.findMany({
-    where: {
-      createdAt: {
-        gte: startOfYear,
-        lte: endOfYear,
-      },
-    },
-    orderBy: {
-      createdAt: 'desc',
-    },
-    take: 1,
+    where: { referenceNumber: { startsWith: prefix } },
+    select: { referenceNumber: true },
   });
 
   let sequence = 1;
-  if (incidentsThisYear.length > 0) {
-    // Extract sequence from last reference number
-    const lastRef = incidentsThisYear[0].referenceNumber;
-    const match = lastRef.match(/BFP-BEN-\d+-(\d+)/);
-    if (match) {
-      sequence = parseInt(match[1]) + 1;
-    }
+  for (const { referenceNumber } of incidentsThisYear) {
+    const n = parseInt(referenceNumber.slice(prefix.length), 10);
+    if (Number.isFinite(n) && n >= sequence) sequence = n + 1;
   }
 
   return `BFP-BEN-${year}-${String(sequence).padStart(3, '0')}`;
@@ -76,6 +68,9 @@ const adviseLockKeyFor = (data) => {
   return digest.readBigInt64BE(0);
 };
 
+// Arbitrary fixed key ("BFPREF" in ASCII) for the numbering lock in createIncidentWithReference.
+const INCIDENT_NUMBERING_LOCK_KEY = BigInt('0x424650524546');
+
 // generateIncidentReference reads the last reference number and increments it with no
 // DB-level lock or sequence backing it, so two submissions in the same moment can compute the
 // same "next" number. Rather than serializing every incident creation to prevent that (or adding
@@ -97,6 +92,13 @@ export async function createIncidentWithReference(data, { maxAttempts = 3, inclu
     try {
       return await prisma.$transaction(async (tx) => {
         await tx.$executeRaw`SELECT pg_advisory_xact_lock(${lockKey})`;
+        // Second, province-wide lock around numbering itself. The lock above only serializes
+        // submissions of the *same* incident, so two different fires filed in the same moment
+        // could still both read the same "last" reference number and collide — under load, often
+        // enough to exhaust the retries and fail one of the reports. Taken after the per-incident
+        // lock (always in this order), so it can't deadlock, and held only for the few
+        // milliseconds the insert takes.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${INCIDENT_NUMBERING_LOCK_KEY})`;
 
         if (hasDistinguishingContent(data)) {
           const recentDuplicate = await tx.incident.findFirst({

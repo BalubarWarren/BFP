@@ -1,7 +1,17 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../../lib/auth';
-import { ROLES } from '../../../../lib/constants';
+import { ROLES, INCIDENT_STATUS } from '../../../../lib/constants';
+
+const INCIDENT_EDITOR_ROLES = [
+  ROLES.INVESTIGATOR,
+  ROLES.MUNICIPAL_CHIEF_IIS,
+  ROLES.MUNICIPAL_CHIEF_OPERATION,
+  ROLES.MUNICIPAL_FIRE_MARSHAL,
+  ROLES.PROVINCIAL_CHIEF_IIS,
+  ROLES.MARSHAL,
+  ROLES.SUPER_ADMIN,
+];
 
 export async function GET(request, { params }) {
   try {
@@ -19,7 +29,11 @@ export async function GET(request, { params }) {
       include: {
         municipality: true,
         createdBy: { select: PUBLIC_USER_SELECT },
-        reports: true,
+        // Only what a case summary needs — not every linked report's full content and attachments.
+        reports: {
+          select: { id: true, reportType: true, status: true, reportDate: true, submittedById: true, passedToRole: true },
+          orderBy: { reportDate: 'asc' },
+        },
       },
     });
 
@@ -73,6 +87,12 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    // Same roles that may create incidents (POST /api/incidents) — every other role (PIO, regional
+    // viewers, admins' read-only tracking role) could previously edit any incident in the province.
+    if (!INCIDENT_EDITOR_ROLES.includes(user.role)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     // RBAC: Only creator can update for municipal workflow roles
     if (
       [ROLES.INVESTIGATOR, ROLES.MUNICIPAL_CHIEF_IIS, ROLES.MUNICIPAL_CHIEF_OPERATION, ROLES.MUNICIPAL_FIRE_MARSHAL].includes(user.role) &&
@@ -86,6 +106,14 @@ export async function PATCH(request, { params }) {
 
     const body = await request.json();
     const { status, casualtiesInjured, casualtiesFatalities, estimatedDamage, causeOfFire, fireInvestigationFindings } = body;
+
+    if (status && !Object.values(INCIDENT_STATUS).includes(status)) {
+      return NextResponse.json({ error: 'Invalid incident status' }, { status: 400 });
+    }
+    const counts = [casualtiesInjured, casualtiesFatalities].filter((value) => value !== undefined);
+    if (counts.some((value) => !Number.isInteger(value) || value < 0)) {
+      return NextResponse.json({ error: 'Casualty counts must be whole numbers' }, { status: 400 });
+    }
 
     const updatedIncident = await prisma.incident.update({
       where: { id: parseInt(params.id) },

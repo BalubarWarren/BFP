@@ -304,9 +304,23 @@ export async function PATCH(request, { params }) {
       }
     }
 
-    const updatedReport = await prisma.report.update({
-      where: { id: parseInt(params.id) },
+    // Guarded on the exact version just read: a double-clicked Forward/Resubmit, or the same
+    // report open in two tabs, would otherwise both pass the status checks above and both apply
+    // (sending every reviewer duplicate notifications). Only the first write wins; the other
+    // gets a 409 instead of re-routing a report that has already moved on.
+    const guarded = await prisma.report.updateMany({
+      where: { id: report.id, status: report.status, updatedAt: report.updatedAt },
       data: updateData,
+    });
+    if (guarded.count === 0) {
+      return NextResponse.json(
+        { error: 'This report was changed in the meantime. Refresh to see its current status.' },
+        { status: 409 }
+      );
+    }
+
+    const updatedReport = await prisma.report.findUnique({
+      where: { id: report.id },
       include: {
         municipality: true,
         submittedBy: { select: PUBLIC_USER_SELECT },
@@ -393,8 +407,18 @@ export async function DELETE(request, { params }) {
       );
     }
 
+    // Conditional on the version just checked, so a reviewer approving/returning the report at the
+    // same moment can't have their review silently deleted out from under them. The record goes
+    // first and the files second — the reverse left a report with dead attachment links whenever
+    // the delete itself failed.
+    const deleted = await prisma.report.deleteMany({ where: { id: reportId, updatedAt: report.updatedAt } });
+    if (deleted.count === 0) {
+      return NextResponse.json(
+        { error: 'This report was changed in the meantime. Refresh and try again.' },
+        { status: 409 }
+      );
+    }
     await deleteAttachments(parseJsonField(report.attachments, []));
-    await prisma.report.delete({ where: { id: reportId } });
 
     // Every Incident in this app is created from a Spot Investigation report's auto-creation
     // path (there's no UI that creates one standalone) — so once the report being deleted was

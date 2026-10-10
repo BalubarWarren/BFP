@@ -38,8 +38,11 @@ export async function POST(request, { params }) {
       return NextResponse.json({ qrToken: report.qrToken });
     }
 
-    const qrToken = generateQrToken();
-    await prisma.report.update({ where: { id: report.id }, data: { qrToken } });
+    // Only set if still empty: two people opening the QR modal for the first time at once would
+    // otherwise each mint a token, and the second would silently invalidate a QR code the first
+    // may already have printed. The loser just returns whichever token won.
+    await prisma.report.updateMany({ where: { id: report.id, qrToken: null }, data: { qrToken: generateQrToken() } });
+    const { qrToken } = await prisma.report.findUnique({ where: { id: report.id }, select: { qrToken: true } });
 
     return NextResponse.json({ qrToken });
   } catch (error) {

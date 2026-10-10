@@ -1,8 +1,14 @@
-// In-memory login attempt tracking. Good enough for this app's scale (a single Node process on
-// Render, not horizontally scaled) — counters reset on redeploy, which is an acceptable tradeoff
-// for a system this size vs. adding a persistent store just for rate limiting.
+// In-memory login attempt tracking. NOTE: the app now runs on Vercel, where each concurrently
+// running function instance has its own memory — so these counters are per instance and reset on
+// cold starts. That still stops a fast burst of guesses (which tends to hit one warm instance) but
+// is not a hard guarantee; a shared store (a DB table or Redis) would be needed for that.
 
 const MAX_ATTEMPTS = 5;
+// Keys starting with "ip:" get a much higher ceiling: a whole fire station (or a mobile carrier's
+// carrier-grade NAT) shares one public IP, so 5 typos across everyone there used to lock the entire
+// station out of logging in for 15 minutes. Per-account keys keep the strict limit above.
+const MAX_ATTEMPTS_PER_IP = 30;
+const maxAttemptsFor = (key) => (key.startsWith('ip:') ? MAX_ATTEMPTS_PER_IP : MAX_ATTEMPTS);
 const WINDOW_MS = 15 * 60 * 1000; // failed attempts are counted within this rolling window
 const LOCKOUT_MS = 15 * 60 * 1000; // once locked out, how long before attempts are allowed again
 
@@ -39,7 +45,7 @@ export function recordFailedAttempt(key) {
   }
 
   entry.count += 1;
-  if (entry.count >= MAX_ATTEMPTS) {
+  if (entry.count >= maxAttemptsFor(key)) {
     entry.lockedUntil = now + LOCKOUT_MS;
   }
 }

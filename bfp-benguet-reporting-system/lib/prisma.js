@@ -37,10 +37,6 @@ if (process.env.NODE_ENV === 'production') {
 // Every in-app Notification is also delivered as a real email, so this hooks the one place
 // notifications are written rather than adding an email call at each of the many call sites
 // that create them (report submit/approve/return/overdue-check/text-blast, etc).
-const emailForNotificationRecipient = async (userId) => {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { email: true } });
-  return user?.email || null;
-};
 
 // Text-blast notifications store a JSON payload in `message` (see POST /api/reports/text-blast
 // and parseNotificationMessage in components/common/Header.jsx) — unpack it so the email shows
@@ -57,6 +53,40 @@ const readableNotification = (message) => {
   return { message, note: '' };
 };
 
+// One recipient lookup for the whole batch, and one email per distinct message (recipients in
+// BCC) — a text blast or report fan-out used to do a query plus a separate SMTP send per
+// recipient while the user's request waited, which on Vercel's function time limit could time
+// the request out after the data was already saved.
+async function emailNotifications(client, notifications) {
+  const userIds = [...new Set(notifications.map((data) => data.userId))];
+  const users = await client.user.findMany({
+    where: { id: { in: userIds }, isActive: true },
+    select: { id: true, email: true },
+  });
+  const emailById = new Map(users.map((user) => [user.id, user.email]));
+
+  const byMessage = new Map();
+  for (const data of notifications) {
+    const email = emailById.get(data.userId);
+    if (!email) continue;
+    if (!byMessage.has(data.message)) byMessage.set(data.message, new Set());
+    byMessage.get(data.message).add(email);
+  }
+
+  await Promise.all(
+    [...byMessage].map(([rawMessage, emails]) => {
+      const { message, note } = readableNotification(rawMessage);
+      // The site root sends a signed-in user to their own role's dashboard (reviewers don't
+      // use /municipal/reports), so it's the one link that works for every recipient.
+      const { subject, html } = notificationEmail({ message, note, reportUrl: APP_URL });
+      const recipients = [...emails];
+      return recipients.length === 1
+        ? sendEmail({ to: recipients[0], subject, html })
+        : sendEmail({ bcc: recipients, subject, html });
+    })
+  );
+}
+
 // Flag lives on the client itself (not `global`): in production each module instance creates its
 // own PrismaClient, and a global flag would leave every client after the first without emails.
 if (!prisma.__notificationEmailMiddlewareRegistered) {
@@ -68,17 +98,8 @@ if (!prisma.__notificationEmailMiddlewareRegistered) {
 
       // Awaited (not fire-and-forget) because on serverless hosts like Vercel the function can be
       // frozen as soon as the response is sent, silently dropping any still-pending email.
-      await Promise.all(
-        notifications.map(async (data) => {
-          const email = await emailForNotificationRecipient(data.userId);
-          if (!email) return;
-          const { message, note } = readableNotification(data.message);
-          // The site root sends a signed-in user to their own role's dashboard (reviewers don't
-          // use /municipal/reports), so it's the one link that works for every recipient.
-          const { subject, html } = notificationEmail({ message, note, reportUrl: APP_URL });
-          await sendEmail({ to: email, subject, html });
-        })
-      ).catch((error) => console.error('[email] Notification email dispatch failed:', error));
+      await emailNotifications(prisma, notifications)
+        .catch((error) => console.error('[email] Notification email dispatch failed:', error));
     }
 
     return result;

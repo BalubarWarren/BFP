@@ -53,21 +53,68 @@ async function uploadWithRetry(supabase, storedName, buffer, contentType) {
   throw lastError;
 }
 
+// Validates files by their declared name/type/size — shared by the server-side upload below and
+// the signed direct-upload flow (createSignedUploads), where the bytes never pass through us.
+function assertValidAttachments(files) {
+  const oversized = files.find((file) => file.size > MAX_FILE_SIZE);
+  if (oversized) {
+    throw new Error(`"${oversized.name}" exceeds the 10MB attachment size limit.`);
+  }
+
+  const disallowed = files.find((file) => !ALLOWED_MIME_TYPES.includes(file.type));
+  if (disallowed) {
+    throw new Error(`"${disallowed.name}" has an unsupported file type. Only images and PDFs are allowed.`);
+  }
+}
+
+const MAX_FILES_PER_REPORT = 10;
+
+const storedNameFor = (folder, fileName) =>
+  `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${sanitizeFileName(fileName)}`;
+
+// Vercel rejects any function request body over 4.5MB, so files can't reliably go through our API
+// (two phone photos are already over it). Instead the browser asks for one signed upload URL per
+// file and PUTs the bytes straight to Supabase Storage; the report is then submitted as JSON
+// carrying the resulting public URLs (validated by isStoredAttachmentUrl in POST /api/reports).
+export async function createSignedUploads(files, folder) {
+  if (!Array.isArray(files) || !files.length) {
+    throw new Error('No files to upload.');
+  }
+  if (files.length > MAX_FILES_PER_REPORT) {
+    throw new Error(`You can attach at most ${MAX_FILES_PER_REPORT} files.`);
+  }
+  const normalized = files.map((file) => ({
+    name: String(file?.name || 'file').slice(0, 200),
+    type: String(file?.type || ''),
+    size: Number(file?.size) || 0,
+  }));
+  assertValidAttachments(normalized);
+
+  const supabase = getSupabaseClient();
+  return Promise.all(
+    normalized.map(async (file) => {
+      const storedName = storedNameFor(folder, file.name);
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUploadUrl(storedName);
+      if (error) throw new Error(`Could not prepare upload for "${file.name}": ${error.message}`);
+      const { data: publicData } = supabase.storage.from(BUCKET).getPublicUrl(storedName);
+      return {
+        signedUrl: data.signedUrl,
+        attachment: { name: file.name, type: file.type, size: file.size, url: publicData.publicUrl },
+      };
+    })
+  );
+}
+
 // Uploads to Supabase Storage instead of local disk — Render's filesystem is ephemeral and wipes
 // on every deploy/restart, which was silently deleting every previously-uploaded attachment.
 export async function saveAttachments(files, folder) {
   const validFiles = files.filter((file) => file && file.size > 0);
   if (!validFiles.length) return [];
 
-  const oversized = validFiles.find((file) => file.size > MAX_FILE_SIZE);
-  if (oversized) {
-    throw new Error(`"${oversized.name}" exceeds the 10MB attachment size limit.`);
+  if (validFiles.length > MAX_FILES_PER_REPORT) {
+    throw new Error(`You can attach at most ${MAX_FILES_PER_REPORT} files.`);
   }
-
-  const disallowed = validFiles.find((file) => !ALLOWED_MIME_TYPES.includes(file.type));
-  if (disallowed) {
-    throw new Error(`"${disallowed.name}" has an unsupported file type. Only images and PDFs are allowed.`);
-  }
+  assertValidAttachments(validFiles);
 
   const supabase = getSupabaseClient();
 
@@ -75,7 +122,7 @@ export async function saveAttachments(files, folder) {
     validFiles.map(async (file) => {
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      const storedName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${sanitizeFileName(file.name)}`;
+      const storedName = storedNameFor(folder, file.name);
 
       try {
         await uploadWithRetry(supabase, storedName, buffer, file.type || 'application/octet-stream');

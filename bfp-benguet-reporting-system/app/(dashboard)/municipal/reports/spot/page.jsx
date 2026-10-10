@@ -12,6 +12,7 @@ import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessM
 import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
 import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 import BackButton from '../../../../../components/common/BackButton';
+import { submitReport } from '../../../../../lib/submit-report';
 
 export default function SpotInvestigationForm() {
   const router = useRouter();
@@ -105,24 +106,24 @@ export default function SpotInvestigationForm() {
     setLoading(true);
     setError('');
     try {
-      const token = sessionStorage.getItem('token');
       const effectiveUser = await getEffectiveUser();
       if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
-      const payload = new FormData();
-      payload.append('reportType', 'SPOT_INVESTIGATION');
-      payload.append('municipalityId', String(effectiveUser.municipalityId));
-      payload.append('reportDate', formData.reportDate);
-      payload.append('category', formData.category);
-      payload.append('subCategory', formData.subCategory);
-      payload.append('content', JSON.stringify({
-        dateOfIncident: formData.dateOfIncident,
-        timeOfIncident: formData.timeOfIncident,
-        description: formData.description,
-      }));
-      attachments.forEach((file) => payload.append('attachments', file));
-      payload.append('passedToRole', recipientRole);
-
-      await axios.post('/api/reports', payload, { headers: { Authorization: `Bearer ${token}` } });
+      await submitReport({
+        fields: {
+          reportType: 'SPOT_INVESTIGATION',
+          municipalityId: String(effectiveUser.municipalityId),
+          reportDate: formData.reportDate,
+          category: formData.category,
+          subCategory: formData.subCategory,
+          content: JSON.stringify({
+            dateOfIncident: formData.dateOfIncident,
+            timeOfIncident: formData.timeOfIncident,
+            description: formData.description,
+          }),
+          passedToRole: recipientRole,
+        },
+        files: attachments,
+      });
       setSuccess('Spot Investigation Report submitted successfully.');
       setShowSuccessModal(true);
     } catch (err) {

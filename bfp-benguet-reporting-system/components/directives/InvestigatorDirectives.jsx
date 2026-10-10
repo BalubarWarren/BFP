@@ -5,7 +5,7 @@ import Link from 'next/link';
 import axios from 'axios';
 import { Megaphone } from 'lucide-react';
 import { useToast } from '../common/ToastProvider';
-import { formatDateTime } from '../../lib/utils';
+import { formatDateTime, isAuthError } from '../../lib/utils';
 import { ASSIGNABLE_REPORT_TYPES } from '../../lib/constants';
 import { DirectiveStatusBadge, directiveTitle, isOverdue } from './DirectiveBadges';
 
@@ -37,9 +37,10 @@ export default function InvestigatorDirectives() {
         headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
       });
       setDirectives(res.data.directives || []);
-    } catch {
-      // The dashboard's own report poll already surfaces auth/session failures.
-      clearInterval(pollRef.current);
+    } catch (err) {
+      // Stop only once the session is gone (the dashboard's own poll surfaces that); a transient
+      // failure just waits for the next tick.
+      if (isAuthError(err)) clearInterval(pollRef.current);
     }
   }
 

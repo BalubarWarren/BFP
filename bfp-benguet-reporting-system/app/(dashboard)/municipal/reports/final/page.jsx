@@ -10,6 +10,7 @@ import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessM
 import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
 import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 import BackButton from '../../../../../components/common/BackButton';
+import { submitReport } from '../../../../../lib/submit-report';
 
 export default function FinalInvestigationForm() {
   const router = useRouter();
@@ -85,27 +86,23 @@ export default function FinalInvestigationForm() {
     setLoading(true);
     setError('');
     try {
-      const token = sessionStorage.getItem('token');
       const effectiveUser = await getEffectiveUser();
       if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
-      const payload = new FormData();
-      payload.append('reportType', 'FINAL_INVESTIGATION');
-      payload.append('municipalityId', String(effectiveUser.municipalityId));
-      if (formData.incidentId) payload.append('incidentId', formData.incidentId);
-      payload.append('reportDate', formData.reportDate);
-      payload.append('respondingUnits', formData.respondingUnits);
-      payload.append('respondingOfficer', formData.respondingOfficer);
-      payload.append('reportingOfficerRank', formData.reportingOfficerRank);
-      payload.append('stationCommanderName', formData.stationCommanderName);
-      payload.append('content', JSON.stringify({}));
-      attachments.forEach((file) => payload.append('attachments', file));
-      payload.append('passedToRole', recipientRole);
-
-      await axios.post(
-        '/api/reports',
-        payload,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await submitReport({
+        fields: {
+          reportType: 'FINAL_INVESTIGATION',
+          municipalityId: String(effectiveUser.municipalityId),
+          incidentId: formData.incidentId || undefined,
+          reportDate: formData.reportDate,
+          respondingUnits: formData.respondingUnits,
+          respondingOfficer: formData.respondingOfficer,
+          reportingOfficerRank: formData.reportingOfficerRank,
+          stationCommanderName: formData.stationCommanderName,
+          content: JSON.stringify({}),
+          passedToRole: recipientRole,
+        },
+        files: attachments,
+      });
       setSuccess('Final Investigation Report submitted successfully.');
       setShowSuccessModal(true);
     } catch (err) {

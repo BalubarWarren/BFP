@@ -38,17 +38,19 @@ const escapeHtml = (value) =>
 
 // Fails silently (logs only) — a broken email provider must never break the report/notification
 // flow it's attached to, since email is a notification channel, not the source of truth.
-export async function sendEmail({ to, subject, html }) {
+// `bcc` sends one message to many recipients without exposing their addresses to each other.
+export async function sendEmail({ to, bcc, subject, html }) {
+  const recipients = to || (bcc && bcc.join(', '));
   if (!transporter) {
-    console.warn(`[email] GMAIL_USER / GMAIL_APP_PASSWORD not set — skipping email "${subject}" to ${to}`);
+    console.warn(`[email] GMAIL_USER / GMAIL_APP_PASSWORD not set — skipping email "${subject}" to ${recipients}`);
     return;
   }
-  if (!to) return;
+  if (!to && !bcc?.length) return;
 
   try {
-    await transporter.sendMail({ from: FROM, to, subject, html });
+    await transporter.sendMail({ from: FROM, subject, html, ...(to ? { to } : { to: FROM, bcc }) });
   } catch (error) {
-    console.error(`[email] Failed to send "${subject}" to ${to}:`, error);
+    console.error(`[email] Failed to send "${subject}" to ${recipients}:`, error);
   }
 }
 

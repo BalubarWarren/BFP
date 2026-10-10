@@ -4,16 +4,28 @@ import { NOTIFICATION_TYPES, DEADLINES } from './constants.js';
 const hoursAgo = (hours) => new Date(Date.now() - hours * 60 * 60 * 1000);
 const daysAgo = (days) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-// Creates the notification unless one of the same (reportId, type) already exists — each rule
-// should only ever fire once per report.
-async function notifyOnce({ reportId, userId, type, message }) {
-  const existing = await prisma.notification.findFirst({ where: { reportId, type } });
-  if (existing) return false;
+// Each rule should only ever fire once per report. Which (reportId, type) pairs were already
+// notified is looked up in one query per rule instead of one findFirst per candidate report —
+// the candidate lists grow with every report ever filed, and this runs inside a single request.
+const REPORT_FIELDS = { id: true, incidentId: true, submittedById: true, reviewedAt: true, reportType: true, status: true, passedToId: true };
 
-  await prisma.notification.create({
-    data: { userId, reportId, type, message },
+async function alreadyNotified(reportIds, types) {
+  if (!reportIds.length) return new Set();
+  const rows = await prisma.notification.findMany({
+    where: { reportId: { in: reportIds }, type: { in: types } },
+    select: { reportId: true, type: true },
   });
-  return true;
+  return new Set(rows.map((row) => `${row.reportId}:${row.type}`));
+}
+
+function makeNotifyOnce(notified) {
+  return async ({ reportId, userId, type, message }) => {
+    const key = `${reportId}:${type}`;
+    if (notified.has(key)) return false;
+    notified.add(key);
+    await prisma.notification.create({ data: { userId, reportId, type, message } });
+    return true;
+  };
 }
 
 // Rule A — the full Spot Investigation review chain should reach final approval within
@@ -33,8 +45,12 @@ async function checkSpotApprovalSla() {
         { status: 'APPROVED', passedToId: { not: null } },
       ],
     },
+    select: REPORT_FIELDS,
   });
 
+  const notifyOnce = makeNotifyOnce(
+    await alreadyNotified(overdueSpotReports.map((r) => r.id), [NOTIFICATION_TYPES.REPORT_SPOT_OVERDUE])
+  );
   let created = 0;
   for (const report of overdueSpotReports) {
     const didCreate = await notifyOnce({
@@ -60,6 +76,7 @@ async function checkCaseFollowUps() {
       passedToId: null,
       incidentId: { not: null },
     },
+    select: REPORT_FIELDS,
   });
 
   let progressOverdueCreated = 0;
@@ -73,8 +90,15 @@ async function checkCaseFollowUps() {
           incidentId: { in: incidentIds },
           reportType: { in: ['PROGRESS_INVESTIGATION', 'FINAL_INVESTIGATION'] },
         },
+        select: REPORT_FIELDS,
       })
     : [];
+  const notifyOnce = makeNotifyOnce(
+    await alreadyNotified(
+      [...finallyApprovedSpotReports, ...allCaseReports].map((r) => r.id),
+      [NOTIFICATION_TYPES.REPORT_PROGRESS_OVERDUE, NOTIFICATION_TYPES.REPORT_OVERDUE, NOTIFICATION_TYPES.REPORT_DEADLINE_WARNING]
+    )
+  );
   const caseReportsByIncident = new Map();
   for (const report of allCaseReports) {
     if (!caseReportsByIncident.has(report.incidentId)) {

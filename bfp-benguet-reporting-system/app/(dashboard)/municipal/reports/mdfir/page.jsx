@@ -2,7 +2,6 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
 import { FileEdit, ClipboardList, Send } from 'lucide-react';
 import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
 import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
@@ -11,6 +10,7 @@ import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessM
 import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
 import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 import BackButton from '../../../../../components/common/BackButton';
+import { submitReport } from '../../../../../lib/submit-report';
 
 export default function MinimalDamageFireIncidentReportForm() {
   const router = useRouter();
@@ -74,25 +74,25 @@ export default function MinimalDamageFireIncidentReportForm() {
     setLoading(true);
     setError('');
     try {
-      const token = sessionStorage.getItem('token');
       const effectiveUser = await getEffectiveUser();
       if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
-      const payload = new FormData();
-      payload.append('reportType', 'MDFIR');
-      payload.append('municipalityId', String(effectiveUser.municipalityId));
-      payload.append('reportDate', formData.reportDate);
-      payload.append('category', formData.generalCategory);
-      payload.append('content', JSON.stringify({
-        reportName: 'Minimal Damage Fire Incident Report',
-        dateOfIncident: formData.dateOfIncident,
-        timeOfIncident: formData.timeOfIncident,
-        generalCategory: formData.generalCategory,
-        subCategory: formData.subCategory,
-      }));
-      attachments.forEach((file) => payload.append('attachments', file));
-      payload.append('passedToRole', recipientRole);
-
-      await axios.post('/api/reports', payload, { headers: { Authorization: `Bearer ${token}` } });
+      await submitReport({
+        fields: {
+          reportType: 'MDFIR',
+          municipalityId: String(effectiveUser.municipalityId),
+          reportDate: formData.reportDate,
+          category: formData.generalCategory,
+          content: JSON.stringify({
+            reportName: 'Minimal Damage Fire Incident Report',
+            dateOfIncident: formData.dateOfIncident,
+            timeOfIncident: formData.timeOfIncident,
+            generalCategory: formData.generalCategory,
+            subCategory: formData.subCategory,
+          }),
+          passedToRole: recipientRole,
+        },
+        files: attachments,
+      });
       setSuccess('MDFIR submitted successfully.');
       setShowSuccessModal(true);
     } catch (err) {

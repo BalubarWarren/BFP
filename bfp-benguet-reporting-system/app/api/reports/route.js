@@ -16,6 +16,7 @@ import {
 // Safety cap on list results — orderBy is already createdAt desc, so this returns the most
 // recent reports rather than silently truncating in an unpredictable order.
 const MAX_LIST_RESULTS = 200;
+const MAX_ATTACHMENTS = 10;
 
 const INVESTIGATION_REPORT_TYPES = [
   'MDFIR',
@@ -325,21 +326,31 @@ export async function POST(request) {
     const parsedIncidentId = incidentId ? parseInt(incidentId) : null;
     const parsedContent = parseJsonField(content, {});
 
-    let attachments;
-    if (isMultipart) {
-      try {
-        attachments = await saveAttachments(formData.getAll('attachments'), 'reports');
-      } catch (uploadError) {
-        return NextResponse.json({ error: uploadError.message }, { status: 400 });
-      }
-    } else {
+    // Multipart files are only uploaded once every other check below has passed, so a rejected
+    // submission doesn't leave orphaned files behind in storage.
+    const uploadedFiles = isMultipart
+      ? formData.getAll('attachments').filter((file) => file && typeof file === 'object' && file.size > 0)
+      : [];
+    let attachments = [];
+    if (!isMultipart) {
       attachments = parseJsonField(body.attachments, []);
-      // JSON submissions carry pre-built attachment objects rather than files — only accept ones
-      // pointing at our own storage bucket, since reviewers open these URLs as links (a
-      // `javascript:` or phishing URL here would otherwise be one click away for them).
-      if (!Array.isArray(attachments) || !attachments.every((attachment) => isStoredAttachmentUrl(attachment?.url))) {
+      // JSON submissions carry attachment objects for files the browser already uploaded straight
+      // to storage (see lib/submit-report.js) — only accept ones pointing at our own bucket, since
+      // reviewers open these URLs as links (a `javascript:` or phishing URL here would otherwise be
+      // one click away for them).
+      if (
+        !Array.isArray(attachments) ||
+        attachments.length > MAX_ATTACHMENTS ||
+        !attachments.every((attachment) => isStoredAttachmentUrl(attachment?.url))
+      ) {
         return NextResponse.json({ error: 'Invalid attachment' }, { status: 400 });
       }
+      attachments = attachments.map((attachment) => ({
+        name: String(attachment.name || 'attachment').slice(0, 200),
+        type: String(attachment.type || 'application/octet-stream'),
+        size: Number(attachment.size) || 0,
+        url: attachment.url,
+      }));
     }
 
     // Validate required fields
@@ -370,7 +381,7 @@ export async function POST(request) {
       }
     }
 
-    if (!attachments.length) {
+    if (!attachments.length && !uploadedFiles.length) {
       return NextResponse.json(
         { error: 'At least one attachment is required.' },
         { status: 400 }
@@ -410,6 +421,14 @@ export async function POST(request) {
 
       passedToRole = targetRecipientRole;
       passedToId = recipient.id;
+    }
+
+    if (isMultipart) {
+      try {
+        attachments = await saveAttachments(uploadedFiles, 'reports');
+      } catch (uploadError) {
+        return NextResponse.json({ error: uploadError.message }, { status: 400 });
+      }
     }
 
     // A Spot Investigation is the entry point into a case — auto-create the linked Incident

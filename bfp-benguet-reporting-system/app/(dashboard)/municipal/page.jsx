@@ -150,6 +150,12 @@ export default function MunicipalDashboard() {
       toast.success(`Report submitted to ${FORWARD_ROLE_LABELS[forwardRole]} for review.`);
     } catch (err) {
       toast.error(err.response?.data?.error || 'Failed to forward report');
+      // 409: already forwarded (e.g. a double-click or another tab) — show the current state.
+      if (err.response?.status === 409) {
+        closeForward();
+        closeView();
+        fetchReports();
+      }
     } finally {
       setForwardLoading(false);
     }

@@ -11,6 +11,10 @@ import BFPCrest from '../../../components/common/BFPCrest';
 // here directly. Reachable only by guessing a 32-byte random token, and even then only ever
 // shows the handful of fields below (never `content`, `remarks`, or anything else from the full
 // report) — the same minimal footprint as the printed report itself.
+// Always read the database on each scan. Without this, Next caches the first render of each token,
+// so a report an admin later deleted would keep showing as "Verified" to anyone scanning its QR code.
+export const dynamic = 'force-dynamic';
+
 export const metadata = {
   title: 'Verify Report — FireTrack',
   robots: { index: false, follow: false },
