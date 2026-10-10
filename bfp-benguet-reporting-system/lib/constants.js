@@ -308,7 +308,35 @@ export const NOTIFICATION_TYPES = {
   REPORT_SPOT_OVERDUE: 'REPORT_SPOT_OVERDUE',
   REPORT_PROGRESS_OVERDUE: 'REPORT_PROGRESS_OVERDUE',
   REPORT_DEADLINE_WARNING: 'REPORT_DEADLINE_WARNING',
+  DIRECTIVE_RECEIVED: 'DIRECTIVE_RECEIVED',
+  DIRECTIVE_UPDATED: 'DIRECTIVE_UPDATED',
 };
+
+// Messages and report assignments a Municipal Fire Marshal sends to the investigators of their
+// own municipality (see /api/directives and /municipal/marshal/team).
+export const DIRECTIVE_KINDS = {
+  MESSAGE: 'MESSAGE',
+  ASSIGNMENT: 'ASSIGNMENT',
+};
+
+export const DIRECTIVE_STATUS = {
+  PENDING: 'PENDING',
+  ACKNOWLEDGED: 'ACKNOWLEDGED',
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+};
+
+// The report forms an investigator can be assigned, mapped to the form that starts each one.
+export const ASSIGNABLE_REPORT_TYPES = {
+  MDFIR: { label: 'MDFIR', path: '/municipal/reports/mdfir' },
+  SPOT_INVESTIGATION: { label: 'Spot Investigation', path: '/municipal/reports/spot' },
+  PROGRESS_INVESTIGATION: { label: 'Progress Investigation', path: '/municipal/reports/progress' },
+  FINAL_INVESTIGATION: { label: 'Final Investigation', path: '/municipal/reports/final' },
+};
+
+// An investigator counts as "online" if their dashboard checked in within this window. The header
+// polls notifications every 30s while the tab is visible, and that poll bumps lastSeenAt.
+export const ONLINE_WINDOW_MS = 2 * 60 * 1000;
 
 // Follow-up SLA windows for the Spot -> Progress/Final case workflow.
 // See lib/check-overdue-reports.js for how these are applied.

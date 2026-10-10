@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
-  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History, Archive,
+  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History, Archive, UserCheck,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
 import { APPROVED_REPORTS_PATH, canViewApprovedReports } from '../../lib/constants';
@@ -156,6 +156,12 @@ export default function Sidebar({ isOpen, user }) {
                     className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
                   >
                     <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Fire Marshal Dashboard
+                  </Link>
+                  <Link
+                    href="/municipal/marshal/team"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
+                  >
+                    <UserCheck className="w-4 h-4 flex-shrink-0" /> My Investigators
                   </Link>
                 </>
               )}

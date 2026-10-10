@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { History, CheckCircle2, Undo2, MessageSquare, AlertTriangle } from 'lucide-react';
+import { History, CheckCircle2, Undo2, MessageSquare, AlertTriangle, Megaphone } from 'lucide-react';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import PageHeader from '../../../../components/common/PageHeader';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
@@ -12,6 +12,7 @@ const ACTION_META = {
   APPROVE_REPORT: { label: 'Approved', icon: CheckCircle2, className: 'bg-bfp-green/15 text-bfp-green' },
   RETURN_REPORT: { label: 'Returned', icon: Undo2, className: 'bg-bfp-red/10 text-bfp-red' },
   TEXT_BLAST_REPORT: { label: 'Text Blast', icon: MessageSquare, className: 'bg-bfp-navy/10 text-bfp-navy' },
+  SEND_DIRECTIVE: { label: 'Directive', icon: Megaphone, className: 'bg-bfp-amber/15 text-amber-800' },
 };
 
 const formatReportType = (type) =>
@@ -27,6 +28,9 @@ const describeChanges = (entry) => {
   }
   if (entry.action === 'TEXT_BLAST_REPORT') {
     return `Sent to ${changes.recipientCount ?? '?'} recipient(s), ${changes.newlySentCount ?? '?'} newly notified`;
+  }
+  if (entry.action === 'SEND_DIRECTIVE') {
+    return `${changes.kind === 'ASSIGNMENT' ? `Assigned ${formatReportType(changes.reportType)}` : 'Message'} to ${changes.recipientName ?? '?'}`;
   }
   return '—';
 };
@@ -123,6 +127,7 @@ export default function ActivityLogPage() {
               <option value="APPROVE_REPORT">Approved</option>
               <option value="RETURN_REPORT">Returned</option>
               <option value="TEXT_BLAST_REPORT">Text Blast</option>
+              <option value="SEND_DIRECTIVE">Directive</option>
             </select>
           </div>
         </div>

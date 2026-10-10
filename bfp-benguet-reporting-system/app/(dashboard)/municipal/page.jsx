@@ -14,6 +14,7 @@ import CaseFollowUpCta from '../../../components/reports/CaseFollowUpCta';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 import PageHeader from '../../../components/common/PageHeader';
 import ConfirmDeleteModal from '../../../components/reports/ConfirmDeleteModal';
+import InvestigatorDirectives from '../../../components/directives/InvestigatorDirectives';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 
 export default function MunicipalDashboard() {
@@ -212,6 +213,8 @@ export default function MunicipalDashboard() {
           <SessionExpiredBanner />
         </div>
       )}
+
+      {!sessionExpired && <InvestigatorDirectives />}
 
       {/* Report View Modal */}
       {selectedReport && (

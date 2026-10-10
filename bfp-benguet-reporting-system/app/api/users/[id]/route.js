@@ -192,6 +192,8 @@ export async function DELETE(request, { params }) {
               }
 
               await tx.annotation.deleteMany({ where: { authorId: targetId } });
+              // Directives they received cascade with the user; ones they sent would block the delete.
+              await tx.directive.deleteMany({ where: { senderId: targetId } });
               await tx.report.deleteMany({ where: { submittedById: targetId } });
               await tx.incident.deleteMany({ where: { createdById: targetId } });
               await tx.user.delete({ where: { id: targetId } });

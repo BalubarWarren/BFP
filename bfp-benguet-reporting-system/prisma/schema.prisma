@@ -20,6 +20,7 @@ model Municipality {
   reports   Report[]
   incidents Incident[]
   dailyReportEntries DailyReportEntry[]
+  directives Directive[]
 
   @@map("municipalities")
 }
@@ -32,6 +33,10 @@ model User {
   role      String  // Role: INVESTIGATOR, CHIEF_INVESTIGATOR_IIS, MARSHAL, PIO, VIEWER, etc.
   rank      String?
   isActive  Boolean @default(true)
+  // Last time this account's open dashboard checked in (bumped by the header's notification poll,
+  // see GET /api/notifications) — lets the Municipal Fire Marshal see which investigators are on
+  // the system right now. isActive only says the account isn't disabled.
+  lastSeenAt DateTime?
   permissions String? // JSON array of permissions based on role
 
   municipalityId Int?
@@ -46,6 +51,8 @@ model User {
   incidentsCreated     Incident[] @relation("CreatedBy")
   notifications        Notification[]
   annotations          Annotation[]
+  directivesSent       Directive[] @relation("DirectiveSender")
+  directivesReceived   Directive[] @relation("DirectiveRecipient")
 
   // Matches how /api/reports resolves the recipient for a role within a municipality
   @@index([role, municipalityId])
@@ -190,6 +197,37 @@ model Notification {
   @@index([userId, createdAt])
   @@index([reportId])
   @@map("notifications")
+}
+
+// A message or report assignment from a Municipal Fire Marshal to one investigator of the same
+// municipality (see /api/directives). The investigator acknowledges it and marks it done, with an
+// optional reply, so the marshal can follow up on who has (and hasn't) acted on an order.
+model Directive {
+  id             Int      @id @default(autoincrement())
+  kind           String   // "MESSAGE" or "ASSIGNMENT"
+  status         String   @default("PENDING") // "PENDING", "ACKNOWLEDGED", "COMPLETED", "CANCELLED"
+
+  municipalityId Int
+  municipality   Municipality @relation(fields: [municipalityId], references: [id])
+
+  senderId       Int
+  sender         User     @relation("DirectiveSender", fields: [senderId], references: [id])
+  recipientId    Int
+  recipient      User     @relation("DirectiveRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  reportType     String?  // ASSIGNMENT only: which report the investigator is ordered to prepare
+  message        String
+  dueAt          DateTime?
+  response       String?  // the investigator's reply when acknowledging/completing
+  respondedAt    DateTime?
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([recipientId, createdAt])
+  @@index([senderId, createdAt])
+  @@index([municipalityId])
+  @@map("directives")
 }
 
 model Annotation {

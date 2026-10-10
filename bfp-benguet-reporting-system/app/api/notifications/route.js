@@ -13,6 +13,17 @@ export async function GET(request) {
       );
     }
 
+    // This poll runs every 30s from every open, visible dashboard (components/common/Header.jsx),
+    // which makes it the presence heartbeat behind the Fire Marshal's "online now" indicator.
+    // Throttled to one write a minute per user so it doesn't add a write to every poll.
+    await prisma.user.updateMany({
+      where: {
+        id: user.id,
+        OR: [{ lastSeenAt: null }, { lastSeenAt: { lt: new Date(Date.now() - 60 * 1000) } }],
+      },
+      data: { lastSeenAt: new Date() },
+    });
+
     const notifications = await prisma.notification.findMany({
       where: {
         userId: user.id,
