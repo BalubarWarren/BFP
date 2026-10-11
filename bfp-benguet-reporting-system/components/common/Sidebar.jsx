@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
-  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History, Archive, UserCheck,
+  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History, Archive, UserCheck, MessageSquare,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
 import { APPROVED_REPORTS_PATH, canViewApprovedReports } from '../../lib/constants';
@@ -134,6 +134,15 @@ export default function Sidebar({ isOpen, user }) {
                         <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Final Investigation
                       </Link>
                     </div>
+                  </div>
+
+                  <div className="mt-4 pt-4 border-t border-bfp-gold/30">
+                    <Link
+                      href="/municipal/reports/text-blast"
+                      className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
+                    >
+                      <MessageSquare className="w-4 h-4 flex-shrink-0" /> Text Blast
+                    </Link>
                   </div>
                 </>
               )}

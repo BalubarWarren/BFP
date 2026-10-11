@@ -5,12 +5,14 @@ import { NOTIFICATION_TYPES, ROLES } from '../../../../lib/constants';
 
 const TEXT_BLAST_MAX_LENGTH = 1000;
 
+// The investigator picks any combination of these. The two municipal roles are scoped to the
+// investigator's own municipality; the Provincial Chief IIS covers the whole province.
 const TEXT_BLAST_RECIPIENT_ROLES = [
-  ROLES.MUNICIPAL_CHIEF_IIS,
-  ROLES.MUNICIPAL_CHIEF_OPERATION,
   ROLES.MUNICIPAL_FIRE_MARSHAL,
+  ROLES.MUNICIPAL_CHIEF_IIS,
   ROLES.PROVINCIAL_CHIEF_IIS,
 ];
+const MUNICIPAL_RECIPIENT_ROLES = [ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.MUNICIPAL_CHIEF_IIS];
 
 export async function POST(request) {
   try {
@@ -22,7 +24,7 @@ export async function POST(request) {
 
     if (user.role !== ROLES.INVESTIGATOR) {
       return NextResponse.json(
-        { error: 'Only investigators can send a Spot Investigation text blast' },
+        { error: 'Only investigators can send a text blast' },
         { status: 403 }
       );
     }
@@ -45,6 +47,13 @@ export async function POST(request) {
       );
     }
 
+    const recipientRoles = Array.isArray(body?.recipientRoles)
+      ? [...new Set(body.recipientRoles)].filter((role) => TEXT_BLAST_RECIPIENT_ROLES.includes(role))
+      : [];
+    if (!recipientRoles.length) {
+      return NextResponse.json({ error: 'Choose at least one recipient' }, { status: 400 });
+    }
+
     const sender = await prisma.user.findUnique({
       where: { id: user.id },
       include: { municipality: true },
@@ -57,9 +66,12 @@ export async function POST(request) {
     const recipients = await prisma.user.findMany({
       where: {
         isActive: true,
-        role: {
-          in: TEXT_BLAST_RECIPIENT_ROLES,
-        },
+        id: { not: sender.id },
+        OR: recipientRoles.map((role) =>
+          MUNICIPAL_RECIPIENT_ROLES.includes(role)
+            ? { role, municipalityId: sender.municipalityId }
+            : { role }
+        ),
       },
       select: { id: true },
     });
@@ -68,14 +80,14 @@ export async function POST(request) {
 
     if (!recipientIds.length) {
       return NextResponse.json(
-        { error: 'No active text blast recipients were found' },
+        { error: 'No active accounts were found for the selected recipients' },
         { status: 400 }
       );
     }
 
     const payload = {
       kind: 'TEXT_BLAST',
-      message: `Spot Investigation text blast from ${sender.name}${sender.municipality?.name ? ` (${sender.municipality.name})` : ''}.`,
+      message: `Text blast from ${sender.name}${sender.municipality?.name ? ` (${sender.municipality.name})` : ''}.`,
       note,
     };
 
@@ -92,9 +104,9 @@ export async function POST(request) {
         action: 'TEXT_BLAST_REPORT',
         userId: user.id,
         changes: JSON.stringify({
-          source: 'SPOT_INVESTIGATION_FORM',
+          source: 'TEXT_BLAST_PAGE',
           recipientCount: recipientIds.length,
-          recipientRoles: TEXT_BLAST_RECIPIENT_ROLES,
+          recipientRoles,
         }),
       },
     });
@@ -104,7 +116,7 @@ export async function POST(request) {
       recipientCount: recipientIds.length,
     });
   } catch (error) {
-    console.error('Error sending Spot Investigation text blast:', error);
+    console.error('Error sending text blast:', error);
     return NextResponse.json(
       { error: 'Failed to send text blast' },
       { status: 500 }

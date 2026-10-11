@@ -2,8 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import axios from 'axios';
-import { Search, ClipboardList, Send, MessageSquare, HeartPulse } from 'lucide-react';
+import { Search, ClipboardList, Send, HeartPulse } from 'lucide-react';
 import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
 import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
@@ -31,9 +30,6 @@ export default function SpotInvestigationForm() {
   const emsInputRef = useRef(null);
   const attachmentInputRef = useRef(null);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
-  const [textBlastMessage, setTextBlastMessage] = useState('');
-  const [textBlastLoading, setTextBlastLoading] = useState(false);
-  const [textBlastStatus, setTextBlastStatus] = useState('');
 
   const [formData, setFormData] = useState({
     reportDate: new Date().toISOString().split('T')[0],
@@ -62,32 +58,6 @@ export default function SpotInvestigationForm() {
     setShowAttachmentWarning(false);
     attachmentInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     attachmentInputRef.current?.focus();
-  };
-
-  const handleTextBlast = async () => {
-    if (!textBlastMessage.trim()) {
-      setTextBlastStatus('Type a message before sending.');
-      return;
-    }
-
-    setTextBlastLoading(true);
-    setTextBlastStatus('');
-
-    try {
-      const token = sessionStorage.getItem('token');
-      const response = await axios.post(
-        '/api/reports/text-blast',
-        { message: textBlastMessage },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-
-      setTextBlastMessage('');
-      setTextBlastStatus(response.data.message || 'Text blast sent successfully.');
-    } catch (err) {
-      setTextBlastStatus(err.response?.data?.error || 'Failed to send text blast.');
-    } finally {
-      setTextBlastLoading(false);
-    }
   };
 
   const handleSubmit = async (e) => {
@@ -239,43 +209,6 @@ export default function SpotInvestigationForm() {
           label="Attach EMS Report"
           description="Attach the Emergency Medical Services report if EMS responded to this incident. Leave this blank if it isn't needed."
         />
-
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
-            <MessageSquare className="w-5 h-5" /> Text Blast
-          </h2>
-          <div className="space-y-4">
-            <div>
-              <label className="form-label">Message</label>
-              <div className="form-field-icon-wrap">
-                <FieldIcon src="/icons/text-blast.svg" />
-                <textarea
-                  value={textBlastMessage}
-                  onChange={(e) => setTextBlastMessage(e.target.value)}
-                  rows={3}
-                  maxLength={1000}
-                  className="form-textarea-icon"
-                  placeholder="Type the text blast message..."
-                />
-              </div>
-            </div>
-
-            {textBlastStatus && (
-              <div className="text-sm text-gray-700 bg-gray-100 border border-gray-200 rounded p-3">
-                {textBlastStatus}
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={handleTextBlast}
-              disabled={textBlastLoading}
-              className="btn btn-success px-6"
-            >
-              {textBlastLoading ? 'Sending...' : 'Text Blast'}
-            </button>
-          </div>
-        </div>
 
         <div className="flex gap-3">
           <button type="submit" disabled={loading} className="btn btn-primary px-8">

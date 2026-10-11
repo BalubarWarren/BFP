@@ -27,7 +27,8 @@ const describeChanges = (entry) => {
     return changes.remarks ? `"${changes.remarks}"` : '—';
   }
   if (entry.action === 'TEXT_BLAST_REPORT') {
-    return `Sent to ${changes.recipientCount ?? '?'} recipient(s), ${changes.newlySentCount ?? '?'} newly notified`;
+    const roles = (changes.recipientRoles || []).map(formatReportType).join(', ');
+    return `Sent to ${changes.recipientCount ?? '?'} recipient(s)${roles ? ` — ${roles}` : ''}`;
   }
   if (entry.action === 'SEND_DIRECTIVE') {
     return `${changes.kind === 'ASSIGNMENT' ? `Assigned ${formatReportType(changes.reportType)}` : 'Message'} to ${changes.recipientName ?? '?'}`;
