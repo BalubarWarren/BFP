@@ -23,7 +23,10 @@ export const getFileIssue = (file) => {
 
 export const hasInvalidAttachments = (files) => files.some((file) => getFileIssue(file));
 
-const AttachmentInput = forwardRef(function AttachmentInput({ files, onChange, highlight }, ref) {
+const AttachmentInput = forwardRef(function AttachmentInput(
+  { files, onChange, highlight, title = 'Attachments', label = 'Attach Files', description, icon: Icon = Paperclip },
+  ref
+) {
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
   const invalidCount = files.filter((file) => getFileIssue(file)).length;
@@ -45,9 +48,10 @@ const AttachmentInput = forwardRef(function AttachmentInput({ files, onChange, h
       className={`bg-white rounded-lg shadow-md p-6 transition-shadow ${highlight ? 'ring-2 ring-bfp-red' : ''}`}
     >
       <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
-        <Paperclip className="w-5 h-5" /> Attachments
+        <Icon className="w-5 h-5" /> {title}
       </h2>
-      <label className="form-label">Attach Files</label>
+      {description && <p className="-mt-2 mb-3 text-sm text-gray-500">{description}</p>}
+      <label className="form-label">{label}</label>
       <input
         ref={fileInputRef}
         type="file"

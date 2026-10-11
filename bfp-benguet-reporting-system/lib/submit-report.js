@@ -26,13 +26,18 @@ async function uploadDirect(files, headers) {
   return data.uploads.map((upload) => upload.attachment);
 }
 
-// `fields` holds every non-file form field (strings); `files` the File objects to attach.
-export async function submitReport({ fields, files }) {
+// `fields` holds every non-file form field (strings); `files` the File objects to attach;
+// `emsFiles` the optional EMS report files, stored with the other attachments but tagged
+// kind: 'EMS' so every attachment list can show them under their own heading.
+export async function submitReport({ fields, files, emsFiles = [] }) {
   const headers = { Authorization: `Bearer ${sessionStorage.getItem('token')}` };
 
   let attachments = null;
   try {
-    attachments = await uploadDirect(files, headers);
+    const uploaded = await uploadDirect([...files, ...emsFiles], headers);
+    attachments = uploaded.map((attachment, index) =>
+      index >= files.length ? { ...attachment, kind: 'EMS' } : attachment
+    );
   } catch (error) {
     // A 4xx from /api/uploads is a real validation error (bad type, too large, too many files) —
     // show it rather than retrying the same files a different way.
@@ -50,6 +55,7 @@ export async function submitReport({ fields, files }) {
     if (value !== undefined && value !== null && value !== '') payload.append(key, value);
   });
   files.forEach((file) => payload.append('attachments', file));
+  emsFiles.forEach((file) => payload.append('emsAttachments', file));
   try {
     return await axios.post('/api/reports', payload, { headers });
   } catch (error) {

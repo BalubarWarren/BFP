@@ -19,16 +19,47 @@ const parseAttachments = (attachments) => {
 const isPdf = (attachment) =>
   attachment.type === 'application/pdf' || attachment.name?.toLowerCase().endsWith('.pdf');
 
+// EMS (Emergency Medical Services) reports are stored in the same attachments array, tagged
+// kind: 'EMS' by the Spot/Progress/Final forms (see lib/submit-report.js), and listed separately.
+const isEmsAttachment = (attachment) => attachment?.kind === 'EMS';
+
 export default function AttachmentList({ attachments, reportId, canAnnotate = false, className = '' }) {
   const [openAttachment, setOpenAttachment] = useState(null);
   const files = parseAttachments(attachments);
 
   if (!files.length) return null;
 
+  const mainFiles = files.filter((attachment) => !isEmsAttachment(attachment));
+  const emsFiles = files.filter(isEmsAttachment);
+
   return (
     <>
-      <ul className={`space-y-2 text-sm ${className}`}>
-        {files.map((attachment) => (
+      <div className={`space-y-3 ${className}`}>
+        {mainFiles.length > 0 && renderFiles(mainFiles)}
+        {emsFiles.length > 0 && (
+          <div>
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-bfp-red">EMS Report</p>
+            {renderFiles(emsFiles)}
+          </div>
+        )}
+      </div>
+
+      {openAttachment && (
+        <PdfAnnotator
+          attachmentUrl={openAttachment.url}
+          attachmentName={openAttachment.name}
+          reportId={reportId}
+          canAnnotate={canAnnotate}
+          onClose={() => setOpenAttachment(null)}
+        />
+      )}
+    </>
+  );
+
+  function renderFiles(list) {
+    return (
+      <ul className="space-y-2 text-sm">
+        {list.map((attachment) => (
           <li key={attachment.url}>
             {isPdf(attachment) ? (
               <button
@@ -53,16 +84,6 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
           </li>
         ))}
       </ul>
-
-      {openAttachment && (
-        <PdfAnnotator
-          attachmentUrl={openAttachment.url}
-          attachmentName={openAttachment.name}
-          reportId={reportId}
-          canAnnotate={canAnnotate}
-          onClose={() => setOpenAttachment(null)}
-        />
-      )}
-    </>
-  );
+    );
+  }
 }

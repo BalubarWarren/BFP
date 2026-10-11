@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import axios from 'axios';
-import { Clock, FileText, Send } from 'lucide-react';
+import { Clock, FileText, Send, HeartPulse } from 'lucide-react';
 import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
 import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessModal';
@@ -25,6 +25,10 @@ export default function ProgressInvestigationForm() {
   const [attachmentHighlight, setAttachmentHighlight] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [attachments, setAttachments] = useState([]);
+  // Optional EMS (Emergency Medical Services) report — left empty when there was no EMS response.
+  const [emsFiles, setEmsFiles] = useState([]);
+  const [emsHighlight, setEmsHighlight] = useState(false);
+  const emsInputRef = useRef(null);
   const attachmentInputRef = useRef(null);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
 
@@ -78,6 +82,13 @@ export default function ProgressInvestigationForm() {
       return;
     }
 
+    if (hasInvalidAttachments(emsFiles)) {
+      setError('One or more EMS report files are too large or an unsupported type. Remove or replace them before submitting.');
+      setEmsHighlight(true);
+      emsInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -93,6 +104,7 @@ export default function ProgressInvestigationForm() {
           passedToRole: recipientRole,
         },
         files: attachments,
+        emsFiles,
       });
       setSuccess('Progress Investigation Report submitted successfully.');
       setShowSuccessModal(true);
@@ -154,6 +166,20 @@ export default function ProgressInvestigationForm() {
           files={attachments}
           onChange={handleAttachmentChange}
           highlight={attachmentHighlight}
+        />
+
+        <AttachmentInput
+          ref={emsInputRef}
+          files={emsFiles}
+          onChange={(e) => {
+            setEmsFiles(Array.from(e.target.files || []));
+            setEmsHighlight(false);
+          }}
+          highlight={emsHighlight}
+          icon={HeartPulse}
+          title="EMS Report (optional)"
+          label="Attach EMS Report"
+          description="Attach the Emergency Medical Services report if EMS responded to this incident. Leave this blank if it isn't needed."
         />
 
         <div className="flex gap-3">

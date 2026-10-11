@@ -328,9 +328,11 @@ export async function POST(request) {
 
     // Multipart files are only uploaded once every other check below has passed, so a rejected
     // submission doesn't leave orphaned files behind in storage.
-    const uploadedFiles = isMultipart
-      ? formData.getAll('attachments').filter((file) => file && typeof file === 'object' && file.size > 0)
-      : [];
+    const realFiles = (entries) => entries.filter((file) => file && typeof file === 'object' && file.size > 0);
+    const uploadedFiles = isMultipart ? realFiles(formData.getAll('attachments')) : [];
+    // Optional EMS (Emergency Medical Services) report files — kept in the same attachments array,
+    // tagged kind: 'EMS' (see components/reports/AttachmentList.jsx).
+    const uploadedEmsFiles = isMultipart ? realFiles(formData.getAll('emsAttachments')) : [];
     let attachments = [];
     if (!isMultipart) {
       attachments = parseJsonField(body.attachments, []);
@@ -350,6 +352,7 @@ export async function POST(request) {
         type: String(attachment.type || 'application/octet-stream'),
         size: Number(attachment.size) || 0,
         url: attachment.url,
+        ...(attachment.kind === 'EMS' && { kind: 'EMS' }),
       }));
     }
 
@@ -381,7 +384,8 @@ export async function POST(request) {
       }
     }
 
-    if (!attachments.length && !uploadedFiles.length) {
+    // The EMS report is optional and doesn't count — the investigation report itself is required.
+    if (!attachments.some((attachment) => attachment.kind !== 'EMS') && !uploadedFiles.length) {
       return NextResponse.json(
         { error: 'At least one attachment is required.' },
         { status: 400 }
@@ -425,7 +429,14 @@ export async function POST(request) {
 
     if (isMultipart) {
       try {
-        attachments = await saveAttachments(uploadedFiles, 'reports');
+        if (uploadedFiles.length + uploadedEmsFiles.length > MAX_ATTACHMENTS) {
+          return NextResponse.json({ error: `You can attach at most ${MAX_ATTACHMENTS} files.` }, { status: 400 });
+        }
+        const [mainSaved, emsSaved] = await Promise.all([
+          saveAttachments(uploadedFiles, 'reports'),
+          saveAttachments(uploadedEmsFiles, 'reports'),
+        ]);
+        attachments = [...mainSaved, ...emsSaved.map((attachment) => ({ ...attachment, kind: 'EMS' }))];
       } catch (uploadError) {
         return NextResponse.json({ error: uploadError.message }, { status: 400 });
       }
