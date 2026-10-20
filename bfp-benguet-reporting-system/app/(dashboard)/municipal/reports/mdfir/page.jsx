@@ -10,6 +10,7 @@ import SubmitSuccessModal from '../../../../../components/reports/SubmitSuccessM
 import AttachmentWarningModal from '../../../../../components/reports/AttachmentWarningModal';
 import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 import BackButton from '../../../../../components/common/BackButton';
+import PageHeader from '../../../../../components/common/PageHeader';
 import { submitReport } from '../../../../../lib/submit-report';
 
 export default function MinimalDamageFireIncidentReportForm() {
@@ -103,18 +104,17 @@ export default function MinimalDamageFireIncidentReportForm() {
   };
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
       <div className="mb-6">
         <BackButton className="mb-3" />
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-bfp-navy"><FileEdit className="w-6 h-6" /> MDFIR</h1>
-        <p className="text-gray-500 text-sm mt-1">Minimal Damage Fire Incident Report for documented low-damage fire incidents.</p>
+        <PageHeader icon={FileEdit} eyebrow="Investigation Report" title="MDFIR" description="Minimal Damage Fire Incident Report for documented low-damage fire incidents." border={false} />
       </div>
 
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
       {success && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">{success}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
             <ClipboardList className="w-5 h-5" /> Incident Details
           </h2>
@@ -146,7 +146,7 @@ export default function MinimalDamageFireIncidentReportForm() {
           </div>
         </div>
 
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
               <Send className="w-5 h-5" /> Submit To
             </h2>
@@ -163,7 +163,7 @@ export default function MinimalDamageFireIncidentReportForm() {
             highlight={attachmentHighlight}
           />
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <button type="submit" disabled={loading} className="btn btn-primary px-8">
             {loading ? 'Submitting…' : 'Submit MDFIR'}
           </button>

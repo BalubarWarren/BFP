@@ -4,6 +4,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { MessageSquare, Users } from 'lucide-react';
 import BackButton from '../../../../../components/common/BackButton';
+import PageHeader from '../../../../../components/common/PageHeader';
 import FieldIcon from '../../../../../components/reports/FieldIcon';
 import { useToast } from '../../../../../components/common/ToastProvider';
 
@@ -60,21 +61,16 @@ export default function TextBlastPage() {
   };
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
       <div className="mb-6">
         <BackButton className="mb-3" />
-        <h1 className="flex items-center gap-2 text-2xl font-bold text-bfp-navy">
-          <MessageSquare className="w-6 h-6" /> Text Blast
-        </h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Send a quick text report to the officers you choose. They are notified in the system and by email.
-        </p>
+        <PageHeader icon={MessageSquare} eyebrow="Quick Report" title="Text Blast" description="Send a quick text report to the officers you choose. They are notified in the system and by email." border={false} />
       </div>
 
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
       <form onSubmit={handleSend} className="space-y-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
             <Users className="w-5 h-5" /> Send To
           </h2>
@@ -99,7 +95,7 @@ export default function TextBlastPage() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
             <MessageSquare className="w-5 h-5" /> Message
           </h2>

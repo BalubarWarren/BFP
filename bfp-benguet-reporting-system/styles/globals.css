@@ -19,6 +19,13 @@ body {
   transition: background-color 0.15s ease, color 0.15s ease;
 }
 
+/* Full-height app frame (dashboard layout + sidebar). 100dvh follows the visible viewport on
+   phones, where 100vh runs under the browser's toolbars; browsers without dvh keep 100vh. */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
 /* Sidebar */
 .sidebar {
   @apply bg-bfp-navy text-white;
@@ -45,11 +52,11 @@ body {
 }
 
 .data-table th {
-  @apply px-4 py-3 text-left font-semibold text-white text-xs uppercase tracking-wider;
+  @apply px-3 py-2.5 sm:px-4 sm:py-3 text-left font-semibold text-white text-xs uppercase tracking-wider;
 }
 
 .data-table td {
-  @apply border-b border-gray-200 px-4 py-3 text-sm dark:border-gray-700;
+  @apply border-b border-gray-200 px-3 py-2.5 sm:px-4 sm:py-3 text-sm dark:border-gray-700;
 }
 
 .data-table tbody tr:nth-child(even) {

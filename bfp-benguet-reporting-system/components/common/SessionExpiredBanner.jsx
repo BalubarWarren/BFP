@@ -12,7 +12,7 @@ export default function SessionExpiredBanner() {
   };
 
   return (
-    <div className="flex items-center justify-between gap-4 bg-bfp-red/10 border border-bfp-red text-bfp-red px-4 py-3 rounded-lg">
+    <div className="flex flex-wrap items-center justify-between gap-4 bg-bfp-red/10 border border-bfp-red text-bfp-red px-4 py-3 rounded-lg">
       <span className="text-sm font-semibold">
         Your session is out of date or no longer has access to this page. Please log out and log back in.
       </span>

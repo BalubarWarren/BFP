@@ -97,7 +97,7 @@ export default function Header({ user, onToggleSidebar }) {
   return (
     <header className="bg-white border-b border-gray-200 shadow-sm">
       <div className="h-1 hazard-trim" />
-      <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4">
         {/* Left side - Menu toggle */}
         <button
           onClick={onToggleSidebar}
@@ -108,14 +108,15 @@ export default function Header({ user, onToggleSidebar }) {
         </button>
 
         {/* Center - Page info */}
-        <div className="flex-1 text-center">
-          <h1 className="text-xl font-bold text-bfp-navy">
-            Fire Incident Report Tracking System
+        <div className="flex-1 min-w-0 text-center">
+          <h1 className="truncate text-base font-bold text-bfp-navy sm:text-xl">
+            <span className="hidden md:inline">Fire Incident Report Tracking System</span>
+            <span className="md:hidden">FireTrack</span>
           </h1>
         </div>
 
         {/* Right side - Notifications & User */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-shrink-0 items-center gap-1 sm:gap-4">
           {/* Notifications */}
           <div className="relative" ref={notificationsRef}>
             <button
@@ -133,7 +134,7 @@ export default function Header({ user, onToggleSidebar }) {
 
             {/* Notification Dropdown */}
             {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+              <div className="fixed inset-x-4 top-16 sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 mt-2 sm:w-80 bg-white rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
                 <div className="p-4 border-b border-gray-200">
                   <h3 className="font-semibold text-gray-900">Notifications</h3>
                 </div>
@@ -201,9 +202,9 @@ export default function Header({ user, onToggleSidebar }) {
               <div className="w-10 h-10 bg-bfp-red rounded-full flex items-center justify-center text-white font-bold">
                 {user?.name?.charAt(0)}
               </div>
-              <div className="hidden sm:block text-left">
+              <div className="hidden lg:block text-left">
                 <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.role?.replace('_', ' ')}</p>
+                <p className="text-xs text-gray-500">{user?.role?.replace(/_/g, ' ')}</p>
               </div>
             </button>
 

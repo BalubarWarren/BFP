@@ -2,14 +2,17 @@
 
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Flame } from 'lucide-react';
+import { Flame, ClipboardCheck } from 'lucide-react';
 import StatusBadge from '../../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../../../lib/utils';
 import AttachmentList from '../../../../components/reports/AttachmentList';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
+import PageHeader from '../../../../components/common/PageHeader';
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
+import ReportSearchFilters from '../../../../components/reports/ReportSearchFilters';
+import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../../lib/report-search';
 
 export default function ProvincialReportsPage() {
   const toast = useToast();
@@ -23,7 +26,7 @@ export default function ProvincialReportsPage() {
   const [reportDetail, setReportDetail] = useState(null);
   const [comments, setComments] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
-  const [search, setSearch] = useState('');
+  const [searchFilters, setSearchFilters] = useState(EMPTY_REPORT_FILTERS);
 
   useEffect(() => {
     fetchReports();
@@ -140,28 +143,24 @@ export default function ProvincialReportsPage() {
 
   const parseAttachments = (attachments) => parseJsonField(attachments, []);
 
-  const matchesSearch = (report) =>
-    !search || report.incident?.referenceNumber?.toLowerCase().includes(search.toLowerCase());
+  const matchesSearch = (report) => matchesReportFilters(report, searchFilters);
+  const search = hasActiveFilters(searchFilters);
 
   const filteredIncoming = incomingReports.filter(matchesSearch);
   const filteredReviewed = reviewedReports.filter(matchesSearch);
 
   return (
-    <div className="p-8 space-y-8">
-      <h1 className="text-3xl font-bold text-bfp-navy">Provincial Chief IIS — Report Review</h1>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+      <PageHeader
+        icon={ClipboardCheck}
+        eyebrow="Provincial Chief IIS"
+        title="Report Review"
+        description="Fire incident reports forwarded from the municipalities for final review."
+      />
 
       {sessionExpired && <SessionExpiredBanner />}
 
-      <div className="max-w-xs">
-        <label className="form-label">Search Reference #</label>
-        <input
-          type="text"
-          className="form-input"
-          placeholder="e.g. BFP-BEN-2026-001"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      <ReportSearchFilters filters={searchFilters} onChange={setSearchFilters} className="max-w-4xl" />
 
       {!sessionExpired && error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">{error}</div>
@@ -169,11 +168,11 @@ export default function ProvincialReportsPage() {
 
       {loading ? (
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="mb-4 h-6 w-72 animate-pulse rounded bg-gray-200" />
             <TableSkeleton rows={4} columns={8} />
           </div>
-          <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="mb-4 h-6 w-72 animate-pulse rounded bg-gray-200" />
             <TableSkeleton rows={3} columns={8} />
           </div>
@@ -181,10 +180,10 @@ export default function ProvincialReportsPage() {
       ) : (
         <>
           {/* Fire Incident Reports — incoming from municipalities */}
-          <section className="bg-white rounded-lg shadow-md p-6">
+          <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy mb-4"><Flame className="w-5 h-5" /> Fire Incident Reports — For Review</h2>
             {filteredIncoming.length === 0 ? (
-              <p className="text-gray-500">{search ? 'No reports match that reference number.' : 'No pending reports for review.'}</p>
+              <p className="text-gray-500">{search ? 'No reports match your search.' : 'No pending reports for review.'}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="data-table">
@@ -227,10 +226,10 @@ export default function ProvincialReportsPage() {
           </section>
 
           {/* Already reviewed fire incident reports */}
-          <section className="bg-white rounded-lg shadow-md p-6">
+          <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy mb-4"><Flame className="w-5 h-5" /> Fire Incident Reports — Already Reviewed</h2>
             {filteredReviewed.length === 0 ? (
-              <p className="text-gray-500">{search ? 'No reports match that reference number.' : 'No reviewed reports yet.'}</p>
+              <p className="text-gray-500">{search ? 'No reports match your search.' : 'No reviewed reports yet.'}</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="data-table">
@@ -272,15 +271,15 @@ export default function ProvincialReportsPage() {
       {/* Review Modal */}
       {selectedReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b">
+          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b">
               <h2 className="text-2xl font-bold text-bfp-navy">Report Review</h2>
               <button onClick={closeReview} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-6">
               {/* Report Meta */}
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
                 <div><p className="text-gray-500">Municipality</p><p className="font-semibold">{reportDetail?.municipality?.name || selectedReport.municipality?.name}</p></div>
                 <div><p className="text-gray-500">Report Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
                 <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
@@ -317,7 +316,7 @@ export default function ProvincialReportsPage() {
               {reportDetail?.incident && (
                 <div className="bg-yellow-50 rounded-lg p-4">
                   <h3 className="font-bold text-bfp-navy mb-2">Incident Details</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div><p className="text-gray-500">Reference</p><p className="font-semibold">{reportDetail.incident.referenceNumber}</p></div>
                     <div><p className="text-gray-500">Category</p><p className="font-semibold">{reportDetail.incident.generalCategory}</p></div>
                     <div><p className="text-gray-500">Status</p><p className="font-semibold">{reportDetail.incident.status}</p></div>
@@ -351,7 +350,7 @@ export default function ProvincialReportsPage() {
             </div>
 
             {/* Action Buttons — show for SUBMITTED status */}
-            <div className="flex gap-3 justify-end p-6 border-t bg-gray-50">
+            <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
               <button onClick={closeReview} className="btn btn-secondary" disabled={actionLoading}>Cancel</button>
               {selectedReport.status === 'SUBMITTED' && (
                 <>

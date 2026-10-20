@@ -383,6 +383,14 @@ export const APPROVED_REPORTS_ROLES = [
 
 export const canViewApprovedReports = (role) => APPROVED_REPORTS_ROLES.includes(role);
 
+// Trash bin for deleted reports (see lib/trash.js). Open to the roles that can delete reports:
+// investigators see the reports they deleted/submitted, admins see everything.
+export const TRASH_PATH = '/trash';
+
+export const TRASH_ROLES = [ROLES.INVESTIGATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN];
+
+export const canViewTrash = (role) => TRASH_ROLES.includes(role);
+
 // Whether a given pathname belongs to the dashboard section a role is allowed to view.
 // Used to bounce a signed-in user back to their own dashboard if the URL they're on
 // (e.g. left over from a previous session in the same browser) belongs to a different role.
@@ -391,6 +399,9 @@ export function isRouteAllowedForRole(role, pathname) {
   // per-tier prefixes rather than repeated inside each of their cases.
   if (pathname.startsWith(APPROVED_REPORTS_PATH)) {
     return canViewApprovedReports(role);
+  }
+  if (pathname.startsWith(TRASH_PATH)) {
+    return canViewTrash(role);
   }
 
   switch (role) {
@@ -416,3 +427,41 @@ export function isRouteAllowedForRole(role, pathname) {
       return false;
   }
 }
+
+// BFP ranks (RA 9263 as amended by RA 11589), lowest to highest, grouped the way the rank
+// dropdown (components/common/RankSelect.jsx) shows them. The full title is what gets stored.
+export const BFP_RANK_GROUPS = [
+  {
+    label: 'Fire Officers',
+    ranks: [
+      { value: 'Fire Officer I', abbr: 'FO1' },
+      { value: 'Fire Officer II', abbr: 'FO2' },
+      { value: 'Fire Officer III', abbr: 'FO3' },
+      { value: 'Senior Fire Officer I', abbr: 'SFO1' },
+      { value: 'Senior Fire Officer II', abbr: 'SFO2' },
+      { value: 'Senior Fire Officer III', abbr: 'SFO3' },
+      { value: 'Senior Fire Officer IV', abbr: 'SFO4' },
+    ],
+  },
+  {
+    label: 'Commissioned Officers',
+    ranks: [
+      { value: 'Fire Inspector', abbr: 'FINSP' },
+      { value: 'Fire Senior Inspector', abbr: 'FSINSP' },
+      { value: 'Fire Chief Inspector', abbr: 'FCINSP' },
+      { value: 'Fire Superintendent', abbr: 'FSUPT' },
+      { value: 'Fire Senior Superintendent', abbr: 'FSSUPT' },
+      { value: 'Fire Chief Superintendent', abbr: 'FCSUPT' },
+      { value: 'Fire Director', abbr: 'FDIR' },
+    ],
+  },
+  {
+    label: 'Others',
+    ranks: [
+      { value: 'Non-Uniformed Personnel', abbr: 'NUP' },
+      { value: 'Administrator', abbr: '' },
+    ],
+  },
+];
+
+export const BFP_RANKS = BFP_RANK_GROUPS.flatMap((group) => group.ranks.map((rank) => rank.value));

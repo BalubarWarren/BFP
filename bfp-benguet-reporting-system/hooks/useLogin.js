@@ -31,6 +31,11 @@ export function useLogin() {
   // home if that page belongs to a different role.
   const completeLogin = (user, token) => {
     saveSession(token, user);
+    // Wipe the form so the credentials don't stay visible (or come back via the Back button)
+    // once the user is signed in.
+    setEmail('');
+    setPassword('');
+    setShowPassword(false);
     const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
     router.push(next || ROLE_HOME_PATH[user.role] || '/provincial');
   };

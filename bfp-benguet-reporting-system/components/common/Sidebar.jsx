@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
-  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History, Archive, UserCheck, MessageSquare,
+  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History, Archive, UserCheck, MessageSquare, Trash2,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
-import { APPROVED_REPORTS_PATH, canViewApprovedReports } from '../../lib/constants';
+import { APPROVED_REPORTS_PATH, canViewApprovedReports, TRASH_PATH, canViewTrash } from '../../lib/constants';
 import { clearSession } from '../../lib/session';
 
-export default function Sidebar({ isOpen, user }) {
+export default function Sidebar({ isOpen, user, onClose }) {
   const router = useRouter();
 
   const handleLogout = () => {
@@ -40,17 +40,18 @@ export default function Sidebar({ isOpen, user }) {
   // Shared across three tiers (Provincial Chief IIS, Municipal Fire Marshal, Municipal Chief IIS),
   // so this link is rendered once below the role-specific blocks rather than inside each of them.
   const showApprovedReports = canViewApprovedReports(user?.role);
+  const showTrash = canViewTrash(user?.role);
 
   return (
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"></div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40" onClick={onClose} aria-hidden="true"></div>
       )}
 
       {/* Sidebar */}
       <aside
-        className={`sidebar fixed left-0 top-0 h-screen w-64 transform transition-transform duration-300 overflow-y-auto z-50 lg:relative lg:transform-none ${
+        className={`sidebar app-shell fixed left-0 top-0 w-64 flex-shrink-0 transform transition-transform duration-300 overflow-y-auto z-50 lg:relative lg:translate-x-0 lg:transform-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -215,6 +216,19 @@ export default function Sidebar({ isOpen, user }) {
                     <Archive className="w-4 h-4 flex-shrink-0" /> Reports
                   </Link>
                   <p className="mt-1 px-4 text-xs text-white/50">Approved &amp; filed records</p>
+                </div>
+              )}
+
+              {/* Recycle bin for deleted reports — investigators and admins (see TRASH_ROLES) */}
+              {showTrash && (
+                <div className="mt-4 pt-4 border-t border-bfp-gold/30">
+                  <Link
+                    href={TRASH_PATH}
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
+                  >
+                    <Trash2 className="w-4 h-4 flex-shrink-0" /> Trash
+                  </Link>
+                  <p className="mt-1 px-4 text-xs text-white/50">Recover deleted reports</p>
                 </div>
               )}
             </div>

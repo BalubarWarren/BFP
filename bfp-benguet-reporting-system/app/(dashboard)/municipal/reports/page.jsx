@@ -13,6 +13,8 @@ import CaseFollowUpCta from '../../../../components/reports/CaseFollowUpCta';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
 import PageHeader from '../../../../components/common/PageHeader';
 import ConfirmDeleteModal from '../../../../components/reports/ConfirmDeleteModal';
+import ReportSearchFilters from '../../../../components/reports/ReportSearchFilters';
+import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../../lib/report-search';
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 
 export default function MunicipalReportsPage() {
@@ -20,7 +22,7 @@ export default function MunicipalReportsPage() {
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
-  const [search, setSearch] = useState('');
+  const [searchFilters, setSearchFilters] = useState(EMPTY_REPORT_FILTERS);
   const [selectedReport, setSelectedReport] = useState(null);
   const [reportDetail, setReportDetail] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -63,7 +65,7 @@ export default function MunicipalReportsPage() {
       await axios.delete(`/api/reports/${deleteTarget.id}`, { headers: { Authorization: `Bearer ${token}` } });
       setDeleteTarget(null);
       closeReport();
-      toast.success('Report deleted successfully.');
+      toast.success('Report moved to Trash. You can restore it from the Trash page.');
       fetchReports();
     } catch (err) {
       setDeleteError(err.response?.data?.error || 'Failed to delete report.');
@@ -80,11 +82,7 @@ export default function MunicipalReportsPage() {
     {}
   );
 
-  const filteredReports = search
-    ? reports.filter((r) =>
-        r.incident?.referenceNumber?.toLowerCase().includes(search.toLowerCase())
-      )
-    : reports;
+  const filteredReports = reports.filter((r) => matchesReportFilters(r, searchFilters));
 
   const formatReportType = (type) =>
     type
@@ -116,10 +114,10 @@ export default function MunicipalReportsPage() {
   useEscapeKey(closeReport, !!selectedReport && !deleteTarget);
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-          <div className="modal-pop-in max-h-screen w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
+          <div className="modal-pop-in max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b p-6">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Report Details</p>
@@ -225,16 +223,6 @@ export default function MunicipalReportsPage() {
             </p>
           </div>
           <div className="w-full md:w-72">
-            <label className="form-label">Search Reference #</label>
-            <input
-              type="text"
-              className="form-input"
-              placeholder="e.g. BFP-BEN-2026-001"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="w-full md:w-72">
             <label className="form-label">Status</label>
             <select
               className="form-select"
@@ -249,6 +237,9 @@ export default function MunicipalReportsPage() {
             </select>
           </div>
         </div>
+        <div className="border-b border-gray-200 p-5">
+          <ReportSearchFilters filters={searchFilters} onChange={setSearchFilters} showStatus={false} />
+        </div>
 
         {loading ? (
           <TableSkeleton rows={6} columns={6} />
@@ -259,7 +250,7 @@ export default function MunicipalReportsPage() {
             </div>
             <p className="text-lg font-semibold text-bfp-navy">No reports found</p>
             <p className="mt-1 text-sm text-gray-500">
-              {search ? 'No reports match that reference number.' : filterStatus ? 'No reports match the selected status.' : 'Submitted reports will appear here.'}
+              {hasActiveFilters(searchFilters) ? 'No reports match your search.' : filterStatus ? 'No reports match the selected status.' : 'Submitted reports will appear here.'}
             </p>
           </div>
         ) : (
@@ -381,7 +372,7 @@ export default function MunicipalReportsPage() {
 
       {deleteTarget && (
         <ConfirmDeleteModal
-          message={`Delete this ${formatReportType(deleteTarget.reportType)} report? This cannot be undone.`}
+          message={`Delete this ${formatReportType(deleteTarget.reportType)} report? It will be moved to the Trash, where it can be restored within 30 days.`}
           loading={deleteLoading}
           error={deleteError}
           onConfirm={handleDelete}

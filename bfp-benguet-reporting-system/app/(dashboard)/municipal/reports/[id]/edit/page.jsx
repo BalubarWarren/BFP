@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Undo2 } from 'lucide-react';
+import { Undo2, FileEdit } from 'lucide-react';
 import StatusBadge from '../../../../../../components/common/StatusBadge';
 import BackButton from '../../../../../../components/common/BackButton';
+import PageHeader from '../../../../../../components/common/PageHeader';
 
 const ROLE_LABELS = {
   MUNICIPAL_CHIEF_IIS: 'Municipal Chief IIS',
@@ -80,15 +81,15 @@ export default function EditReturnedReportPage() {
     }
   };
 
-  if (loading) return <div className="p-8">Loading...</div>;
+  if (loading) return <div className="p-4 sm:p-6 lg:p-8">Loading...</div>;
 
-  if (!report) return <div className="p-8 text-red-600">Report not found</div>;
+  if (!report) return <div className="p-4 sm:p-6 lg:p-8 text-red-600">Report not found</div>;
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-3xl mx-auto">
       <BackButton fallbackHref="/municipal/reports" className="mb-4" />
-      <h1 className="text-2xl font-bold text-bfp-navy mb-2">Edit Returned Report</h1>
-      <p className="text-gray-600 mb-4">Status: <StatusBadge status={report.status} /></p>
+      <PageHeader icon={FileEdit} eyebrow="Returned for Revision" title="Edit Returned Report" border={false} />
+      <p className="mt-2 mb-4 text-gray-600">Status: <StatusBadge status={report.status} /></p>
 
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 

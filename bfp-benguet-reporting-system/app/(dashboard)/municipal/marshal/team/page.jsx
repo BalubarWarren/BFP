@@ -144,7 +144,7 @@ export default function MarshalTeamPage() {
     : directives;
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       <PageHeader
         icon={Users}
         eyebrow="Municipal Fire Marshal"
@@ -159,12 +159,12 @@ export default function MarshalTeamPage() {
       )}
 
       {loading ? (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <TableSkeleton rows={4} columns={5} />
         </div>
       ) : (
         <>
-          <section className="bg-white rounded-lg shadow-md p-6">
+          <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-xl font-bold text-bfp-navy">Investigators</h2>
@@ -231,7 +231,7 @@ export default function MarshalTeamPage() {
             )}
           </section>
 
-          <section className="bg-white rounded-lg shadow-md p-6">
+          <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
               <h2 className="text-xl font-bold text-bfp-navy">Sent Messages &amp; Assignments</h2>
               <div className="w-60">
@@ -292,8 +292,8 @@ export default function MarshalTeamPage() {
 
       {target && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-screen overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b">
+          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b">
               <h2 className="text-2xl font-bold text-bfp-navy">
                 {form.kind === 'ASSIGNMENT' ? 'Assign Report' : 'Send Message'}
               </h2>
@@ -305,7 +305,7 @@ export default function MarshalTeamPage() {
                 To: <span className="font-semibold text-gray-900">{target.rank ? `${target.rank} ` : ''}{target.name}</span>
               </p>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 {['MESSAGE', 'ASSIGNMENT'].map((kind) => (
                   <button
                     key={kind}
@@ -351,7 +351,7 @@ export default function MarshalTeamPage() {
               </div>
             </div>
 
-            <div className="flex gap-3 justify-end p-6 border-t bg-gray-50">
+            <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
               <button onClick={closeCompose} className="btn btn-secondary" disabled={sending}>Cancel</button>
               <button onClick={handleSend} className="btn btn-primary" disabled={sending}>
                 {sending ? 'Sending...' : form.kind === 'ASSIGNMENT' ? 'Assign' : 'Send'}

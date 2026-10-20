@@ -7,6 +7,8 @@ import PageHeader from '../../../components/common/PageHeader';
 import StatusBadge from '../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
 import TableSkeleton from '../../../components/common/TableSkeleton';
+import ReportSearchFilters from '../../../components/reports/ReportSearchFilters';
+import { EMPTY_REPORT_FILTERS, matchesReportFilters } from '../../../lib/report-search';
 import AttachmentList from '../../../components/reports/AttachmentList';
 import ReportQrModal from '../../../components/reports/ReportQrModal';
 import { useToast } from '../../../components/common/ToastProvider';
@@ -35,7 +37,7 @@ export default function ApprovedReportsPage() {
   const [error, setError] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [search, setSearch] = useState('');
+  const [searchFilters, setSearchFilters] = useState(EMPTY_REPORT_FILTERS);
   const [typeFilter, setTypeFilter] = useState('');
   const [municipalityFilter, setMunicipalityFilter] = useState('');
   const [selectedReport, setSelectedReport] = useState(null);
@@ -153,23 +155,12 @@ export default function ApprovedReportsPage() {
   const filteredReports = useMemo(
     () =>
       reports.filter((report) => {
-        if (search) {
-          const needle = search.toLowerCase();
-          const haystack = [
-            report.incident?.referenceNumber,
-            report.municipality?.name,
-            report.submittedBy?.name,
-          ]
-            .filter(Boolean)
-            .join(' ')
-            .toLowerCase();
-          if (!haystack.includes(needle)) return false;
-        }
+        if (!matchesReportFilters(report, searchFilters)) return false;
         if (typeFilter && report.reportType !== typeFilter) return false;
         if (municipalityFilter && report.municipality?.name !== municipalityFilter) return false;
         return true;
       }),
-    [reports, search, typeFilter, municipalityFilter]
+    [reports, searchFilters, typeFilter, municipalityFilter]
   );
 
   const approvedThisMonth = useMemo(() => {
@@ -193,7 +184,7 @@ export default function ApprovedReportsPage() {
   ];
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       <PageHeader
         icon={Archive}
         eyebrow="Shared Archive"
@@ -221,17 +212,9 @@ export default function ApprovedReportsPage() {
         ))}
       </div>
 
+      <ReportSearchFilters filters={searchFilters} onChange={setSearchFilters} showStatus={false} />
+
       <div className="flex flex-wrap gap-4">
-        <div className="min-w-[16rem] flex-1">
-          <label className="form-label">Search</label>
-          <input
-            type="text"
-            className="form-input"
-            placeholder="Reference #, municipality or investigator"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
         <div className="min-w-[12rem]">
           <label className="form-label">Report Type</label>
           <select className="form-input" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
@@ -258,7 +241,7 @@ export default function ApprovedReportsPage() {
         )}
       </div>
 
-      <section className="bg-white rounded-lg shadow-md p-6">
+      <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy mb-4">
           <Archive className="w-5 h-5" /> Approved Reports
           {!loading && filteredReports.length > 0 && (
@@ -331,8 +314,8 @@ export default function ApprovedReportsPage() {
       {/* Read-only detail view — no approve/return actions: this report is already final. */}
       {selectedReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b">
+          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-bfp-red">Approved Report</p>
                 <h2 className="text-2xl font-bold text-bfp-navy">
@@ -344,8 +327,8 @@ export default function ApprovedReportsPage() {
               </button>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+            <div className="p-4 sm:p-6 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
                 <div><p className="text-gray-500">Report Type</p><p className="font-semibold">{formatReportType(selectedReport.reportType)}</p></div>
                 <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
                 <div><p className="text-gray-500">Municipality</p><p className="font-semibold">{selectedReport.municipality?.name || '-'}</p></div>
@@ -375,7 +358,7 @@ export default function ApprovedReportsPage() {
               {reportDetail?.incident && (
                 <div className="bg-yellow-50 rounded-lg p-4">
                   <h3 className="font-bold text-bfp-navy mb-2">Incident Details</h3>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                     <div><p className="text-gray-500">Reference</p><p className="font-semibold">{reportDetail.incident.referenceNumber}</p></div>
                     <div><p className="text-gray-500">Category</p><p className="font-semibold">{reportDetail.incident.generalCategory}</p></div>
                     <div><p className="text-gray-500">Status</p><p className="font-semibold">{reportDetail.incident.status}</p></div>

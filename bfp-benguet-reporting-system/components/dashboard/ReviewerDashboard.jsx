@@ -10,6 +10,8 @@ import { formatDateTime, isAuthError, parseJsonField } from '../../lib/utils';
 import AttachmentList from '../reports/AttachmentList';
 import TableSkeleton from '../common/TableSkeleton';
 import PageHeader from '../common/PageHeader';
+import ReportSearchFilters from '../reports/ReportSearchFilters';
+import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../lib/report-search';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 // Shared by the Municipal Chief IIS/Operation and Municipal Fire Marshal dashboards, which were
@@ -29,7 +31,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('incoming');
   const [sessionExpired, setSessionExpired] = useState(false);
-  const [search, setSearch] = useState('');
+  const [searchFilters, setSearchFilters] = useState(EMPTY_REPORT_FILTERS);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -165,28 +167,19 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
 
   const parseAttachments = (attachments) => parseJsonField(attachments, []);
 
-  const matchesSearch = (report) =>
-    !search || report.incident?.referenceNumber?.toLowerCase().includes(search.toLowerCase());
+  const matchesSearch = (report) => matchesReportFilters(report, searchFilters);
+  const search = hasActiveFilters(searchFilters);
 
   const filteredIncoming = incomingReports.filter(matchesSearch);
   const filteredOutgoing = outgoingReports.filter(matchesSearch);
 
   return (
-    <div className="p-8 space-y-8">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       <PageHeader icon={ClipboardCheck} eyebrow={eyebrow} title={title} description={description} />
 
       {sessionExpired && <SessionExpiredBanner />}
 
-      <div className="max-w-xs">
-        <label className="form-label">Search Reference #</label>
-        <input
-          type="text"
-          className="form-input"
-          placeholder="e.g. BFP-BEN-2026-001"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      <ReportSearchFilters filters={searchFilters} onChange={setSearchFilters} className="max-w-4xl" />
 
       {!sessionExpired && error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
@@ -195,13 +188,13 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
       )}
 
       {loading ? (
-        <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="mb-4 h-6 w-56 animate-pulse rounded bg-gray-200" />
           <TableSkeleton rows={5} columns={6} />
         </div>
       ) : (
         <>
-          <div className="flex gap-2 mb-6">
+          <div className="flex gap-2 mb-6 flex-wrap">
             <button
               onClick={() => setActiveTab('incoming')}
               className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
@@ -225,10 +218,10 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
           </div>
 
           {activeTab === 'incoming' && (
-            <section className="bg-white rounded-lg shadow-md p-6">
+            <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <h2 className="text-xl font-bold text-bfp-navy mb-4">{incomingSectionTitle}</h2>
               {filteredIncoming.length === 0 ? (
-                <p className="text-gray-600">{search ? 'No reports match that reference number.' : 'No pending reports for review.'}</p>
+                <p className="text-gray-600">{search ? 'No reports match your search.' : 'No pending reports for review.'}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="data-table">
@@ -251,7 +244,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                           <td>{new Date(report.reportDate).toLocaleDateString()}</td>
                           <td><AttachmentList attachments={report.attachments} reportId={report.id} canAnnotate /></td>
                           <td>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 flex-wrap">
                               <button onClick={() => openReview(report)} className="btn btn-primary">Open</button>
                             </div>
                           </td>
@@ -265,10 +258,10 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
           )}
 
           {activeTab === 'reviewed' && (
-            <section className="bg-white rounded-lg shadow-md p-6">
+            <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
               <h2 className="text-xl font-bold text-bfp-navy mb-4">Reports You Reviewed</h2>
               {filteredOutgoing.length === 0 ? (
-                <p className="text-gray-600">{search ? 'No reports match that reference number.' : 'No forwarded reports yet.'}</p>
+                <p className="text-gray-600">{search ? 'No reports match your search.' : 'No forwarded reports yet.'}</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="data-table">
@@ -305,14 +298,14 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
           {/* Review Modal */}
           {selectedReport && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-              <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
-                <div className="flex justify-between items-center p-6 border-b">
+              <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center p-4 sm:p-6 border-b">
                   <h2 className="text-2xl font-bold text-bfp-navy">Report Review</h2>
                   <button onClick={closeReview} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                 </div>
 
-                <div className="p-6 space-y-6">
-                  <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+                <div className="p-4 sm:p-6 space-y-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
                     <div><p className="text-gray-500">Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
                     <div><p className="text-gray-500">Submitted By</p><p className="font-semibold">{selectedReport.submittedBy?.name}</p></div>
                     <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
@@ -374,7 +367,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                   )}
                 </div>
 
-                <div className="flex gap-3 justify-end p-6 border-t bg-gray-50">
+                <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
                   <button onClick={closeReview} className="btn btn-secondary" disabled={actionLoading}>Cancel</button>
                   <button onClick={handleReturn} disabled={actionLoading} className="btn btn-danger">{actionLoading ? 'Processing...' : 'Return'}</button>
                   <button onClick={handleApprove} disabled={actionLoading} className="btn btn-success">{actionLoading ? 'Processing...' : 'Approve'}</button>

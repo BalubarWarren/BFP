@@ -81,7 +81,7 @@ export default function ReportQrModal({ report, onClose }) {
           </button>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <button onClick={onClose} className="btn btn-secondary flex-1">Close</button>
           <button onClick={handleDownload} className="btn btn-primary flex-1 flex items-center justify-center gap-1.5">
             <Download className="w-4 h-4" /> Download

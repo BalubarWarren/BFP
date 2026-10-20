@@ -131,14 +131,14 @@ export default function PdfAnnotator({ attachmentUrl, attachmentName, reportId, 
   // screen. A portal sidesteps the problem entirely by not being a DOM descendant of that row
   // (or of anything else with its own transform/filter) in the first place.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-2 sm:p-4">
       <div className="modal-pop-in flex h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b p-4">
-          <div>
+        <div className="flex items-center justify-between gap-3 border-b p-4">
+          <div className="min-w-0">
             <p className="text-sm font-semibold uppercase tracking-wide text-bfp-navy">
               {canAnnotate ? 'Review & Annotate' : 'Attachment'}
             </p>
-            <h2 className="text-lg font-bold text-gray-900 truncate max-w-md">{attachmentName}</h2>
+            <h2 className="text-lg font-bold text-gray-900 truncate">{attachmentName}</h2>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="w-6 h-6" />
@@ -149,7 +149,7 @@ export default function PdfAnnotator({ attachmentUrl, attachmentName, reportId, 
           <div className="bg-red-100 border-b border-red-300 text-red-700 px-4 py-2 text-sm">{error}</div>
         )}
 
-        <div className="flex flex-1 min-h-0">
+        <div className="flex flex-1 min-h-0 flex-col md:flex-row">
           <div className="relative flex-1 min-w-0">
             <PdfLoader
               url={attachmentUrl}
@@ -202,7 +202,7 @@ export default function PdfAnnotator({ attachmentUrl, attachmentName, reportId, 
             )}
           </div>
 
-          <div className="w-72 flex-shrink-0 overflow-y-auto border-l border-gray-200 bg-gray-50 p-4">
+          <div className="max-h-48 w-full flex-shrink-0 overflow-y-auto border-t border-gray-200 bg-gray-50 p-4 md:max-h-none md:w-72 md:border-l md:border-t-0">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
               {canAnnotate ? 'Select text in the PDF to add a correction' : 'Corrections noted by reviewer'}
             </p>

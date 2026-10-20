@@ -14,6 +14,8 @@ import CaseFollowUpCta from '../../../components/reports/CaseFollowUpCta';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 import PageHeader from '../../../components/common/PageHeader';
 import ConfirmDeleteModal from '../../../components/reports/ConfirmDeleteModal';
+import ReportSearchFilters from '../../../components/reports/ReportSearchFilters';
+import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../lib/report-search';
 import InvestigatorDirectives from '../../../components/directives/InvestigatorDirectives';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 
@@ -29,7 +31,7 @@ export default function MunicipalDashboard() {
   const [forwardRole, setForwardRole] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
-  const [search, setSearch] = useState('');
+  const [searchFilters, setSearchFilters] = useState(EMPTY_REPORT_FILTERS);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
@@ -172,7 +174,7 @@ export default function MunicipalDashboard() {
       await axios.delete(`/api/reports/${deleteTarget.id}`, { headers: { Authorization: `Bearer ${token}` } });
       setDeleteTarget(null);
       closeView();
-      toast.success('Report deleted successfully.');
+      toast.success('Report moved to Trash. You can restore it from the Trash page.');
       fetchReports();
     } catch (err) {
       setDeleteError(err.response?.data?.error || 'Failed to delete report.');
@@ -199,12 +201,10 @@ export default function MunicipalDashboard() {
 
   const filteredReports = reports
     .filter((r) => (filterStatus ? r.status === filterStatus : true))
-    .filter((r) =>
-      search ? r.incident?.referenceNumber?.toLowerCase().includes(search.toLowerCase()) : true
-    );
+    .filter((r) => matchesReportFilters(r, searchFilters));
 
   return (
-    <div className="p-8">
+    <div className="p-4 sm:p-6 lg:p-8">
       {/* Welcome Section */}
       <div className="mb-8">
         <PageHeader
@@ -225,15 +225,15 @@ export default function MunicipalDashboard() {
       {/* Report View Modal */}
       {selectedReport && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-screen overflow-y-auto">
-            <div className="flex justify-between items-center p-6 border-b">
+          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-4 sm:p-6 border-b">
               <h2 className="text-2xl font-bold text-bfp-navy">Report Details</h2>
               <button onClick={closeView} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
 
-            <div className="p-6 space-y-6">
+            <div className="p-4 sm:p-6 space-y-6">
               {/* Meta */}
-              <div className="grid grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
                 <div><p className="text-gray-500">Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
                 <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
                 <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
@@ -438,16 +438,6 @@ export default function MunicipalDashboard() {
                 {filterStatus ? `${formatReportType(filterStatus)} reports` : 'All statuses'}
               </p>
             </div>
-            <div className="w-full md:w-64">
-              <label className="form-label">Search Reference #</label>
-              <input
-                type="text"
-                className="form-input"
-                placeholder="e.g. BFP-BEN-2026-001"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
             <div className="w-full md:w-72">
               <label className="form-label">Status</label>
               <select
@@ -463,6 +453,9 @@ export default function MunicipalDashboard() {
               </select>
             </div>
           </div>
+          <div className="border-b border-gray-200 p-5">
+            <ReportSearchFilters filters={searchFilters} onChange={setSearchFilters} showStatus={false} />
+          </div>
 
           {loading ? (
             <TableSkeleton rows={5} columns={6} />
@@ -473,7 +466,7 @@ export default function MunicipalDashboard() {
               </div>
               <p className="text-lg font-semibold text-bfp-navy">No reports found</p>
               <p className="mt-1 text-sm text-gray-500">
-                {search ? 'No reports match that reference number.' : filterStatus ? 'No reports match the selected status.' : 'Submitted reports will appear here.'}
+                {hasActiveFilters(searchFilters) ? 'No reports match your search.' : filterStatus ? 'No reports match the selected status.' : 'Submitted reports will appear here.'}
               </p>
             </div>
           ) : (
@@ -574,7 +567,7 @@ export default function MunicipalDashboard() {
 
       {deleteTarget && (
         <ConfirmDeleteModal
-          message={`Delete this ${formatReportType(deleteTarget.reportType)} report? This cannot be undone.`}
+          message={`Delete this ${formatReportType(deleteTarget.reportType)} report? It will be moved to the Trash, where it can be restored within 30 days.`}
           loading={deleteLoading}
           error={deleteError}
           onConfirm={handleDelete}

@@ -14,7 +14,15 @@ export default function DashboardLayout({ children }) {
   const pathname = usePathname();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  // Only matters below the lg breakpoint, where the sidebar becomes a slide-out menu; on wider
+  // screens it is always shown (see the lg: classes in Sidebar). Starts closed so a phone or a
+  // narrow window isn't covered by the menu on every page load.
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Close the slide-out menu after navigating to another page.
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     let cancelled = false;
@@ -76,12 +84,12 @@ export default function DashboardLayout({ children }) {
   return (
     <ToastProvider>
       <SessionManager onUserChange={setUser} />
-      <div className="flex h-screen bg-gray-50">
+      <div className="app-shell flex bg-gray-50">
         {/* Sidebar */}
-        <Sidebar isOpen={isSidebarOpen} user={user} />
+        <Sidebar isOpen={isSidebarOpen} user={user} onClose={() => setIsSidebarOpen(false)} />
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Main Content — min-w-0 lets it shrink with the window instead of overflowing it */}
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Header */}
           <Header
             user={user}

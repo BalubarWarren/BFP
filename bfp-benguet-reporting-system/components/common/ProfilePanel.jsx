@@ -1,12 +1,12 @@
 'use client';
 
-import { Mail, ShieldCheck, MapPin, KeyRound, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { Mail, ShieldCheck, MapPin, Settings as SettingsIcon, LogOut } from 'lucide-react';
 
 export default function ProfilePanel({ user, onOpenSettings, onLogout }) {
   const formattedRole = user?.role?.replace(/_/g, ' ');
 
   return (
-    <div className="modal-pop-in absolute right-0 mt-2 w-80 rounded-lg bg-white shadow-lg z-50 dark:bg-gray-800">
+    <div className="modal-pop-in fixed inset-x-4 top-16 sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 mt-2 sm:w-80 rounded-lg bg-white shadow-lg z-50 dark:bg-gray-800">
       <div className="flex items-center gap-3 border-b border-gray-200 p-4">
         <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-bfp-red text-lg font-bold text-white">
           {user?.name?.charAt(0)}
@@ -34,12 +34,6 @@ export default function ProfilePanel({ user, onOpenSettings, onLogout }) {
             <span>{user.municipality.name}</span>
           </div>
         )}
-        <div className="flex items-center justify-between gap-2 text-gray-700">
-          <span className="flex items-center gap-2">
-            <KeyRound className="w-4 h-4 flex-shrink-0 text-gray-400" /> Password
-          </span>
-          <span className="tracking-widest text-gray-400">••••••••</span>
-        </div>
       </div>
 
       <div className="space-y-1 border-t border-gray-200 p-3">

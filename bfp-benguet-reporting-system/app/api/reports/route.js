@@ -249,12 +249,18 @@ export async function GET(request) {
             role: true,
           },
         },
+        // dateOfIncident/barangay/address/subCategory feed the shared report search
+        // (lib/report-search.js): incident date, location and classification filters.
         incident: {
           select: {
             id: true,
             referenceNumber: true,
             generalCategory: true,
+            subCategory: true,
             status: true,
+            dateOfIncident: true,
+            barangay: true,
+            address: true,
           },
         },
       },

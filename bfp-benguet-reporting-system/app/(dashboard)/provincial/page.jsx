@@ -10,6 +10,7 @@ import {
   LayoutGrid, MapPin, Inbox, FileSearch,
 } from 'lucide-react';
 import PageHeader from '../../../components/common/PageHeader';
+import MunicipalityDetailModal from '../../../components/dashboard/MunicipalityDetailModal';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import { CATEGORY_CHART_COLORS } from '../../../lib/constants';
 import {
@@ -89,7 +90,7 @@ const BENGUET_MUNICIPALITIES = [
 // municipality and not part of the fire incident data above; drawn only for geographic context.
 const BAGUIO_SHAPE = { points: '132,423 148,423 152,443 142,464 128,453', markerX: 140, markerY: 435, labelX: 140, labelY: 462 };
 
-function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
+function BenguetFireMap({ monitoringBoard, onPrint, onExport, onSelect }) {
   const [hovered, setHovered] = useState(null);
 
   const dataMap = {};
@@ -125,17 +126,17 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
   const labelFont = "'Georgia', 'Times New Roman', serif";
 
   return (
-    <div id="section-fire-map" className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <div className="flex justify-between items-start mb-4">
+    <div id="section-fire-map" className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+      <div className="flex justify-between items-start gap-3 mb-4">
         <div>
           <h2 className="text-xl font-bold text-bfp-navy">Municipality Fire Incident Rate Map</h2>
-          <p className="text-sm text-gray-500">Color shows relative fire incident rate — green (lowest) to red (highest)</p>
+          <p className="text-sm text-gray-500">Color shows relative fire incident rate — green (lowest) to red (highest). Click a municipality for details.</p>
         </div>
         {onPrint && <SectionMenu onPrint={onPrint} onExport={onExport} />}
       </div>
       <div className="flex flex-wrap gap-6">
         {/* SVG Map */}
-        <div className="relative flex-shrink-0" style={{ width: 230 }}>
+        <div className="relative mx-auto flex-shrink-0 sm:mx-0" style={{ width: 230 }}>
           <svg viewBox="0 0 270 545" width="100%">
             <text x="135" y="20" textAnchor="middle" style={{ fontSize: 11, fontWeight: 700, fill: '#1a3c6e', letterSpacing: 1, fontFamily: labelFont }}>
               PROVINCE OF BENGUET
@@ -158,6 +159,11 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport }) {
               const small = mun.code === 'LT' || mun.code === 'TUBLAY';
               return (
                 <g key={mun.code} style={{ cursor: 'pointer' }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`View ${mun.name} incident information`}
+                  onClick={() => onSelect?.(mun.code)}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect?.(mun.code); } }}
                   onMouseEnter={() => setHovered(mun)}
                   onMouseLeave={() => setHovered(null)}>
                   <polygon points={mun.points} fill={fill}
@@ -296,6 +302,10 @@ export default function ProvincialDashboard() {
   const [histReportsByCategory, setHistReportsByCategory] = useState({});
   const [categoryModal, setCategoryModal] = useState(null); // { field, label } | null
   useEscapeKey(() => setCategoryModal(null), !!categoryModal);
+
+  // Clicking a municipality (Monitoring Board row or map) opens its detail modal. The map always
+  // shows the current month; the board shows whichever tab is active.
+  const [municipalityModal, setMunicipalityModal] = useState(null); // { code, source: 'board' | 'map' } | null
 
   // Sub-category breakdown view: only sub-categories with an actual reported count are shown.
   const [showSubCategories, setShowSubCategories] = useState(false);
@@ -593,7 +603,7 @@ export default function ProvincialDashboard() {
   };
 
   return (
-    <div className="p-8" id="provincial-dashboard-content">
+    <div className="p-4 sm:p-6 lg:p-8" id="provincial-dashboard-content">
       {/* Page Title */}
       <div className="mb-6">
         <PageHeader
@@ -617,17 +627,17 @@ export default function ProvincialDashboard() {
       )}
 
       {/* ── 1. Fire Incident Monitoring Board — main dashboard, first thing visible ── */}
-      <div id="section-monitoring-board" className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex justify-between items-start mb-1">
+      <div id="section-monitoring-board" className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
+        <div className="flex justify-between items-start gap-3 mb-1">
           <div>
             <h2 className="text-xl font-bold text-bfp-navy">Fire Incident Monitoring Board</h2>
-            <p className="text-sm text-gray-500 mb-4">Live totals for the current month, or browse a past month or year.</p>
+            <p className="text-sm text-gray-500 mb-4">Live totals for the current month, or browse a past month or year. Click a municipality to see its incidents and statistics.</p>
           </div>
           <SectionMenu onPrint={() => handlePrint('section-monitoring-board')} onExport={handleExportMonitoringBoard} />
         </div>
 
         {/* Sub-tabs */}
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-4 flex-wrap">
           {[
             { key: 'current', label: 'This Month' },
             { key: 'monthly', label: 'By Month' },
@@ -833,8 +843,21 @@ export default function ProvincialDashboard() {
                     </thead>
                     <tbody>
                       {rows.map((row) => (
-                        <tr key={row.code}>
-                          <td className="font-semibold">{row.municipality}</td>
+                        <tr
+                          key={row.code}
+                          onClick={() => setMunicipalityModal({ code: row.code, source: 'board' })}
+                          className="cursor-pointer hover:bg-bfp-navy/5"
+                          title={`View ${row.municipality} incident information`}
+                        >
+                          <td className="font-semibold">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); setMunicipalityModal({ code: row.code, source: 'board' }); }}
+                              className="text-left text-bfp-navy underline decoration-dotted underline-offset-4 hover:text-bfp-red"
+                            >
+                              {row.municipality}
+                            </button>
+                          </td>
                           {fieldOrder.flatMap((field) => {
                             const subKeys = subKeysByField[field];
                             if (subKeys.length > 0) {
@@ -1053,10 +1076,54 @@ export default function ProvincialDashboard() {
       </div>
 
       {/* ── 2b. Municipality Fire Rate SVG Map ── */}
-      <BenguetFireMap monitoringBoard={monitoringBoard} onPrint={() => handlePrint('section-fire-map')} onExport={handleExportFireMap} />
+      <BenguetFireMap
+        monitoringBoard={monitoringBoard}
+        onPrint={() => handlePrint('section-fire-map')}
+        onExport={handleExportFireMap}
+        onSelect={(code) => setMunicipalityModal({ code, source: 'map' })}
+      />
+
+      {municipalityModal && (() => {
+        const useCurrent = municipalityModal.source === 'map' || boardTab === 'current';
+        const rows = useCurrent ? monitoringBoard : (histData || []);
+        const row = rows.find((r) => r.code === municipalityModal.code);
+        if (!row) return null;
+        const byCategory = useCurrent ? reportsByCategory : histReportsByCategory;
+        const filedReports = ['residential', 'nonResidential', 'nonStructural', 'transport']
+          .flatMap((f) => byCategory[f] || [])
+          .filter((report) => report.municipality === row.municipality)
+          .sort((a, b) => new Date(b.reportDate) - new Date(a.reportDate));
+        const rank = [...rows].sort((a, b) => (b.total || 0) - (a.total || 0)).findIndex((r) => r.code === row.code) + 1;
+
+        let periodStart;
+        let periodEnd;
+        if (useCurrent) {
+          periodStart = new Date(currentYear, now.getMonth(), 1);
+          periodEnd = new Date(currentYear, now.getMonth() + 1, 0, 23, 59, 59, 999);
+        } else if (boardTab === 'monthly') {
+          periodStart = new Date(histMonthYear, histMonthNum - 1, 1);
+          periodEnd = new Date(histMonthYear, histMonthNum, 0, 23, 59, 59, 999);
+        } else {
+          periodStart = new Date(histYearNum, 0, 1);
+          periodEnd = new Date(histYearNum, 11, 31, 23, 59, 59, 999);
+        }
+
+        return (
+          <MunicipalityDetailModal
+            row={row}
+            rank={rank}
+            municipalityCount={rows.length}
+            periodLabel={useCurrent ? `${currentMonthName} ${currentYear}` : histLabel}
+            periodStart={periodStart}
+            periodEnd={periodEnd}
+            filedReports={filedReports}
+            onClose={() => setMunicipalityModal(null)}
+          />
+        );
+      })()}
 
       {/* ── 4. Incident Trend Charts ── */}
-      <div id="section-comparison" className="bg-white rounded-lg shadow-md p-6 mb-8">
+      <div id="section-comparison" className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8">
         <div className="flex justify-between items-start mb-5 flex-wrap gap-4">
           <div>
             <h2 className="text-xl font-bold text-bfp-navy">Fire Incident Comparison</h2>

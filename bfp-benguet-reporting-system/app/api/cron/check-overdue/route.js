@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { runOverdueCheck } from '../../../../lib/check-overdue-reports';
+import { purgeExpiredTrash } from '../../../../lib/trash';
 
 export async function POST(request) {
   const authHeader = request.headers.get('authorization') || '';
@@ -11,7 +12,8 @@ export async function POST(request) {
 
   try {
     const summary = await runOverdueCheck();
-    return NextResponse.json({ message: 'Overdue check complete', ...summary });
+    const trashPurged = await purgeExpiredTrash();
+    return NextResponse.json({ message: 'Overdue check complete', ...summary, trashPurged });
   } catch (error) {
     console.error('Error running overdue check:', error);
     return NextResponse.json({ error: 'Failed to run overdue check' }, { status: 500 });

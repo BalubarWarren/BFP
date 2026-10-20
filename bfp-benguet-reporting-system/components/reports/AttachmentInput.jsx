@@ -45,7 +45,7 @@ const AttachmentInput = forwardRef(function AttachmentInput(
   return (
     <div
       ref={containerRef}
-      className={`bg-white rounded-lg shadow-md p-6 transition-shadow ${highlight ? 'ring-2 ring-bfp-red' : ''}`}
+      className={`bg-white rounded-lg shadow-md p-4 sm:p-6 transition-shadow ${highlight ? 'ring-2 ring-bfp-red' : ''}`}
     >
       <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
         <Icon className="w-5 h-5" /> {title}

@@ -2,10 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { History, CheckCircle2, Undo2, MessageSquare, AlertTriangle, Megaphone } from 'lucide-react';
+import { History, CheckCircle2, Undo2, MessageSquare, AlertTriangle, Megaphone, Trash2, ArchiveRestore, XCircle } from 'lucide-react';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import PageHeader from '../../../../components/common/PageHeader';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
+import ReportDetailsModal from '../../../../components/reports/ReportDetailsModal';
 import { formatDateTime, isAuthError, parseJsonField } from '../../../../lib/utils';
 
 const ACTION_META = {
@@ -13,6 +14,9 @@ const ACTION_META = {
   RETURN_REPORT: { label: 'Returned', icon: Undo2, className: 'bg-bfp-red/10 text-bfp-red' },
   TEXT_BLAST_REPORT: { label: 'Text Blast', icon: MessageSquare, className: 'bg-bfp-navy/10 text-bfp-navy' },
   SEND_DIRECTIVE: { label: 'Directive', icon: Megaphone, className: 'bg-bfp-amber/15 text-amber-800' },
+  TRASH_REPORT: { label: 'Moved to Trash', icon: Trash2, className: 'bg-gray-100 text-gray-800' },
+  RESTORE_REPORT: { label: 'Restored', icon: ArchiveRestore, className: 'bg-bfp-green/15 text-bfp-green' },
+  PURGE_REPORT: { label: 'Permanently Deleted', icon: XCircle, className: 'bg-bfp-red/10 text-bfp-red' },
 };
 
 const formatReportType = (type) =>
@@ -33,6 +37,12 @@ const describeChanges = (entry) => {
   if (entry.action === 'SEND_DIRECTIVE') {
     return `${changes.kind === 'ASSIGNMENT' ? `Assigned ${formatReportType(changes.reportType)}` : 'Message'} to ${changes.recipientName ?? '?'}`;
   }
+  if (entry.action === 'TRASH_REPORT' || entry.action === 'RESTORE_REPORT') {
+    return formatReportType(changes.reportType);
+  }
+  if (entry.action === 'PURGE_REPORT') {
+    return changes.label || '—';
+  }
   return '—';
 };
 
@@ -44,6 +54,7 @@ export default function ActivityLogPage() {
   const [error, setError] = useState('');
   const [filterAction, setFilterAction] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
+  const [viewTarget, setViewTarget] = useState(null);
 
   useEffect(() => {
     fetchEntries();
@@ -100,12 +111,12 @@ export default function ActivityLogPage() {
   };
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <PageHeader
         icon={History}
         eyebrow="System Administrator"
         title="Activity Log"
-        description="Every report approval, return, and text blast, in one place."
+        description="Every report approval, return, text blast, and deletion, in one place. Click a report to view its details."
       />
 
       {sessionExpired && <SessionExpiredBanner />}
@@ -129,6 +140,9 @@ export default function ActivityLogPage() {
               <option value="RETURN_REPORT">Returned</option>
               <option value="TEXT_BLAST_REPORT">Text Blast</option>
               <option value="SEND_DIRECTIVE">Directive</option>
+              <option value="TRASH_REPORT">Moved to Trash</option>
+              <option value="RESTORE_REPORT">Restored</option>
+              <option value="PURGE_REPORT">Permanently Deleted</option>
             </select>
           </div>
         </div>
@@ -191,12 +205,17 @@ export default function ActivityLogPage() {
                         </td>
                         <td className="px-5 py-4 text-sm">
                           {entry.report ? (
-                            <>
-                              <p className="font-semibold text-gray-900">{formatReportType(entry.report.reportType)}</p>
+                            <button
+                              type="button"
+                              onClick={() => setViewTarget(entry.report)}
+                              className="text-left group"
+                              title="View report details"
+                            >
+                              <p className="font-semibold text-gray-900 group-hover:text-bfp-red group-hover:underline">{formatReportType(entry.report.reportType)}</p>
                               <p className="text-xs text-gray-500">
                                 {entry.report.incident?.referenceNumber || `#${entry.report.id}`} · {entry.report.municipality?.name}
                               </p>
-                            </>
+                            </button>
                           ) : (
                             <p className="text-xs italic text-gray-400">Report no longer exists</p>
                           )}
@@ -221,6 +240,10 @@ export default function ActivityLogPage() {
           </>
         )}
       </div>
+
+      {viewTarget && (
+        <ReportDetailsModal report={viewTarget} onClose={() => setViewTarget(null)} showHistory />
+      )}
     </div>
   );
 }

@@ -25,12 +25,16 @@ export async function GET(request) {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     const cursor = searchParams.get('cursor');
+    const reportId = parseInt(searchParams.get('reportId'), 10);
 
     // Ordering and the pagination cursor both key off `id` rather than `createdAt` — ids are
     // guaranteed unique and monotonically increasing, so a cursor built from one is unambiguous
     // even if two rows land on the same millisecond.
     const page = await prisma.auditLog.findMany({
-      where: action ? { action } : {},
+      where: {
+        ...(action && { action }),
+        ...(Number.isInteger(reportId) && { reportId }),
+      },
       orderBy: { id: 'desc' },
       take: PAGE_SIZE + 1,
       ...(cursor && { cursor: { id: parseInt(cursor) }, skip: 1 }),

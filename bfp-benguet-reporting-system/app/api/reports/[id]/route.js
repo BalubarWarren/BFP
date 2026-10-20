@@ -12,9 +12,8 @@ import {
   REVIEW_TIERS,
   canViewReportViaArchive,
 } from '../../../../lib/report-access';
-import { deleteAttachments } from '../../../../lib/storage';
+import { moveReportToTrash } from '../../../../lib/trash';
 import { notifyReportRecipients } from '../../../../lib/report-notifications';
-import { parseJsonField } from '../../../../lib/utils';
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
@@ -45,6 +44,7 @@ export async function GET(request, { params }) {
         municipality: true,
         submittedBy: { select: PUBLIC_USER_SELECT },
         reviewedBy: { select: PUBLIC_USER_SELECT },
+        passedTo: { select: PUBLIC_USER_SELECT },
         incident: true,
       },
     });
@@ -65,7 +65,8 @@ export async function GET(request, { params }) {
     // or the original submitter. Super admins may view all.
     const isSubmitter = report.submittedById === user.id;
     const isRecipient = isReportRecipient(report, user);
-    const isSuperAdmin = user.role === ROLES.SUPER_ADMIN;
+    // Both admin roles track every report (Report Tracking → View Details).
+    const isSuperAdmin = ADMIN_ROLES.includes(user.role);
     // Final approval clears passedToRole/passedToId, so the reviewers who signed off along the way
     // stop being "recipients" of the finished report. The shared Reports archive gives the three
     // archive roles read access to it (municipal ones still only within their own municipality).
@@ -407,36 +408,19 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Conditional on the version just checked, so a reviewer approving/returning the report at the
-    // same moment can't have their review silently deleted out from under them. The record goes
-    // first and the files second — the reverse left a report with dead attachment links whenever
-    // the delete itself failed.
-    const deleted = await prisma.report.deleteMany({ where: { id: reportId, updatedAt: report.updatedAt } });
-    if (deleted.count === 0) {
+    // Moved to the trash rather than destroyed, so an accidental delete can be undone from
+    // /trash (see lib/trash.js). Conditional on the version just checked, so a reviewer
+    // approving/returning the report at the same moment can't have their review trashed out from
+    // under them.
+    const moved = await moveReportToTrash(report, user);
+    if (!moved) {
       return NextResponse.json(
         { error: 'This report was changed in the meantime. Refresh and try again.' },
         { status: 409 }
       );
     }
-    await deleteAttachments(parseJsonField(report.attachments, []));
 
-    // Every Incident in this app is created from a Spot Investigation report's auto-creation
-    // path (there's no UI that creates one standalone) — so once the report being deleted was
-    // the last one linked to its Incident, that Incident is now a phantom row with a burned
-    // reference number and nothing pointing to it. Best-effort: a failure here shouldn't undo an
-    // otherwise-successful report deletion.
-    if (report.incidentId) {
-      try {
-        const remainingReports = await prisma.report.count({ where: { incidentId: report.incidentId } });
-        if (remainingReports === 0) {
-          await prisma.incident.delete({ where: { id: report.incidentId } });
-        }
-      } catch (error) {
-        console.error('Failed to clean up orphaned incident:', error);
-      }
-    }
-
-    return NextResponse.json({ message: 'Report deleted successfully' });
+    return NextResponse.json({ message: 'Report moved to Trash' });
   } catch (error) {
     console.error('Error deleting report:', error);
     return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });

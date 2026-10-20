@@ -6,6 +6,7 @@ import { Users, UserPlus, Pencil, Power, Trash2 } from 'lucide-react';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../../components/common/ToastProvider';
 import PageHeader from '../../../../components/common/PageHeader';
+import RankSelect from '../../../../components/common/RankSelect';
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 import { isAuthError } from '../../../../lib/utils';
 
@@ -231,14 +232,14 @@ export default function UserManagementPage() {
 
   if (sessionExpired) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         <SessionExpiredBanner />
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       <PageHeader
         icon={Users}
         eyebrow="System Administrator"
@@ -247,7 +248,7 @@ export default function UserManagementPage() {
       />
 
       {/* Create account */}
-      <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
         <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
           <UserPlus className="w-5 h-5" /> Create Account
         </h2>
@@ -290,7 +291,7 @@ export default function UserManagementPage() {
           )}
           <div>
             <label className="form-label">Rank</label>
-            <input type="text" name="rank" value={formData.rank} onChange={handleCreateChange} className="form-input" placeholder="e.g. Fire Officer III" />
+            <RankSelect name="rank" value={formData.rank} onChange={handleCreateChange} />
           </div>
           <div className="md:col-span-3">
             <button type="submit" disabled={creating} className="btn btn-primary px-8">
@@ -384,7 +385,7 @@ export default function UserManagementPage() {
       {/* Edit modal */}
       {editingUser && editForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={closeEdit}>
-          <div className="modal-pop-in w-full max-w-md rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-pop-in max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b p-6">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Edit Account</p>
@@ -429,11 +430,9 @@ export default function UserManagementPage() {
 
               <div>
                 <label className="form-label">Rank</label>
-                <input
-                  type="text"
+                <RankSelect
                   value={editForm.rank}
                   onChange={(e) => setEditForm((prev) => ({ ...prev, rank: e.target.value }))}
-                  className="form-input"
                 />
               </div>
 
@@ -449,7 +448,7 @@ export default function UserManagementPage() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-2">
+              <div className="flex gap-3 pt-2 flex-wrap">
                 <button type="submit" disabled={savingEdit} className="btn btn-primary px-6">
                   {savingEdit ? 'Saving…' : 'Save Changes'}
                 </button>
@@ -474,7 +473,7 @@ export default function UserManagementPage() {
               <p>This permanently deletes <strong>{deleteTarget.email}</strong>. This cannot be undone.</p>
               <p>Any reports they submitted, incidents they created, or comments they left will be permanently deleted along with them — unless one of their incidents still has reports from other users, in which case the delete will be refused.</p>
             </div>
-            <div className="flex gap-3 p-6 pt-0">
+            <div className="flex gap-3 p-6 pt-0 flex-wrap">
               <button type="button" onClick={handleDelete} disabled={deleting} className="btn btn-danger px-6">
                 {deleting ? 'Deleting…' : 'Delete Permanently'}
               </button>

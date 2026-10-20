@@ -93,7 +93,7 @@ export default async function VerifyReportPage({ params }) {
             </div>
           </div>
 
-          <div className="p-6 space-y-6">
+          <div className="p-4 sm:p-6 space-y-6">
             {report.incident?.referenceNumber && (
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Reference Number</p>
@@ -101,7 +101,7 @@ export default async function VerifyReportPage({ params }) {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
               <Field icon={FileText} label="Report Type" value={reportTypeLabel} />
               <Field icon={Building2} label="Municipality" value={report.municipality?.name} />
               <Field icon={CalendarCheck} label="Report Date" value={formatDate(report.reportDate)} />
