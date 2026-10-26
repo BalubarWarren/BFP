@@ -6,14 +6,14 @@ import { getDemoReportById, isDemoReportId } from '../../../../lib/demo-reports'
 import {
   MUNICIPAL_REVIEWER_ROLES,
   PROVINCIAL_REVIEWER_ROLES,
-  isReportRecipient,
   tierIndexForRole,
   nextTierRoles,
   REVIEW_TIERS,
-  canViewReportViaArchive,
 } from '../../../../lib/report-access';
 import { moveReportToTrash } from '../../../../lib/trash';
 import { notifyReportRecipients } from '../../../../lib/report-notifications';
+import { canUserViewReport } from '../../../../lib/report-view-access';
+import { generateQrToken } from '../../../../lib/qr-token';
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
@@ -56,41 +56,7 @@ export async function GET(request, { params }) {
       );
     }
 
-    // RBAC: Investigators can only view their own reports
-    if (user.role === ROLES.INVESTIGATOR && report.submittedById !== user.id) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    // Reviewers and other users may only view a report if they are the explicit recipient
-    // or the original submitter. Super admins may view all.
-    const isSubmitter = report.submittedById === user.id;
-    const isRecipient = isReportRecipient(report, user);
-    // Both admin roles track every report (Report Tracking → View Details).
-    const isSuperAdmin = ADMIN_ROLES.includes(user.role);
-    // Final approval clears passedToRole/passedToId, so the reviewers who signed off along the way
-    // stop being "recipients" of the finished report. The shared Reports archive gives the three
-    // archive roles read access to it (municipal ones still only within their own municipality).
-    const isArchiveReader = canViewReportViaArchive(report, user);
-    const hasTextBlastAccess = await prisma.notification.findFirst({
-      where: {
-        userId: user.id,
-        reportId: report.id,
-        type: NOTIFICATION_TYPES.REPORT_TEXT_BLAST,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    // A reviewer's "Reports Reviewed" list (GET /api/reports?view=outgoing) is built from these
-    // AuditLog rows — without the same check here, opening a report from that list 403s as soon
-    // as the report has moved on to the next reviewer.
-    const hasReviewedReport = await prisma.auditLog.findFirst({
-      where: { userId: user.id, reportId: report.id, action: { in: ['APPROVE_REPORT', 'RETURN_REPORT'] } },
-      select: { id: true },
-    });
-
-    if (!isSubmitter && !isRecipient && !isSuperAdmin && !isArchiveReader && !hasTextBlastAccess && !hasReviewedReport) {
+    if (!(await canUserViewReport(report, user))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -179,6 +145,10 @@ export async function PATCH(request, { params }) {
       ...(reportingOfficerRank && { reportingOfficerRank }),
       ...(stationCommanderName && { stationCommanderName }),
       ...(status && { status }),
+      // Keeps the report's existing QR code through returns and corrections — only a report that
+      // somehow doesn't have one yet (e.g. passed before QR codes were issued at submission) gets
+      // one here, as it's passed on again.
+      ...(status === REPORT_STATUS.SUBMITTED && !report.qrToken && { qrToken: generateQrToken() }),
     };
 
     // Investigator re-submitting a RETURNED report → they may pick a lateral alternative within

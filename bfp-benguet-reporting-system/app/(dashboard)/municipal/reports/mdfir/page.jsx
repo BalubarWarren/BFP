@@ -19,6 +19,7 @@ export default function MinimalDamageFireIncidentReportForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submittedReport, setSubmittedReport] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
   const [attachmentWarningKind, setAttachmentWarningKind] = useState('missing');
@@ -77,7 +78,7 @@ export default function MinimalDamageFireIncidentReportForm() {
     try {
       const effectiveUser = await getEffectiveUser();
       if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
-      await submitReport({
+      const response = await submitReport({
         fields: {
           reportType: 'MDFIR',
           municipalityId: String(effectiveUser.municipalityId),
@@ -94,6 +95,7 @@ export default function MinimalDamageFireIncidentReportForm() {
         },
         files: attachments,
       });
+      setSubmittedReport(response.data.report);
       setSuccess('MDFIR submitted successfully.');
       setShowSuccessModal(true);
     } catch (err) {
@@ -177,6 +179,7 @@ export default function MinimalDamageFireIncidentReportForm() {
         <SubmitSuccessModal
           message={success}
           onConfirm={() => router.push('/municipal')}
+          report={submittedReport}
         />
       )}
 

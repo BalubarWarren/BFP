@@ -6,6 +6,7 @@ import { createIncidentWithReference } from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
 import { saveAttachments, isStoredAttachmentUrl } from '../../../lib/storage';
 import { notifyReportRecipients } from '../../../lib/report-notifications';
+import { generateQrToken } from '../../../lib/qr-token';
 import {
   MUNICIPAL_REVIEWER_ROLES,
   PROVINCIAL_REVIEWER_ROLES,
@@ -482,6 +483,8 @@ export async function POST(request) {
         passedToId,
         status: REPORT_STATUS.SUBMITTED,
         submittedById: user.id,
+        // Issued the moment the investigator passes the report, and kept for life — see lib/qr-token.js.
+        qrToken: generateQrToken(),
       },
       include: {
         municipality: true,

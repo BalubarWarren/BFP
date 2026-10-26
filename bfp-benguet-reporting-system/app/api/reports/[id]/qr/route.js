@@ -1,19 +1,14 @@
-import { randomBytes } from 'crypto';
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../../lib/auth';
-import { canViewReportViaArchive } from '../../../../../lib/report-access';
+import { REPORT_STATUS } from '../../../../../lib/constants';
+import { generateQrToken } from '../../../../../lib/qr-token';
+import { canUserViewReport } from '../../../../../lib/report-view-access';
 
-// Same generator as the automatic one in POST /api/reports/[id]/approve — kept identical (32
-// random bytes, base64url) rather than importing from there, since that route has no exports of
-// its own to share (Next route modules only export the HTTP method handlers).
-const generateQrToken = () => randomBytes(32).toString('base64url');
-
-// Lazily mints a qrToken for a report that was finally approved before the QR feature shipped
-// (POST /api/reports/[id]/approve only sets one going forward, at the moment of approval) — the
-// Reports archive page calls this the first time someone opens the QR modal for such a report,
-// so there's no need for a one-off backfill migration against every already-approved report.
-// Idempotent: a report that already has a token just gets it echoed back.
+// Returns a report's QR token, minting one for a report passed before QR codes were issued at
+// submission (POST /api/reports sets one going forward) — the QR Code button calls this the first
+// time someone opens the QR modal for such a report, so there's no need for a one-off backfill
+// migration. Idempotent: a report that already has a token just gets it echoed back.
 export async function POST(request, { params }) {
   try {
     const user = await getUserFromRequest(request);
@@ -28,14 +23,18 @@ export async function POST(request, { params }) {
       return NextResponse.json({ error: 'Report not found' }, { status: 404 });
     }
 
-    // Same rule as who may open this report through the archive in the first place: finally
-    // approved, and (for the two municipal archive roles) within their own municipality.
-    if (!canViewReportViaArchive(report, user)) {
+    // Same rule as who may open this report at all (GET /api/reports/[id]).
+    if (!(await canUserViewReport(report, user))) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     if (report.qrToken) {
       return NextResponse.json({ qrToken: report.qrToken });
+    }
+
+    // A draft hasn't been passed to anyone yet, so there's nothing to verify.
+    if (report.status === REPORT_STATUS.DRAFT) {
+      return NextResponse.json({ error: 'A QR code is issued once the report is submitted.' }, { status: 400 });
     }
 
     // Only set if still empty: two people opening the QR modal for the first time at once would

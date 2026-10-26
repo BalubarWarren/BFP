@@ -16,6 +16,7 @@ import ConfirmDeleteModal from '../../../../components/reports/ConfirmDeleteModa
 import ReportSearchFilters from '../../../../components/reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../../lib/report-search';
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
+import ReportQrButton from '../../../../components/reports/ReportQrButton';
 
 export default function MunicipalReportsPage() {
   const toast = useToast();
@@ -177,6 +178,7 @@ export default function MunicipalReportsPage() {
             </div>
 
             <div className="flex justify-end gap-3 border-t bg-gray-50 p-6">
+              <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
               {canDelete(selectedReport) && (
                 <button
                   type="button"

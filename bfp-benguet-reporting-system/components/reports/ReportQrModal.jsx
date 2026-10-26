@@ -15,9 +15,9 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 // phone camera with no "current page" to resolve a relative path against.
 const buildVerifyUrl = (qrToken) => `${window.location.origin}/verify/${qrToken}`;
 
-// Shown for a report on the shared Reports archive (see app/(dashboard)/reports/page.jsx) once
-// it has a qrToken — scanning the code opens /verify/[qrToken], a public page (no login) that
-// links straight to the report's attached file(s) for on-the-spot verification.
+// Opened from the shared Reports archive (app/(dashboard)/reports/page.jsx) or any report's
+// QR Code button (ReportQrButton.jsx) — scanning the code opens /verify/[qrToken], a public page
+// (no login) showing the report's current status and linking to its attached file(s).
 export default function ReportQrModal({ report, onClose }) {
   const [copied, setCopied] = useState(false);
   const verifyUrl = buildVerifyUrl(report.qrToken);
@@ -71,7 +71,8 @@ export default function ReportQrModal({ report, onClose }) {
         </div>
 
         <p className="text-xs text-gray-500 mb-4">
-          Scan with a phone camera to open this report&rsquo;s file — no login required.
+          Scan with a phone camera to see this report&rsquo;s current status and file — no login
+          required. The QR code stays the same even if the report is returned and corrected.
         </p>
 
         <div className="flex items-center gap-2 mb-4 rounded-lg bg-gray-50 px-3 py-2">

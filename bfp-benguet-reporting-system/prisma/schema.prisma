@@ -131,10 +131,10 @@ model Report {
 
   attachments String? // JSON array stored as string
 
-  // Set once, the moment the Provincial Chief IIS gives final approval (see isFinalApproval in
-  // POST /api/reports/[id]/approve) — a random, unguessable identifier for the public QR-code
-  // verification page at /verify/[qrToken]. Never reused and never set for any other report
-  // status, so its mere presence already implies "finally approved" without re-checking status.
+  // Set once, the moment the investigator first passes the report (POST /api/reports — see
+  // lib/qr-token.js), and kept through every return and correction — a random, unguessable
+  // identifier for the public QR-code verification page at /verify/[qrToken], which shows the
+  // report's current status. Its presence does NOT imply final approval; check the status.
   qrToken String? @unique
 
   createdAt DateTime @default(now())

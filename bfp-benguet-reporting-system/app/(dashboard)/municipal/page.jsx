@@ -18,6 +18,7 @@ import ReportSearchFilters from '../../../components/reports/ReportSearchFilters
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../lib/report-search';
 import InvestigatorDirectives from '../../../components/directives/InvestigatorDirectives';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
+import ReportQrButton from '../../../components/reports/ReportQrButton';
 
 export default function MunicipalDashboard() {
   const toast = useToast();
@@ -302,6 +303,7 @@ export default function MunicipalDashboard() {
             </div>
 
             <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+              <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
               {selectedReport.status === 'RETURNED' && (
                 <Link href={`/municipal/reports/${selectedReport.id}/edit`} className="btn btn-danger">
                   ↩ Revise & Resubmit

@@ -1,16 +1,10 @@
-import { randomBytes } from 'crypto';
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
 import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../../../lib/auth';
 import { ROLES, REPORT_STATUS, NOTIFICATION_TYPES } from '../../../../../lib/constants';
 import { getDemoReportById, isDemoReportId } from '../../../../../lib/demo-reports';
+import { generateQrToken } from '../../../../../lib/qr-token';
 import { MUNICIPAL_REVIEWER_ROLES, PROVINCIAL_REVIEWER_ROLES, isReportRecipient } from '../../../../../lib/report-access';
-
-// Public, unguessable id for the /verify/[qrToken] page the QR code on a finally-approved report
-// encodes — 32 random bytes, base64url so it drops straight into a URL path with no encoding.
-// Collisions are astronomically unlikely (2^256 space) so this doesn't loop-and-retry on conflict
-// the way e.g. a 6-digit code generator would need to.
-const generateQrToken = () => randomBytes(32).toString('base64url');
 
 export async function POST(request, { params }) {
   try {
@@ -177,11 +171,9 @@ export async function POST(request, { params }) {
         remarks: remarks || null,
         passedToRole: nextPassedToRole,
         passedToId: nextPassedToId,
-        // Only the final approval — nothing left to forward — gets a QR code, since that's the
-        // point where the report becomes the official, unchangeable record (see the edit lock in
-        // PATCH /api/reports/[id]). A report can only ever reach isFinalApproval once (there's no
-        // path back to SUBMITTED afterward), so this never overwrites an existing token.
-        ...(isFinalApproval && { qrToken: generateQrToken() }),
+        // Reports get their QR code when first passed (POST /api/reports) and keep it — this only
+        // fills one in for a report passed before that, so it's never overwritten.
+        ...(!report.qrToken && { qrToken: generateQrToken() }),
       },
     });
 

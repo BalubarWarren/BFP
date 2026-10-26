@@ -1,16 +1,18 @@
-import { ShieldCheck, FileText, Building2, User, CalendarCheck, XCircle } from 'lucide-react';
+import { ShieldCheck, FileText, Building2, User, CalendarCheck, XCircle, Clock, RotateCcw, Send, History } from 'lucide-react';
 import prisma from '../../../lib/prisma';
 import { isFinallyApprovedReport } from '../../../lib/report-access';
+import { REPORT_STATUS } from '../../../lib/constants';
 import { parseJsonField, formatDate, formatDateTime } from '../../../lib/utils';
 import BFPCrest from '../../../components/common/BFPCrest';
 
-// Public, unauthenticated landing page for the QR code printed/shown on a finally-approved
-// report (see qrToken in prisma/schema.prisma and its generation in POST
-// /api/reports/[id]/approve). Deliberately outside the (dashboard) route group — no login, no
-// sidebar — since the whole point is that someone with no account can scan the code and land
-// here directly. Reachable only by guessing a 32-byte random token, and even then only ever
-// shows the handful of fields below (never `content`, `remarks`, or anything else from the full
-// report) — the same minimal footprint as the printed report itself.
+// Public, unauthenticated landing page for a report's QR code (see lib/qr-token.js — issued when
+// the investigator first passes the report and kept through every return and correction).
+// Deliberately outside the (dashboard) route group — no login, no sidebar — since the whole point
+// is that someone with no account can scan the code and land here directly. Always shows the
+// report's *current* status and latest files, so a scanned printout of an older version is easy
+// to tell apart from the finished record. Reachable only by guessing a 32-byte random token, and
+// even then only ever shows the handful of fields below (never `content`, `remarks`, or anything
+// else from the full report).
 // Always read the database on each scan. Without this, Next caches the first render of each token,
 // so a report an admin later deleted would keep showing as "Verified" to anyone scanning its QR code.
 export const dynamic = 'force-dynamic';
@@ -29,10 +31,6 @@ const REPORT_TYPE_LABELS = {
 };
 
 async function getVerifiedReport(token) {
-  // qrToken is only ever written by the final-approval branch of POST /api/reports/[id]/approve,
-  // and PATCH /api/reports/[id] refuses to edit a finally-approved report afterward — so finding
-  // a report by qrToken should always mean isFinallyApprovedReport is already true. The check is
-  // kept anyway as the actual security boundary this page relies on, not the lookup itself.
   const report = await prisma.report.findUnique({
     where: { qrToken: token },
     include: {
@@ -45,8 +43,56 @@ async function getVerifiedReport(token) {
     },
   });
 
-  if (!report || !isFinallyApprovedReport(report)) return null;
-  return report;
+  // A draft was never passed to anyone, so there's nothing to vouch for yet.
+  if (!report || report.status === REPORT_STATUS.DRAFT) return null;
+
+  const timesReturned = await prisma.auditLog.count({
+    where: { reportId: report.id, action: 'RETURN_REPORT' },
+  });
+  return { report, timesReturned };
+}
+
+// "MUNICIPAL_FIRE_MARSHAL" -> "Municipal Fire Marshal", keeping "IIS" as an acronym.
+const formatRole = (role) =>
+  role
+    .split('_')
+    .map((word) => (word === 'IIS' ? word : word.charAt(0) + word.slice(1).toLowerCase()))
+    .join(' ');
+
+// The banner at the top of the card — the one thing someone scanning needs to read first.
+function getStatusBanner(report) {
+  if (isFinallyApprovedReport(report)) {
+    return {
+      icon: ShieldCheck,
+      title: 'Verified Report',
+      detail: 'Finally approved by the Provincial Chief IIS',
+      className: 'bg-bfp-green/10 border-bfp-green/20 text-bfp-green',
+    };
+  }
+  if (report.status === REPORT_STATUS.RETURNED) {
+    return {
+      icon: RotateCcw,
+      title: 'Returned for Corrections',
+      detail: 'Not yet an official record — the investigator is correcting this report',
+      className: 'bg-orange-50 border-orange-200 text-orange-700',
+    };
+  }
+  if (report.status === REPORT_STATUS.APPROVED) {
+    return {
+      icon: Send,
+      title: 'Approved at Municipal Level',
+      detail: 'Not yet an official record — awaiting final approval by the Provincial Chief IIS',
+      className: 'bg-blue-50 border-blue-200 text-blue-700',
+    };
+  }
+  return {
+    icon: Clock,
+    title: 'Under Review',
+    detail: report.passedToRole
+      ? `Not yet an official record — currently with the ${formatRole(report.passedToRole)}`
+      : 'Not yet an official record — awaiting review',
+    className: 'bg-amber-50 border-amber-200 text-amber-700',
+  };
 }
 
 function InvalidState() {
@@ -65,9 +111,14 @@ function InvalidState() {
 }
 
 export default async function VerifyReportPage({ params }) {
-  const report = await getVerifiedReport(params.token);
+  const verified = await getVerifiedReport(params.token);
 
-  if (!report) return <InvalidState />;
+  if (!verified) return <InvalidState />;
+
+  const { report, timesReturned } = verified;
+  const isFinal = isFinallyApprovedReport(report);
+  const banner = getStatusBanner(report);
+  const BannerIcon = banner.icon;
 
   const attachments = parseJsonField(report.attachments, []);
   const reportTypeLabel = REPORT_TYPE_LABELS[report.reportType] || report.reportType.replace(/_/g, ' ');
@@ -82,14 +133,12 @@ export default async function VerifyReportPage({ params }) {
         </div>
 
         <div className="rounded-lg bg-white shadow-md overflow-hidden">
-          {/* Verified banner */}
-          <div className="bg-bfp-green/10 border-b border-bfp-green/20 px-6 py-4 flex items-center gap-3">
-            <ShieldCheck className="h-6 w-6 text-bfp-green flex-shrink-0" />
+          {/* Status banner */}
+          <div className={`border-b px-6 py-4 flex items-center gap-3 ${banner.className}`}>
+            <BannerIcon className="h-6 w-6 flex-shrink-0" />
             <div>
-              <p className="font-bold text-bfp-green leading-tight">Verified Report</p>
-              <p className="text-xs text-bfp-green/80">
-                Finally approved by the Provincial Chief IIS
-              </p>
+              <p className="font-bold leading-tight">{banner.title}</p>
+              <p className="text-xs opacity-80">{banner.detail}</p>
             </div>
           </div>
 
@@ -106,8 +155,19 @@ export default async function VerifyReportPage({ params }) {
               <Field icon={Building2} label="Municipality" value={report.municipality?.name} />
               <Field icon={CalendarCheck} label="Report Date" value={formatDate(report.reportDate)} />
               <Field icon={User} label="Submitted By" value={report.submittedBy?.name} />
-              <Field icon={ShieldCheck} label="Approved By" value={report.reviewedBy?.name || 'Provincial Chief IIS'} />
-              <Field icon={CalendarCheck} label="Approved At" value={report.reviewedAt ? formatDateTime(report.reviewedAt) : '-'} />
+              {isFinal ? (
+                <>
+                  <Field icon={ShieldCheck} label="Approved By" value={report.reviewedBy?.name || 'Provincial Chief IIS'} />
+                  <Field icon={CalendarCheck} label="Approved At" value={report.reviewedAt ? formatDateTime(report.reviewedAt) : '-'} />
+                </>
+              ) : (
+                <Field icon={CalendarCheck} label="Last Updated" value={formatDateTime(report.updatedAt)} />
+              )}
+              <Field
+                icon={History}
+                label="Corrections"
+                value={timesReturned === 0 ? 'None' : `Returned ${timesReturned} time${timesReturned === 1 ? '' : 's'} for corrections`}
+              />
             </div>
 
             {/* Attachments — the actual "open the file" action the QR code exists for */}
@@ -115,6 +175,11 @@ export default async function VerifyReportPage({ params }) {
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
                 {attachments.length > 1 ? 'Report Files' : 'Report File'}
               </p>
+              {!isFinal && (
+                <p className="text-xs text-gray-500 mb-2">
+                  Latest submitted version — it may still change before final approval.
+                </p>
+              )}
               {attachments.length === 0 ? (
                 <p className="text-sm text-gray-500">No files are attached to this report.</p>
               ) : (
@@ -141,7 +206,9 @@ export default async function VerifyReportPage({ params }) {
         </div>
 
         <p className="mt-6 text-center text-xs text-gray-400">
-          This page confirms the report is an authentic, finally approved BFP Benguet record.
+          {isFinal
+            ? 'This page confirms the report is an authentic, finally approved BFP Benguet record.'
+            : 'This page shows the current status of a BFP Benguet report that is still being reviewed.'}{' '}
           For official use only.
         </p>
       </div>

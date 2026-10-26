@@ -13,6 +13,7 @@ import PageHeader from '../../../../components/common/PageHeader';
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 import ReportSearchFilters from '../../../../components/reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../../lib/report-search';
+import ReportQrButton from '../../../../components/reports/ReportQrButton';
 
 export default function ProvincialReportsPage() {
   const toast = useToast();
@@ -351,6 +352,7 @@ export default function ProvincialReportsPage() {
 
             {/* Action Buttons — show for SUBMITTED status */}
             <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
+              <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
               <button onClick={closeReview} className="btn btn-secondary" disabled={actionLoading}>Cancel</button>
               {selectedReport.status === 'SUBMITTED' && (
                 <>

@@ -13,6 +13,7 @@ import PageHeader from '../common/PageHeader';
 import ReportSearchFilters from '../reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../lib/report-search';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import ReportQrButton from '../reports/ReportQrButton';
 
 // Shared by the Municipal Chief IIS/Operation and Municipal Fire Marshal dashboards, which were
 // ~95% byte-identical (same incoming/reviewed tabs, same review modal, same approve/return
@@ -368,6 +369,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                 </div>
 
                 <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
+                  <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
                   <button onClick={closeReview} className="btn btn-secondary" disabled={actionLoading}>Cancel</button>
                   <button onClick={handleReturn} disabled={actionLoading} className="btn btn-danger">{actionLoading ? 'Processing...' : 'Return'}</button>
                   <button onClick={handleApprove} disabled={actionLoading} className="btn btn-success">{actionLoading ? 'Processing...' : 'Approve'}</button>

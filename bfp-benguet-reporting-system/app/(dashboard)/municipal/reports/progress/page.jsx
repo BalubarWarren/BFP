@@ -20,6 +20,7 @@ export default function ProgressInvestigationForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [submittedReport, setSubmittedReport] = useState(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
   const [attachmentWarningKind, setAttachmentWarningKind] = useState('missing');
@@ -95,7 +96,7 @@ export default function ProgressInvestigationForm() {
     try {
       const effectiveUser = await getEffectiveUser();
       if (!effectiveUser) throw new Error('Not authenticated. Please sign in again.');
-      await submitReport({
+      const response = await submitReport({
         fields: {
           reportType: 'PROGRESS_INVESTIGATION',
           municipalityId: String(effectiveUser.municipalityId),
@@ -107,6 +108,7 @@ export default function ProgressInvestigationForm() {
         files: attachments,
         emsFiles,
       });
+      setSubmittedReport(response.data.report);
       setSuccess('Progress Investigation Report submitted successfully.');
       setShowSuccessModal(true);
     } catch (err) {
@@ -196,6 +198,7 @@ export default function ProgressInvestigationForm() {
         <SubmitSuccessModal
           message={success}
           onConfirm={() => router.push('/municipal')}
+          report={submittedReport}
         />
       )}
 

@@ -113,10 +113,9 @@ export default function ApprovedReportsPage() {
 
   useEscapeKey(closeReport, !!selectedReport);
 
-  // Most reports already carry a qrToken (POST /api/reports/[id]/approve mints one the moment
-  // the Provincial Chief IIS gives final approval) so this just opens the modal directly. A
-  // report approved before the QR feature shipped won't have one yet — POST /api/reports/[id]/qr
-  // lazily mints it on first request instead of needing a separate backfill step.
+  // Most reports already carry a qrToken (POST /api/reports mints one the moment the report is
+  // passed) so this just opens the modal directly. A report from before that won't have one yet —
+  // POST /api/reports/[id]/qr lazily mints it on first request instead of needing a backfill step.
   const openQr = async (report) => {
     if (report.qrToken) {
       setQrTarget(report);
