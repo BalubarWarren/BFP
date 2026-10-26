@@ -3,14 +3,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import axios from 'axios';
-import { Menu, Bell, Settings } from 'lucide-react';
+import { Bell, Settings } from 'lucide-react';
 import ProfilePanel from './ProfilePanel';
+import MenuButton from './MenuButton';
 import SettingsModal from './SettingsModal';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { clearSession } from '../../lib/session';
 
-export default function Header({ user, onToggleSidebar, isSidebarCollapsed, isSidebarOpen }) {
+export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
   const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -98,16 +99,14 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed, isSi
     <header className="bg-white border-b border-gray-200 shadow-sm">
       <div className="h-1 hazard-trim" />
       <div className="flex items-center justify-between gap-2 px-4 py-3 sm:px-6 sm:py-4">
-        {/* Left side - Menu toggle: slides the menu in on phones, hides/shows the sidebar on
-            wider screens (see toggleSidebar in app/(dashboard)/layout.jsx) */}
-        <button
+        {/* Left side - Menu toggle: opens the slide-out menu on phones. On wider screens the
+            sidebar has its own button, so this one only appears to bring a hidden sidebar back
+            (see toggleSidebar in app/(dashboard)/layout.jsx). */}
+        <MenuButton
           onClick={onToggleSidebar}
-          className="rounded-lg p-1 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-          aria-label={isSidebarOpen || !isSidebarCollapsed ? 'Hide menu' : 'Show menu'}
-          title="Menu"
-        >
-          <Menu className="w-6 h-6" />
-        </button>
+          label="Show menu"
+          className={`-ml-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 ${isSidebarCollapsed ? '' : 'lg:hidden'}`}
+        />
 
         {/* Center - Page info */}
         <div className="flex-1 min-w-0 text-center">

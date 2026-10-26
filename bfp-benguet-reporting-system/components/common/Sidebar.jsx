@@ -8,10 +8,11 @@ import {
   Clock, CheckCircle2, ShieldCheck, LogOut, Users, History, Archive, UserCheck, MessageSquare, Trash2,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
+import MenuButton from './MenuButton';
 import { APPROVED_REPORTS_PATH, canViewApprovedReports, TRASH_PATH, canViewTrash } from '../../lib/constants';
 import { clearSession } from '../../lib/session';
 
-export default function Sidebar({ isOpen, isCollapsed, user, onClose }) {
+export default function Sidebar({ isOpen, isCollapsed, user, onClose, onToggle }) {
   const router = useRouter();
 
   const handleLogout = () => {
@@ -60,13 +61,15 @@ export default function Sidebar({ isOpen, isCollapsed, user, onClose }) {
       >
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="p-6 border-b-2 border-bfp-gold">
-            <div className="flex items-center gap-3">
-              <BFPCrest size={44} className="flex-shrink-0" />
-              <div>
+          <div className="py-6 pl-5 pr-3 border-b-2 border-bfp-gold">
+            <div className="flex items-center gap-2.5">
+              <BFPCrest size={40} className="flex-shrink-0" />
+              <div className="min-w-0 flex-1">
                 <h1 className="font-bold text-lg leading-tight tracking-wide">FireTrack</h1>
-                <p className="text-xs text-bfp-gold tracking-wide uppercase">Report Tracking</p>
+                <p className="text-xs text-bfp-gold tracking-wide uppercase whitespace-nowrap">Report Tracking</p>
               </div>
+              {/* Hides the sidebar on wide screens, closes the slide-out menu on phones */}
+              <MenuButton onClick={onToggle} label="Hide menu" className="-mr-1 text-white/80 hover:bg-white/10 hover:text-white" />
             </div>
           </div>
 

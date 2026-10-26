@@ -119,6 +119,7 @@ export default function DashboardLayout({ children }) {
           isCollapsed={isSidebarCollapsed}
           user={user}
           onClose={() => setIsSidebarOpen(false)}
+          onToggle={toggleSidebar}
         />
 
         {/* Main Content — min-w-0 lets it shrink with the window instead of overflowing it */}
@@ -128,7 +129,6 @@ export default function DashboardLayout({ children }) {
             user={user}
             onToggleSidebar={toggleSidebar}
             isSidebarCollapsed={isSidebarCollapsed}
-            isSidebarOpen={isSidebarOpen}
           />
 
           {/* Content Area */}
