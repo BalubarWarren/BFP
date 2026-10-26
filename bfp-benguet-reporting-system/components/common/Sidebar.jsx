@@ -11,7 +11,7 @@ import BFPCrest from './BFPCrest';
 import { APPROVED_REPORTS_PATH, canViewApprovedReports, TRASH_PATH, canViewTrash } from '../../lib/constants';
 import { clearSession } from '../../lib/session';
 
-export default function Sidebar({ isOpen, user, onClose }) {
+export default function Sidebar({ isOpen, isCollapsed, user, onClose }) {
   const router = useRouter();
 
   const handleLogout = () => {
@@ -51,9 +51,12 @@ export default function Sidebar({ isOpen, user, onClose }) {
 
       {/* Sidebar */}
       <aside
-        className={`sidebar app-shell fixed left-0 top-0 w-64 flex-shrink-0 transform transition-transform duration-300 overflow-y-auto z-50 lg:relative lg:translate-x-0 lg:transform-none ${
+        // Phones: slides in over the page (isOpen). lg and up: part of the layout, slid off to the
+        // left when collapsed — the negative margin lets the page take the freed width, and
+        // `invisible` (applied once the slide ends) keeps hidden links out of the Tab order.
+        className={`sidebar app-shell fixed left-0 top-0 w-64 flex-shrink-0 transform transition-[transform,margin,visibility] duration-300 overflow-y-auto z-50 lg:relative lg:translate-x-0 lg:transform-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${isCollapsed ? 'lg:-ml-64 lg:invisible' : 'lg:ml-0 lg:visible'}`}
       >
         <div className="flex flex-col h-full">
           {/* Logo */}

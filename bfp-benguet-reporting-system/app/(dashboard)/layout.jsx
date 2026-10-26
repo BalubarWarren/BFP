@@ -9,6 +9,8 @@ import SessionManager from '../../components/common/SessionManager';
 import { requestSessionFromOtherTabs, redirectToLogin } from '../../lib/session';
 import { ROLE_HOME_PATH, isRouteAllowedForRole } from '../../lib/constants';
 
+const SIDEBAR_COLLAPSED_KEY = 'firetrack.sidebarCollapsed';
+
 export default function DashboardLayout({ children }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -18,6 +20,32 @@ export default function DashboardLayout({ children }) {
   // screens it is always shown (see the lg: classes in Sidebar). Starts closed so a phone or a
   // narrow window isn't covered by the menu on every page load.
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // lg and up: the header's hamburger hides/shows the always-on sidebar instead, to give pages
+  // the full width. Remembered per browser, so it stays the way the user left it.
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      setIsSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === '1');
+    } catch {
+      // Storage blocked (private mode etc.) — just start with the sidebar shown.
+    }
+  }, []);
+
+  const toggleSidebar = () => {
+    if (window.matchMedia('(min-width: 1024px)').matches) {
+      setIsSidebarCollapsed((collapsed) => {
+        try {
+          localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? '0' : '1');
+        } catch {
+          // Not remembered across reloads, but the toggle itself still works.
+        }
+        return !collapsed;
+      });
+    } else {
+      setIsSidebarOpen((open) => !open);
+    }
+  };
 
   // Close the slide-out menu after navigating to another page.
   useEffect(() => {
@@ -86,14 +114,21 @@ export default function DashboardLayout({ children }) {
       <SessionManager onUserChange={setUser} />
       <div className="app-shell flex bg-gray-50">
         {/* Sidebar */}
-        <Sidebar isOpen={isSidebarOpen} user={user} onClose={() => setIsSidebarOpen(false)} />
+        <Sidebar
+          isOpen={isSidebarOpen}
+          isCollapsed={isSidebarCollapsed}
+          user={user}
+          onClose={() => setIsSidebarOpen(false)}
+        />
 
         {/* Main Content — min-w-0 lets it shrink with the window instead of overflowing it */}
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Header */}
           <Header
             user={user}
-            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            onToggleSidebar={toggleSidebar}
+            isSidebarCollapsed={isSidebarCollapsed}
+            isSidebarOpen={isSidebarOpen}
           />
 
           {/* Content Area */}
