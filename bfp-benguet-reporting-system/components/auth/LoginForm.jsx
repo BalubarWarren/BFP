@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import BFPCrest from '../common/BFPCrest';
 import GoogleSignInButton from './GoogleSignInButton';
 import ForgotPasswordForm from './ForgotPasswordForm';
+import GoogleAccountWarningModal from './GoogleAccountWarningModal';
 
 export default function LoginForm({
   email,
@@ -22,6 +23,9 @@ export default function LoginForm({
   showForgotPassword,
   openForgotPassword,
   closeForgotPassword,
+  googleWarning,
+  closeGoogleWarning,
+  switchToPasswordLogin,
 }) {
   // The password field is already mounted when Google fills in the account, so autoFocus
   // wouldn't fire — move the cursor there explicitly instead.
@@ -152,6 +156,14 @@ export default function LoginForm({
           )}
         </div>
       </div>
+
+      {googleWarning && (
+        <GoogleAccountWarningModal
+          warning={googleWarning}
+          onClose={closeGoogleWarning}
+          onUsePassword={switchToPasswordLogin}
+        />
+      )}
     </div>
   );
 }

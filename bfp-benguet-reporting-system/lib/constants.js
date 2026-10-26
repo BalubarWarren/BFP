@@ -310,6 +310,8 @@ export const NOTIFICATION_TYPES = {
   REPORT_DEADLINE_WARNING: 'REPORT_DEADLINE_WARNING',
   DIRECTIVE_RECEIVED: 'DIRECTIVE_RECEIVED',
   DIRECTIVE_UPDATED: 'DIRECTIVE_UPDATED',
+  // To admins: someone without an (active) account asked for access from the login page.
+  ACCESS_REQUEST: 'ACCESS_REQUEST',
 };
 
 // Messages and report assignments a Municipal Fire Marshal sends to the investigators of their

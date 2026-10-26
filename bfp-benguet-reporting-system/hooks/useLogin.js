@@ -17,6 +17,9 @@ export function useLogin() {
   const [googleUser, setGoogleUser] = useState(null);
   // "Forgot password?" swaps the sign-in form for components/auth/ForgotPasswordForm.jsx.
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  // Set when Google picked an account that can't use FireTrack — drives
+  // components/auth/GoogleAccountWarningModal.jsx. Keeps the credential for "Request Access".
+  const [googleWarning, setGoogleWarning] = useState(null);
 
   const toggleShowPassword = () => setShowPassword((prev) => !prev);
 
@@ -78,10 +81,25 @@ export function useLogin() {
       setGoogleUser({ email: response.data.email, name: response.data.name });
       setPassword('');
     } catch (err) {
-      setError(err.response?.data?.error || 'Google sign-in failed. Please try again.');
+      const data = err.response?.data;
+      if (data?.code) {
+        setGoogleWarning({ code: data.code, email: data.email, name: data.name, credential });
+      } else {
+        setError(data?.error || 'Google sign-in failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const closeGoogleWarning = () => setGoogleWarning(null);
+
+  // "Use Email & Password" in the warning — back to the normal form with the email box empty.
+  const switchToPasswordLogin = () => {
+    setGoogleWarning(null);
+    setGoogleUser(null);
+    setEmail('');
+    setPassword('');
   };
 
   const openForgotPassword = () => {
@@ -124,5 +142,8 @@ export function useLogin() {
     showForgotPassword,
     openForgotPassword,
     closeForgotPassword,
+    googleWarning,
+    closeGoogleWarning,
+    switchToPasswordLogin,
   };
 }
