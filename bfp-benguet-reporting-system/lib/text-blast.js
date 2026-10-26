@@ -1,8 +1,10 @@
 // The Text Blast page (app/(dashboard)/municipal/reports/text-blast) is a small Word-like editor
 // that starts with this template typed in. Its content is sent as `lines`: each line is a list of
-// text runs, and each run says whether it's bold, blue or highlighted — a structured format rather
+// text runs, and each run says whether it's bold or blue — a structured format rather
 // than HTML, so nothing an investigator types can be rendered as markup for the recipients.
-//   lines: [[{ t: 'Fire Station: ' }, { t: 'La Trinidad', c: 'blue', h: true, b: true }], ...]
+//   lines: [[{ t: 'Fire Station: ' }, { t: 'La Trinidad', c: 'blue', b: true }], ...]
+// (Highlighting was offered briefly; `h: true` runs from that time still display, but new blasts
+// can't set it.)
 
 export const TEXT_BLAST_TEMPLATE_LABELS = [
   'Fire Station',
@@ -71,10 +73,9 @@ export function cleanTextBlastLines(lines) {
         t: text,
         ...(run.b ? { b: true } : {}),
         ...(run.c === 'blue' ? { c: 'blue' } : {}),
-        ...(run.h ? { h: true } : {}),
       };
       const previous = runs[runs.length - 1];
-      if (previous && !!previous.b === !!clean.b && previous.c === clean.c && !!previous.h === !!clean.h) {
+      if (previous && !!previous.b === !!clean.b && previous.c === clean.c) {
         previous.t += clean.t;
       } else {
         runs.push(clean);

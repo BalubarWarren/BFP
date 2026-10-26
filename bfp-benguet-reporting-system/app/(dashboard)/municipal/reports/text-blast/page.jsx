@@ -56,7 +56,7 @@ const toTemplate = (lines) =>
 
 // A quick text message to the officers the investigator picks — separate from the report forms,
 // since it isn't a report itself. Recipients get it as an in-app notification and an email, with
-// the bold/blue/highlight formatting kept (see lib/text-blast.js).
+// the bold/blue formatting kept (see lib/text-blast.js).
 export default function TextBlastPage() {
   const toast = useToast();
   const editorRef = useRef(null);
@@ -181,8 +181,8 @@ export default function TextBlastPage() {
           </div>
           <p className="text-xs text-gray-500 mb-3">
             Type after each colon, and delete or add lines as needed. Lines left blank after the colon aren&rsquo;t
-            sent. Select text to make it <strong>bold</strong>, <span className="font-semibold text-blue-700">blue</span>{' '}
-            or <span className="bg-yellow-200 px-0.5">highlighted</span>.
+            sent. Select text to make it <strong>bold</strong> or{' '}
+            <span className="font-semibold text-blue-700">blue</span>.
           </p>
 
           <TextBlastEditor ref={editorRef} initialLines={initialLines} onChange={setLines} />

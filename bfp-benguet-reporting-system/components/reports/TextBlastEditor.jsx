@@ -1,8 +1,8 @@
 'use client';
 
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { Bold, Highlighter, Eraser } from 'lucide-react';
-import { TEXT_BLAST_BLUE, TEXT_BLAST_HIGHLIGHT } from '../../lib/text-blast';
+import { Bold, Eraser } from 'lucide-react';
+import { TEXT_BLAST_BLUE } from '../../lib/text-blast';
 
 const DEFAULT_TEXT_COLOR = '#374151'; // Tailwind gray-700 — the editor's normal text colour
 
@@ -12,7 +12,6 @@ const toRgb = (hex) => {
   return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
 };
 const BLUE_RGB = toRgb(TEXT_BLAST_BLUE);
-const HIGHLIGHT_RGB = toRgb(TEXT_BLAST_HIGHLIGHT);
 
 const escapeHtml = (text) =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -24,7 +23,6 @@ const runHtml = (run) => {
   const style = [
     run.b && 'font-weight: 700',
     run.c === 'blue' && `color: ${TEXT_BLAST_BLUE}`,
-    run.h && `background-color: ${TEXT_BLAST_HIGHLIGHT}`,
   ].filter(Boolean).join('; ');
   return style ? `<span style="${style}">${text}</span>` : text;
 };
@@ -38,13 +36,6 @@ function readLines(root) {
   const lines = [[]];
   const current = () => lines[lines.length - 1];
 
-  const isHighlighted = (element) => {
-    for (let el = element; el && el !== root; el = el.parentElement) {
-      if (getComputedStyle(el).backgroundColor === HIGHLIGHT_RGB) return true;
-    }
-    return false;
-  };
-
   const walk = (node) => {
     node.childNodes.forEach((child) => {
       if (child.nodeType === Node.TEXT_NODE) {
@@ -55,7 +46,6 @@ function readLines(root) {
           t: text,
           ...(Number(style.fontWeight) >= 600 ? { b: true } : {}),
           ...(style.color === BLUE_RGB ? { c: 'blue' } : {}),
-          ...(isHighlighted(child.parentElement) ? { h: true } : {}),
         });
       } else if (child.nodeName === 'BR') {
         lines.push([]);
@@ -86,8 +76,7 @@ const selectionStyle = () => {
 };
 
 // A small Word-like editor for the text blast: the template is typed in, the investigator writes
-// after each label, deletes or adds lines freely, and selects text to make it bold, blue or
-// highlighted. `ref.current.getLines()` returns the content; `ref.current.setLines(lines)` loads.
+// after each label, deletes or adds lines freely, and selects text to make it bold or blue. `ref.current.getLines()` returns the content; `ref.current.setLines(lines)` loads.
 const TextBlastEditor = forwardRef(function TextBlastEditor({ initialLines, onChange }, ref) {
   const editorRef = useRef(null);
 
@@ -112,9 +101,6 @@ const TextBlastEditor = forwardRef(function TextBlastEditor({ initialLines, onCh
     editorRef.current.focus();
     if (command === 'blue') {
       exec('foreColor', selectionStyle()?.color === BLUE_RGB ? DEFAULT_TEXT_COLOR : TEXT_BLAST_BLUE);
-    } else if (command === 'highlight') {
-      const highlighted = selectionStyle()?.backgroundColor === HIGHLIGHT_RGB;
-      exec('backColor', highlighted ? 'transparent' : TEXT_BLAST_HIGHLIGHT);
     } else {
       exec(command);
     }
@@ -130,7 +116,6 @@ const TextBlastEditor = forwardRef(function TextBlastEditor({ initialLines, onCh
   const tools = [
     { command: 'bold', title: 'Bold (Ctrl+B)', icon: <Bold className="w-4 h-4" /> },
     { command: 'blue', title: 'Blue text', icon: <span className="text-base font-bold leading-none" style={{ color: TEXT_BLAST_BLUE }}>A</span> },
-    { command: 'highlight', title: 'Highlight', icon: <Highlighter className="w-4 h-4" />, className: 'bg-yellow-100' },
     { command: 'removeFormat', title: 'Clear formatting', icon: <Eraser className="w-4 h-4" /> },
   ];
 
