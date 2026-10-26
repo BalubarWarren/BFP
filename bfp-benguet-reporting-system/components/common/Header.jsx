@@ -6,6 +6,7 @@ import axios from 'axios';
 import { Bell, Settings } from 'lucide-react';
 import ProfilePanel from './ProfilePanel';
 import MenuButton from './MenuButton';
+import TextBlastFields from './TextBlastFields';
 import SettingsModal from './SettingsModal';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -85,6 +86,7 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
         return {
           message: payload.message || 'Text blast received.',
           note: payload.note || '',
+          fields: Array.isArray(payload.fields) ? payload.fields : [],
           attachments: Array.isArray(payload.attachments) ? payload.attachments : [],
         };
       }
@@ -92,7 +94,7 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
       // Plain notification messages are stored as normal text.
     }
 
-    return { message, note: '', attachments: [] };
+    return { message, note: '', fields: [], attachments: [] };
   };
 
   return (
@@ -154,8 +156,9 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
                         onClick={() => handleMarkAsRead(notif.id)}
                       >
                         <p className="text-sm font-medium text-gray-900">{parsedNotification.message}</p>
+                        <TextBlastFields fields={parsedNotification.fields} className="mt-1" />
                         {parsedNotification.note && (
-                          <p className="text-sm text-gray-600 mt-1">{parsedNotification.note}</p>
+                          <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{parsedNotification.note}</p>
                         )}
                         {parsedNotification.attachments.length > 0 && (
                           <div className="mt-2 space-y-1">

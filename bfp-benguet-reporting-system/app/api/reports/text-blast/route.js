@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { NOTIFICATION_TYPES, ROLES } from '../../../../lib/constants';
-
-const TEXT_BLAST_MAX_LENGTH = 1000;
+import { cleanTextBlastFields, TEXT_BLAST_NOTE_MAX_LENGTH } from '../../../../lib/text-blast';
 
 // The investigator picks any combination of these. The two municipal roles are scoped to the
 // investigator's own municipality; the Provincial Chief IIS covers the whole province.
@@ -32,17 +31,23 @@ export async function POST(request) {
     // Text blasts are text-only — no file attachments.
     const body = await request.json().catch(() => ({}));
     const note = String(body?.message || '').trim();
+    // The filled-in lines of the page's template (see lib/text-blast.js); empty ones are dropped.
+    const fields = cleanTextBlastFields(body?.fields);
 
-    if (!note) {
+    if (fields === null) {
+      return NextResponse.json({ error: 'Invalid text blast fields' }, { status: 400 });
+    }
+
+    if (!note && !fields.length) {
       return NextResponse.json(
-        { error: 'Type a message before sending the text blast' },
+        { error: 'Fill in at least one field or type a message before sending the text blast' },
         { status: 400 }
       );
     }
 
-    if (note.length > TEXT_BLAST_MAX_LENGTH) {
+    if (note.length > TEXT_BLAST_NOTE_MAX_LENGTH) {
       return NextResponse.json(
-        { error: `Text blast message must be ${TEXT_BLAST_MAX_LENGTH} characters or fewer` },
+        { error: `Text blast message must be ${TEXT_BLAST_NOTE_MAX_LENGTH} characters or fewer` },
         { status: 400 }
       );
     }
@@ -89,6 +94,7 @@ export async function POST(request) {
       kind: 'TEXT_BLAST',
       message: `Text blast from ${sender.name}${sender.municipality?.name ? ` (${sender.municipality.name})` : ''}.`,
       note,
+      fields,
     };
 
     await prisma.notification.createMany({

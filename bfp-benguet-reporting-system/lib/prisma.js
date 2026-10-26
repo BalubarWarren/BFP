@@ -45,12 +45,16 @@ const readableNotification = (message) => {
   try {
     const payload = JSON.parse(message);
     if (payload?.kind === 'TEXT_BLAST') {
-      return { message: payload.message || 'Text blast received.', note: payload.note || '' };
+      return {
+        message: payload.message || 'Text blast received.',
+        note: payload.note || '',
+        fields: Array.isArray(payload.fields) ? payload.fields : [],
+      };
     }
   } catch {
     // Plain-text notification.
   }
-  return { message, note: '' };
+  return { message, note: '', fields: [] };
 };
 
 // One recipient lookup for the whole batch, and one email per distinct message (recipients in
@@ -75,10 +79,10 @@ async function emailNotifications(client, notifications) {
 
   await Promise.all(
     [...byMessage].map(([rawMessage, emails]) => {
-      const { message, note } = readableNotification(rawMessage);
+      const { message, note, fields } = readableNotification(rawMessage);
       // The site root sends a signed-in user to their own role's dashboard (reviewers don't
       // use /municipal/reports), so it's the one link that works for every recipient.
-      const { subject, html } = notificationEmail({ message, note, reportUrl: APP_URL });
+      const { subject, html } = notificationEmail({ message, note, fields, reportUrl: APP_URL });
       const recipients = [...emails];
       return recipients.length === 1
         ? sendEmail({ to: recipients[0], subject, html })
