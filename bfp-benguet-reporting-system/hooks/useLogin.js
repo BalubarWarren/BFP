@@ -15,6 +15,8 @@ export function useLogin() {
   const [loading, setLoading] = useState(false);
   // Set after "Continue with Google" identifies the account; null while typing an email by hand.
   const [googleUser, setGoogleUser] = useState(null);
+  // "Forgot password?" swaps the sign-in form for components/auth/ForgotPasswordForm.jsx.
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const toggleShowPassword = () => setShowPassword((prev) => !prev);
 
@@ -82,6 +84,22 @@ export function useLogin() {
     }
   };
 
+  const openForgotPassword = () => {
+    setError('');
+    setShowForgotPassword(true);
+  };
+
+  // `resetEmail` is set once a reset succeeded, so the user can sign in straight away with it.
+  const closeForgotPassword = (resetEmail) => {
+    setShowForgotPassword(false);
+    setError('');
+    if (resetEmail) {
+      setGoogleUser(null);
+      setEmail(resetEmail);
+      setPassword('');
+    }
+  };
+
   // "Not you?" — back to typing an email (or choosing a different Google account).
   const clearGoogleUser = () => {
     setGoogleUser(null);
@@ -103,5 +121,8 @@ export function useLogin() {
     handleGoogleCredential,
     googleUser,
     clearGoogleUser,
+    showForgotPassword,
+    openForgotPassword,
+    closeForgotPassword,
   };
 }

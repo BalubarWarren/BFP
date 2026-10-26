@@ -97,3 +97,28 @@ export function notificationEmail({ message, note, reportUrl }) {
     `),
   };
 }
+
+export function passwordResetCodeEmail({ name, code, minutes }) {
+  return {
+    subject: `FireTrack password reset code: ${code}`,
+    html: layout(`
+      <p>Hi ${escapeHtml(name)},</p>
+      <p>Someone asked to reset the password for your FireTrack account. Enter this code on the login page:</p>
+      <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 16px 0;">${escapeHtml(code)}</p>
+      <p>The code expires in ${minutes} minutes and can only be used once.</p>
+      <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">If you didn't ask for this, you can ignore this email — your password stays the same. Never share this code with anyone, including BFP staff.</p>
+    `),
+  };
+}
+
+export function passwordChangedEmail({ name }) {
+  return {
+    subject: 'Your FireTrack password was changed',
+    html: layout(`
+      <p>Hi ${escapeHtml(name)},</p>
+      <p>The password for your FireTrack account was just reset using a code sent to this email address.</p>
+      <p><a href="${APP_URL}/login" style="display: inline-block; background: #1A2B4A; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">Log In</a></p>
+      <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">If this wasn't you, contact your administrator right away.</p>
+    `),
+  };
+}

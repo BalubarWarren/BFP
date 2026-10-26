@@ -53,6 +53,7 @@ model User {
   annotations        Annotation[]
   directivesSent     Directive[]    @relation("DirectiveSender")
   directivesReceived Directive[]    @relation("DirectiveRecipient")
+  passwordResetCodes PasswordResetCode[]
 
   // Matches how /api/reports resolves the recipient for a role within a municipality
   @@index([role, municipalityId])
@@ -289,4 +290,22 @@ model TrashItem {
   @@index([deletedAt])
   @@index([expiresAt])
   @@map("trash_items")
+}
+
+// A 6-digit "Forgot password?" code emailed from the login page (POST /api/auth/forgot-password)
+// and redeemed by POST /api/auth/reset-password. Only a bcrypt hash of the code is stored. Attempts
+// are counted here rather than in lib/rate-limit.js's in-memory map, which is per Vercel instance —
+// a 6-digit code needs a hard cap on guesses, not a best-effort one.
+model PasswordResetCode {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash  String
+  attempts  Int       @default(0)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+  @@map("password_reset_codes")
 }

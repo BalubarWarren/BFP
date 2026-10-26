@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import BFPCrest from '../common/BFPCrest';
 import GoogleSignInButton from './GoogleSignInButton';
+import ForgotPasswordForm from './ForgotPasswordForm';
 
 export default function LoginForm({
   email,
@@ -18,6 +19,9 @@ export default function LoginForm({
   handleGoogleCredential,
   googleUser,
   clearGoogleUser,
+  showForgotPassword,
+  openForgotPassword,
+  closeForgotPassword,
 }) {
   // The password field is already mounted when Google fills in the account, so autoFocus
   // wouldn't fire — move the cursor there explicitly instead.
@@ -43,92 +47,107 @@ export default function LoginForm({
 
         {/* Card */}
         <div className="card card-accent-gold shadow-2xl">
-          <h2 className="text-2xl font-bold text-bfp-navy mb-6">Sign In</h2>
-
-          {error && (
-            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-            {googleUser ? (
-              // Google already identified the account — only the system password is left to enter.
-              <div className="form-group">
-                <label className="form-label">Account</label>
-                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2">
-                  <div className="min-w-0">
-                    {googleUser.name && <p className="font-semibold text-bfp-navy truncate">{googleUser.name}</p>}
-                    <p className="text-sm text-gray-600 truncate">{googleUser.email}</p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={clearGoogleUser}
-                    className="shrink-0 text-sm font-medium text-bfp-navy hover:underline"
-                  >
-                    Not you?
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-1">
-                  Enter the FireTrack password given by your administrator (not your Google password).
-                </p>
-              </div>
-            ) : (
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                  type="email"
-                  className="form-input"
-                  placeholder="your.email@bfp-benguet.gov.ph"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-            )}
-
-            <div className="form-group">
-              <label className="form-label">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="form-input pr-10"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  ref={passwordRef}
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={toggleShowPassword}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-bfp-navy"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn btn-primary w-full mb-4"
-            >
-              {loading ? 'Signing in...' : 'Sign In'}
-            </button>
-          </form>
-
-          {/* Matches GoogleSignInButton's own check (it renders nothing without a configured
-              client ID) — otherwise this "or" divider would show with nothing below it. */}
-          {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && !googleUser && (
+          {showForgotPassword ? (
+            <ForgotPasswordForm initialEmail={googleUser?.email || email} onBack={closeForgotPassword} />
+          ) : (
             <>
-              <div className="flex items-center gap-3 my-2">
-                <div className="h-px flex-1 bg-gray-200" />
-                <span className="text-xs font-medium uppercase tracking-wide text-gray-400">or</span>
-                <div className="h-px flex-1 bg-gray-200" />
-              </div>
-              <GoogleSignInButton onCredential={handleGoogleCredential} />
+              <h2 className="text-2xl font-bold text-bfp-navy mb-6">Sign In</h2>
+
+              {error && (
+                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleSubmit}>
+                {googleUser ? (
+                  // Google already identified the account — only the system password is left to enter.
+                  <div className="form-group">
+                    <label className="form-label">Account</label>
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2">
+                      <div className="min-w-0">
+                        {googleUser.name && <p className="font-semibold text-bfp-navy truncate">{googleUser.name}</p>}
+                        <p className="text-sm text-gray-600 truncate">{googleUser.email}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={clearGoogleUser}
+                        className="shrink-0 text-sm font-medium text-bfp-navy hover:underline"
+                      >
+                        Not you?
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Enter the FireTrack password given by your administrator (not your Google password).
+                    </p>
+                  </div>
+                ) : (
+                  <div className="form-group">
+                    <label className="form-label">Email Address</label>
+                    <input
+                      type="email"
+                      className="form-input"
+                      placeholder="your.email@bfp-benguet.gov.ph"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+
+                <div className="form-group">
+                  <div className="flex items-center justify-between">
+                    <label className="form-label">Password</label>
+                    <button
+                      type="button"
+                      onClick={openForgotPassword}
+                      className="text-sm font-medium text-bfp-navy hover:underline mb-1"
+                    >
+                      Forgot password?
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      className="form-input pr-10"
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      ref={passwordRef}
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={toggleShowPassword}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-bfp-navy"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="btn btn-primary w-full mb-4"
+                >
+                  {loading ? 'Signing in...' : 'Sign In'}
+                </button>
+              </form>
+
+              {/* Matches GoogleSignInButton's own check (it renders nothing without a configured
+                  client ID) — otherwise this "or" divider would show with nothing below it. */}
+              {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && !googleUser && (
+                <>
+                  <div className="flex items-center gap-3 my-2">
+                    <div className="h-px flex-1 bg-gray-200" />
+                    <span className="text-xs font-medium uppercase tracking-wide text-gray-400">or</span>
+                    <div className="h-px flex-1 bg-gray-200" />
+                  </div>
+                  <GoogleSignInButton onCredential={handleGoogleCredential} />
+                </>
+              )}
             </>
           )}
         </div>
