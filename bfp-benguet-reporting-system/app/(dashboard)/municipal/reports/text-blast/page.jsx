@@ -12,6 +12,7 @@ import {
   TEXT_BLAST_MAX_CHARACTERS,
   lineText,
   isUnfilledTemplateLine,
+  sentCharacterCount,
 } from '../../../../../lib/text-blast';
 
 // Matches TEXT_BLAST_RECIPIENT_ROLES in POST /api/reports/text-blast.
@@ -66,7 +67,8 @@ export default function TextBlastPage() {
   // Read lazily so the server render (no localStorage) and the first client render agree.
   const [initialLines] = useState(() => (typeof window === 'undefined' ? TEXT_BLAST_TEMPLATE_LINES : loadTemplate()));
 
-  const characters = lines.reduce((total, line) => total + lineText(line).length, 0);
+  // Only what will be sent counts — unfilled template lines don't (see lib/text-blast.js).
+  const characters = sentCharacterCount(lines);
   const hasContent = lines.some((line) => lineText(line).trim() && !isUnfilledTemplateLine(line));
 
   const toggleRole = (role) => {

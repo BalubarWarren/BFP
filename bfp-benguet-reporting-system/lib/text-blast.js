@@ -46,14 +46,21 @@ export const lineText = (line) => line.map((run) => run.t).join('');
 // A template line nobody filled in ("Fire Station:" with nothing after it) means "not applicable".
 export const isUnfilledTemplateLine = (line) => /^[^:]*:\s*$/.test(lineText(line));
 
+// What counts toward TEXT_BLAST_MAX_CHARACTERS: only the lines that will actually be sent, so the
+// page's counter starts near 0 instead of at the length of all the template labels.
+export const sentCharacterCount = (lines) =>
+  lines.reduce((total, line) => (isUnfilledTemplateLine(line) ? total : total + lineText(line).length), 0);
+
 // Validates and normalises `lines` from the request. Returns null when the shape is wrong or the
-// content is too long, so the API can reject it. Unfilled template lines and trailing blank lines
+// content to be sent is too long, so the API can reject it. Unfilled template lines and trailing blank lines
 // are dropped; adjacent runs with the same formatting are merged.
 export function cleanTextBlastLines(lines) {
   if (!Array.isArray(lines) || lines.length > TEXT_BLAST_MAX_LINES) return null;
 
   const cleaned = [];
-  let characters = 0;
+  // A loose cap on everything received (unfilled template lines included), so an oversized
+  // request is rejected before any further work; the real limit is checked on what's sent below.
+  let receivedCharacters = 0;
   for (const line of lines) {
     if (!Array.isArray(line) || line.length > MAX_RUNS_PER_LINE) return null;
     const runs = [];
@@ -72,15 +79,16 @@ export function cleanTextBlastLines(lines) {
       } else {
         runs.push(clean);
       }
-      characters += text.length;
+      receivedCharacters += text.length;
     }
-    if (characters > TEXT_BLAST_MAX_CHARACTERS) return null;
+    if (receivedCharacters > TEXT_BLAST_MAX_CHARACTERS * 3) return null;
     if (runs.length && isUnfilledTemplateLine(runs)) continue;
     cleaned.push(runs);
   }
 
   while (cleaned.length && !lineText(cleaned[cleaned.length - 1]).trim()) cleaned.pop();
   while (cleaned.length && !lineText(cleaned[0]).trim()) cleaned.shift();
+  if (sentCharacterCount(cleaned) > TEXT_BLAST_MAX_CHARACTERS) return null;
   return cleaned;
 }
 
