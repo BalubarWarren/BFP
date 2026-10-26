@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { NOTIFICATION_TYPES, ROLES } from '../../../../lib/constants';
-import { cleanTextBlastFields, TEXT_BLAST_NOTE_MAX_LENGTH } from '../../../../lib/text-blast';
+import { cleanTextBlastLines, TEXT_BLAST_MAX_CHARACTERS } from '../../../../lib/text-blast';
 
 // The investigator picks any combination of these. The two municipal roles are scoped to the
 // investigator's own municipality; the Provincial Chief IIS covers the whole province.
@@ -30,24 +30,20 @@ export async function POST(request) {
 
     // Text blasts are text-only — no file attachments.
     const body = await request.json().catch(() => ({}));
-    const note = String(body?.message || '').trim();
-    // The filled-in lines of the page's template (see lib/text-blast.js); empty ones are dropped.
-    const fields = cleanTextBlastFields(body?.fields);
+    // The editor's content as formatted text runs (see lib/text-blast.js) — template lines left
+    // unfilled are dropped there.
+    const lines = cleanTextBlastLines(body?.lines);
 
-    if (fields === null) {
-      return NextResponse.json({ error: 'Invalid text blast fields' }, { status: 400 });
-    }
-
-    if (!note && !fields.length) {
+    if (lines === null) {
       return NextResponse.json(
-        { error: 'Fill in at least one field or type a message before sending the text blast' },
+        { error: `Text blast message must be ${TEXT_BLAST_MAX_CHARACTERS} characters or fewer` },
         { status: 400 }
       );
     }
 
-    if (note.length > TEXT_BLAST_NOTE_MAX_LENGTH) {
+    if (!lines.length) {
       return NextResponse.json(
-        { error: `Text blast message must be ${TEXT_BLAST_NOTE_MAX_LENGTH} characters or fewer` },
+        { error: 'Fill in the template or type a message before sending the text blast' },
         { status: 400 }
       );
     }
@@ -93,8 +89,7 @@ export async function POST(request) {
     const payload = {
       kind: 'TEXT_BLAST',
       message: `Text blast from ${sender.name}${sender.municipality?.name ? ` (${sender.municipality.name})` : ''}.`,
-      note,
-      fields,
+      lines,
     };
 
     await prisma.notification.createMany({

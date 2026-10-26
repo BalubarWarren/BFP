@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { TEXT_BLAST_BLUE, TEXT_BLAST_HIGHLIGHT } from './text-blast.js';
 
 // Sent through a Gmail account's SMTP (free, ~500 emails/day) using a Google App Password —
 // no owned domain required, unlike Resend. GMAIL_APP_PASSWORD is the 16-char App Password,
@@ -86,31 +87,33 @@ export function welcomeAccountEmail({ name, email, password, roleLabel }) {
   };
 }
 
-// A text blast's template lines, styled like the in-app view (components/common/TextBlastFields.jsx):
-// blue text, or a yellow highlighter background.
-const TEXT_BLAST_FIELD_STYLES = {
-  blue: 'color: #1d4ed8;',
-  highlight: 'background: #fef08a; padding: 0 4px; border-radius: 3px;',
-};
+// A text blast's formatted lines (lib/text-blast.js), styled like the in-app view
+// (components/common/TextBlastContent.jsx). Only the three known styles are ever emitted, and all
+// text is escaped.
+const textBlastRunCss = (run) =>
+  [
+    run.b && 'font-weight: bold;',
+    run.c === 'blue' && `color: ${TEXT_BLAST_BLUE};`,
+    run.h && `background: ${TEXT_BLAST_HIGHLIGHT};`,
+  ].filter(Boolean).join(' ');
 
-function textBlastFieldsHtml(fields) {
-  if (!fields?.length) return '';
-  const rows = fields
-    .map(
-      (field) =>
-        `<div style="margin: 2px 0; ${TEXT_BLAST_FIELD_STYLES[field.style] || ''}"><strong>${escapeHtml(field.label)}:</strong> ${escapeHtml(field.value)}</div>`
-    )
+function textBlastLinesHtml(lines) {
+  if (!lines?.length) return '';
+  const rows = lines
+    .map((line) => {
+      const runs = line.map((run) => `<span style="${textBlastRunCss(run)}">${escapeHtml(run.t)}</span>`).join('');
+      return `<div style="margin: 2px 0; min-height: 1em;">${runs || '&nbsp;'}</div>`;
+    })
     .join('');
-  return `<div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 12px; border-radius: 6px; margin: 12px 0;">${rows}</div>`;
+  return `<div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 12px; border-radius: 6px; margin: 12px 0; white-space: pre-wrap;">${rows}</div>`;
 }
 
-export function notificationEmail({ message, note, fields, reportUrl }) {
+export function notificationEmail({ message, lines, reportUrl }) {
   return {
     subject: 'FireTrack — New Notification',
     html: layout(`
       <p>${escapeHtml(message)}</p>
-      ${textBlastFieldsHtml(fields)}
-      ${note ? `<p style="white-space: pre-wrap; background: #f3f4f6; padding: 12px; border-radius: 6px;">${escapeHtml(note)}</p>` : ''}
+      ${textBlastLinesHtml(lines)}
       ${reportUrl ? `<p><a href="${reportUrl}" style="display: inline-block; background: #1A2B4A; color: #fff; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: bold;">View in System</a></p>` : ''}
       <p style="color: #9ca3af; font-size: 12px; margin-top: 24px;">You're receiving this because you have an account on FireTrack, the BFP Benguet fire incident report tracking system.</p>
     `),

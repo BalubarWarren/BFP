@@ -6,7 +6,8 @@ import axios from 'axios';
 import { Bell, Settings } from 'lucide-react';
 import ProfilePanel from './ProfilePanel';
 import MenuButton from './MenuButton';
-import TextBlastFields from './TextBlastFields';
+import TextBlastContent from './TextBlastContent';
+import { textBlastLinesFromPayload } from '../../lib/text-blast';
 import SettingsModal from './SettingsModal';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -85,8 +86,7 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
       if (payload?.kind === 'TEXT_BLAST') {
         return {
           message: payload.message || 'Text blast received.',
-          note: payload.note || '',
-          fields: Array.isArray(payload.fields) ? payload.fields : [],
+          lines: textBlastLinesFromPayload(payload),
           attachments: Array.isArray(payload.attachments) ? payload.attachments : [],
         };
       }
@@ -94,7 +94,7 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
       // Plain notification messages are stored as normal text.
     }
 
-    return { message, note: '', fields: [], attachments: [] };
+    return { message, lines: [], attachments: [] };
   };
 
   return (
@@ -156,10 +156,7 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
                         onClick={() => handleMarkAsRead(notif.id)}
                       >
                         <p className="text-sm font-medium text-gray-900">{parsedNotification.message}</p>
-                        <TextBlastFields fields={parsedNotification.fields} className="mt-1" />
-                        {parsedNotification.note && (
-                          <p className="text-sm text-gray-600 mt-1 whitespace-pre-wrap">{parsedNotification.note}</p>
-                        )}
+                        <TextBlastContent lines={parsedNotification.lines} className="mt-1" />
                         {parsedNotification.attachments.length > 0 && (
                           <div className="mt-2 space-y-1">
                             {parsedNotification.attachments.map((attachment) => (
