@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import BFPCrest from '../common/BFPCrest';
 import GoogleSignInButton from './GoogleSignInButton';
@@ -15,7 +16,16 @@ export default function LoginForm({
   loading,
   handleSubmit,
   handleGoogleCredential,
+  googleUser,
+  clearGoogleUser,
 }) {
+  // The password field is already mounted when Google fills in the account, so autoFocus
+  // wouldn't fire — move the cursor there explicitly instead.
+  const passwordRef = useRef(null);
+  useEffect(() => {
+    if (googleUser) passwordRef.current?.focus();
+  }, [googleUser]);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-bfp-navy via-bfp-navy to-black px-4 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-1.5 hazard-trim" />
@@ -42,17 +52,40 @@ export default function LoginForm({
           )}
 
           <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Email Address</label>
-              <input
-                type="email"
-                className="form-input"
-                placeholder="your.email@bfp-benguet.gov.ph"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+            {googleUser ? (
+              // Google already identified the account — only the system password is left to enter.
+              <div className="form-group">
+                <label className="form-label">Account</label>
+                <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2">
+                  <div className="min-w-0">
+                    {googleUser.name && <p className="font-semibold text-bfp-navy truncate">{googleUser.name}</p>}
+                    <p className="text-sm text-gray-600 truncate">{googleUser.email}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearGoogleUser}
+                    className="shrink-0 text-sm font-medium text-bfp-navy hover:underline"
+                  >
+                    Not you?
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Enter the FireTrack password given by your administrator (not your Google password).
+                </p>
+              </div>
+            ) : (
+              <div className="form-group">
+                <label className="form-label">Email Address</label>
+                <input
+                  type="email"
+                  className="form-input"
+                  placeholder="your.email@bfp-benguet.gov.ph"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+            )}
 
             <div className="form-group">
               <label className="form-label">Password</label>
@@ -63,6 +96,7 @@ export default function LoginForm({
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  ref={passwordRef}
                   required
                 />
                 <button
@@ -87,7 +121,7 @@ export default function LoginForm({
 
           {/* Matches GoogleSignInButton's own check (it renders nothing without a configured
               client ID) — otherwise this "or" divider would show with nothing below it. */}
-          {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+          {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && !googleUser && (
             <>
               <div className="flex items-center gap-3 my-2">
                 <div className="h-px flex-1 bg-gray-200" />

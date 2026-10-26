@@ -37,8 +37,12 @@ const CSP = [
   // creation is blocked. Both paths need to be allowed or the PDF viewer breaks: script-src
   // needs unpkg.com for the fallback, worker-src needs both unpkg.com and blob: for the normal
   // path.
-  `script-src 'self' 'unsafe-inline' ${PDFJS_CDN_ORIGIN} ${GOOGLE_IDENTITY_ORIGIN}`,
-  "style-src 'self' 'unsafe-inline'",
+  // 'unsafe-eval' in development only — `next dev` evaluates its hot-reload bundles as strings,
+  // so without it the page never hydrates locally (no React at all). Production builds don't.
+  `script-src 'self' 'unsafe-inline' ${PDFJS_CDN_ORIGIN} ${GOOGLE_IDENTITY_ORIGIN}` +
+    (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
+  // Google Identity Services loads its button stylesheet from accounts.google.com/gsi/style.
+  `style-src 'self' 'unsafe-inline' ${GOOGLE_IDENTITY_ORIGIN}/gsi/style`,
   "img-src 'self' data:" + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
   "font-src 'self'",
   `connect-src 'self' ${PDFJS_CDN_ORIGIN} ${GOOGLE_IDENTITY_ORIGIN}` + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),

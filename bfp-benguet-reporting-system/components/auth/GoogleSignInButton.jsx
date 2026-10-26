@@ -34,7 +34,7 @@ export default function GoogleSignInButton({ onCredential }) {
         theme: 'outline',
         size: 'large',
         width: 320,
-        text: 'signin_with',
+        text: 'continue_with',
       });
     };
 

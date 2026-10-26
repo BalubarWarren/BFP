@@ -13,6 +13,8 @@ export function useLogin() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Set after "Continue with Google" identifies the account; null while typing an email by hand.
+  const [googleUser, setGoogleUser] = useState(null);
 
   const toggleShowPassword = () => setShowPassword((prev) => !prev);
 
@@ -36,6 +38,7 @@ export function useLogin() {
     setEmail('');
     setPassword('');
     setShowPassword(false);
+    setGoogleUser(null);
     const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
     router.push(next || ROLE_HOME_PATH[user.role] || '/provincial');
   };
@@ -59,22 +62,32 @@ export function useLogin() {
     }
   };
 
-  // Called with the signed ID token Google's own "Sign in with Google" button hands back once
-  // someone picks an account (see components/auth/GoogleSignInButton.jsx) — POST
-  // /api/auth/google does the actual verification and account lookup; this just completes the
-  // session the same way a successful password login does.
+  // Called with the signed ID token Google's own button hands back once someone picks an account
+  // (see components/auth/GoogleSignInButton.jsx). POST /api/auth/google verifies it and returns
+  // the matching FireTrack email — this only fills in and locks the email field; the user still
+  // has to enter their admin-set system password, which goes through the normal handleSubmit.
   const handleGoogleCredential = async (credential) => {
     setError('');
     setLoading(true);
 
     try {
       const response = await axios.post('/api/auth/google', { credential });
-      completeLogin(response.data.user, response.data.token);
+      setEmail(response.data.email);
+      setGoogleUser({ email: response.data.email, name: response.data.name });
+      setPassword('');
     } catch (err) {
       setError(err.response?.data?.error || 'Google sign-in failed. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  // "Not you?" — back to typing an email (or choosing a different Google account).
+  const clearGoogleUser = () => {
+    setGoogleUser(null);
+    setEmail('');
+    setPassword('');
+    setError('');
   };
 
   return {
@@ -88,5 +101,7 @@ export function useLogin() {
     loading,
     handleSubmit,
     handleGoogleCredential,
+    googleUser,
+    clearGoogleUser,
   };
 }
