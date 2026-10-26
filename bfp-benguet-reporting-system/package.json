@@ -32,6 +32,7 @@
     "jsonwebtoken": "^9.0.2",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
+    "lottie-web": "5.12.2",
     "lucide-react": "^0.263.1",
     "next": "^13.5.11",
     "nodemailer": "^6.10.1",
