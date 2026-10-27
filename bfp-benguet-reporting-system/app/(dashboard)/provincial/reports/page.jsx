@@ -211,12 +211,15 @@ export default function ProvincialReportsPage() {
                         <td><StatusBadge status={report.status} /></td>
                         <td className="text-sm text-gray-500">{formatDateTime(report.submittedAt)}</td>
                         <td>
-                          <button
-                            onClick={() => openReview(report)}
-                            className="btn btn-primary"
-                          >
-                            Review
-                          </button>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button
+                              onClick={() => openReview(report)}
+                              className="btn btn-primary"
+                            >
+                              Review
+                            </button>
+                            <ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" />
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -257,7 +260,10 @@ export default function ProvincialReportsPage() {
                         <td className="text-sm text-gray-500">{report.reviewedAt ? formatDateTime(report.reviewedAt) : '-'}</td>
                         <td className="text-sm text-gray-600 max-w-xs truncate">{report.remarks || '-'}</td>
                         <td>
-                          <button onClick={() => openReview(report)} className="text-bfp-navy hover:underline text-sm">View</button>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <button onClick={() => openReview(report)} className="text-bfp-navy hover:underline text-sm">View</button>
+                            <ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" />
+                          </div>
                         </td>
                       </tr>
                     ))}

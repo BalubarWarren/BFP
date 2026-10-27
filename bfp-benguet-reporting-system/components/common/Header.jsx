@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { Bell, Settings } from 'lucide-react';
 import ProfilePanel from './ProfilePanel';
@@ -14,7 +13,6 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { clearSession } from '../../lib/session';
 
 export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
-  const router = useRouter();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -30,7 +28,9 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
 
   const handleLogout = () => {
     clearSession();
-    router.push('/login');
+    // A full page load, not a client-side navigation: nothing from the signed-in session stays in
+    // memory, and Back can't return to the dashboard.
+    window.location.replace('/login');
   };
 
   useEffect(() => {

@@ -46,7 +46,7 @@ export default function ReportQrButton({ report, className = 'btn btn-secondary'
         type="button"
         onClick={handleClick}
         disabled={loading}
-        className={`${className} inline-flex items-center justify-center gap-1.5 disabled:opacity-50`}
+        className={`${className} inline-flex items-center justify-center gap-1.5 whitespace-nowrap disabled:opacity-50`}
       >
         <QrCode className="w-4 h-4" /> {loading ? 'Generating…' : 'QR Code'}
       </button>

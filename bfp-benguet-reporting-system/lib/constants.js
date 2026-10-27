@@ -10,7 +10,8 @@ export const GENERAL_CATEGORIES = {
 // chart on the dashboard colors Residential/Non-Residential/Non-Structural/
 // Transport the same way instead of each chart picking its own hex codes.
 export const CATEGORY_CHART_COLORS = {
-  Residential: '#1a3c6e',
+  // Brighter than the brand navy so the bars stay visible on the dark theme too.
+  Residential: '#2563eb',
   'Non-Residential': '#c0392b',
   'Non-Structural': '#e67e22',
   Transport: '#27ae60',

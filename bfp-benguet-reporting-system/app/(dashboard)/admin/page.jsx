@@ -13,6 +13,7 @@ import ReportSearchFilters from '../../../components/reports/ReportSearchFilters
 import { EMPTY_REPORT_FILTERS, matchesReportFilters } from '../../../lib/report-search';
 import { useToast } from '../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError } from '../../../lib/utils';
+import ReportQrButton from '../../../components/reports/ReportQrButton';
 
 export default function AdminDashboard() {
   const toast = useToast();
@@ -232,9 +233,13 @@ export default function AdminDashboard() {
                     >
                       <Eye className="w-3.5 h-3.5" /> View Details
                     </button>
+                    {/* Stops clicks (and the QR modal's own clicks) from also expanding/collapsing the row */}
+                    <span onClick={(e) => e.stopPropagation()}>
+                      <ReportQrButton report={report} className="btn btn-secondary px-3 py-1.5 text-xs" />
+                    </span>
                     <div className="text-left text-xs text-gray-400 sm:text-right">
                       <div>Submitted {formatDateTime(report.submittedAt)}</div>
-                      {report.reviewedAt && <div className="text-green-600">Reviewed {formatDateTime(report.reviewedAt)}</div>}
+                      {report.reviewedAt && <div className="text-green-700">Reviewed {formatDateTime(report.reviewedAt)}</div>}
                     </div>
                     <span className="text-gray-400">{expandedId === report.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</span>
                   </div>

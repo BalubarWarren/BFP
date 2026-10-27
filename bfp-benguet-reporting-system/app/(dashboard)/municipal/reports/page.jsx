@@ -322,6 +322,7 @@ export default function MunicipalReportsPage() {
                           >
                             View
                           </button>
+                          <ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" />
                           <button
                             type="button"
                             onClick={() => setDeleteTarget(report)}
@@ -348,6 +349,7 @@ export default function MunicipalReportsPage() {
                           >
                             View
                           </button>
+                          <ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" />
                           {canDelete(report) && (
                             <button
                               type="button"

@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import {
   LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
@@ -13,11 +12,12 @@ import { APPROVED_REPORTS_PATH, canViewApprovedReports, TRASH_PATH, canViewTrash
 import { clearSession } from '../../lib/session';
 
 export default function Sidebar({ isOpen, isCollapsed, user, onClose, onToggle }) {
-  const router = useRouter();
 
   const handleLogout = () => {
     clearSession();
-    router.push('/login');
+    // A full page load, not a client-side navigation: nothing from the signed-in session stays in
+    // memory, and Back can't return to the dashboard.
+    window.location.replace('/login');
   };
 
   // Every role whose ROLE_HOME_PATH/isRouteAllowedForRole (lib/constants.js) points at

@@ -83,15 +83,21 @@ export async function GET(request) {
         orderBy: { reportDate: 'desc' },
       }),
       // select (not include) — this is polled every 15s by the provincial dashboard across every
-      // Spot/MDFIR report in the period, so it's worth not pulling attachments/respondingUnits/
-      // remarks/etc. that this endpoint never reads; only `content` is kept, for the sub-category
-      // JSON fallback in getReportSubCategory.
+      // Spot/MDFIR report in the period, so it's worth not pulling respondingUnits/remarks/etc.
+      // that this endpoint never reads; `content` is kept for the sub-category JSON fallback in
+      // getReportSubCategory, and attachments/qrToken for the drill-down modals.
       prisma.report.findMany({
         where: {
           ...dateFilter,
           reportType: { in: ['SPOT_INVESTIGATION', 'MDFIR'] },
           category: { not: null },
-          passedToRole: { in: PROVINCIAL_REVIEWER_ROLES },
+          // Reports at the provincial level: still with a provincial reviewer, or already given
+          // final approval (which clears passedToRole/passedToId — without this second case a
+          // report dropped out of the board's counts and drill-downs the moment it was approved).
+          OR: [
+            { passedToRole: { in: PROVINCIAL_REVIEWER_ROLES } },
+            { status: REPORT_STATUS.APPROVED, passedToRole: null, passedToId: null },
+          ],
         },
         select: {
           id: true,
@@ -99,6 +105,10 @@ export async function GET(request) {
           reportDate: true,
           status: true,
           content: true,
+          // Shown in the dashboard's drill-down modals so the provincial office can open the
+          // report's files and QR code straight from there.
+          attachments: true,
+          qrToken: true,
           municipality: { select: { id: true, name: true, code: true } },
           incident: { select: { referenceNumber: true, subCategory: true } },
           submittedBy: { select: { name: true } },
@@ -208,6 +218,8 @@ export async function GET(request) {
         reportDate: report.reportDate,
         status: report.status,
         submittedBy: report.submittedBy?.name || null,
+        attachments: report.attachments,
+        qrToken: report.qrToken,
       });
     });
 

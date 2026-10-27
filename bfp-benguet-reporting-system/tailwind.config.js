@@ -4,6 +4,9 @@ module.exports = {
   content: [
     './app/**/*.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
+    // Class names also live in lib/ (e.g. StatusBadge's colours in lib/utils.js) — without this,
+    // Tailwind never generated them and status badges rendered with no background.
+    './lib/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {

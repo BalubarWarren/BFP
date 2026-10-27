@@ -247,6 +247,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                           <td>
                             <div className="flex gap-2 flex-wrap">
                               <button onClick={() => openReview(report)} className="btn btn-primary">Open</button>
+                              <ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" />
                             </div>
                           </td>
                         </tr>
@@ -275,6 +276,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                         <th>Returned To</th>
                         <th>Reviewed At</th>
                         <th>Remarks</th>
+                        <th>QR</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -287,6 +289,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                           <td>{['RETURNED', 'APPROVED'].includes(report.status) ? (report.submittedBy?.name || '-') : '-'}</td>
                           <td>{report.reviewedAt ? formatDateTime(report.reviewedAt) : '-'}</td>
                           <td className="text-sm text-gray-600">{report.remarks || '-'}</td>
+                          <td><ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" /></td>
                         </tr>
                       ))}
                     </tbody>

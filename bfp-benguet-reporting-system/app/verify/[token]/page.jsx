@@ -129,7 +129,7 @@ export default async function VerifyReportPage({ params }) {
         {/* Branding */}
         <div className="flex flex-col items-center text-center mb-6">
           <BFPCrest size={64} />
-          <p className="mt-2 text-xs font-bold uppercase tracking-widest text-bfp-navy/60">FireTrack</p>
+          <p className="mt-2 text-xs font-bold uppercase tracking-widest text-gray-600">FireTrack</p>
         </div>
 
         <div className="rounded-lg bg-white shadow-md overflow-hidden">
@@ -196,7 +196,7 @@ export default async function VerifyReportPage({ params }) {
                       <span className="flex-1 text-sm font-medium text-bfp-navy truncate">
                         {attachment.name || 'Open file'}
                       </span>
-                      <span className="text-xs font-semibold text-bfp-navy/60">OPEN &rarr;</span>
+                      <span className="text-xs font-semibold text-gray-600">OPEN &rarr;</span>
                     </a>
                   ))}
                 </div>

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { X, MapPin, Flame, HeartPulse, Coins, Inbox, FileSearch, Home, Building2, TreePine, Truck } from 'lucide-react';
 import StatusBadge from '../common/StatusBadge';
+import AttachmentList from '../reports/AttachmentList';
+import ReportQrButton from '../reports/ReportQrButton';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const CATEGORY_META = [
@@ -69,7 +71,7 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
               <MapPin className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{periodLabel}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-600">{periodLabel}</p>
               <h2 className="text-2xl font-bold leading-tight text-bfp-navy">{row?.municipality}</h2>
               {total > 0 && <p className="text-sm text-gray-600">Ranked #{rank} of {municipalityCount} municipalities</p>}
             </div>
@@ -95,7 +97,7 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
               <div key={label} className={`rounded-xl p-3 ${className}`}>
                 <Icon className="h-4 w-4 opacity-70" />
                 <p className="mt-1 truncate text-xl font-bold">{value}</p>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">{label}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">{label}</p>
                 {hint && <p className="text-[10px] text-gray-400">{hint}</p>}
               </div>
             ))}
@@ -223,10 +225,17 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
               </h3>
               <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
                 {filedReports.map((report) => (
-                  <li key={report.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 text-sm">
-                    <span className="font-semibold text-gray-800">{report.referenceNumber || `#${report.id}`}</span>
-                    <span className="text-xs text-gray-500">{new Date(report.reportDate).toLocaleDateString()}</span>
-                    <StatusBadge status={report.status} />
+                  <li key={report.id} className="space-y-2 px-4 py-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="font-semibold text-gray-800">{report.referenceNumber || `#${report.id}`}</span>
+                      <span className="text-xs text-gray-500">{new Date(report.reportDate).toLocaleDateString()}</span>
+                      <StatusBadge status={report.status} />
+                    </div>
+                    {/* The provincial office can open the report's files and QR code from here */}
+                    <div className="flex flex-wrap items-start gap-2">
+                      <AttachmentList attachments={report.attachments} reportId={report.id} />
+                      <ReportQrButton report={report} className="btn btn-secondary px-2.5 py-1.5 text-xs" />
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -159,7 +159,7 @@ export default function TextBlastPage() {
                   className="h-4 w-4"
                 />
                 <span className="font-medium text-gray-900">{label}</span>
-                <span className="ml-auto text-xs text-gray-500">{hint}</span>
+                <span className="ml-auto text-xs text-gray-600">{hint}</span>
               </label>
             ))}
           </div>

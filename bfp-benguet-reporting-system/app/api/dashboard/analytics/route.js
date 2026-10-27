@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
-import { DASHBOARD_VIEWER_ROLES, ROLES } from '../../../../lib/constants';
+import { DASHBOARD_VIEWER_ROLES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { PROVINCIAL_REVIEWER_ROLES } from '../../../../lib/report-access';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -85,7 +85,11 @@ export async function GET(request) {
         where: {
           reportType: { in: ['SPOT_INVESTIGATION', 'MDFIR'] },
           category: { not: null },
-          passedToRole: { in: PROVINCIAL_REVIEWER_ROLES },
+          // Same rule as the monitoring board: at the provincial level, or finally approved.
+          OR: [
+            { passedToRole: { in: PROVINCIAL_REVIEWER_ROLES } },
+            { status: REPORT_STATUS.APPROVED, passedToRole: null, passedToId: null },
+          ],
         },
         select: { reportDate: true, category: true },
       }),

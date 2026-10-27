@@ -45,12 +45,12 @@ export function getStatusColor(status) {
   const colors = {
     DRAFT: 'bg-gray-100 text-gray-800',
     SUBMITTED: 'bg-bfp-amber/20 text-amber-800',
-    APPROVED: 'bg-bfp-green/15 text-bfp-green',
+    APPROVED: 'bg-bfp-green/15 text-green-800',
     RETURNED: 'bg-bfp-red/10 text-bfp-red',
     PENDING: 'bg-bfp-amber/20 text-amber-800',
     ONGOING: 'bg-orange-100 text-orange-800',
     CONTROLLED: 'bg-bfp-amber/20 text-amber-800',
-    EXTINGUISHED: 'bg-bfp-green/15 text-bfp-green',
+    EXTINGUISHED: 'bg-bfp-green/15 text-green-800',
   };
   return colors[status] || 'bg-gray-100 text-gray-800';
 }

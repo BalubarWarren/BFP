@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import PageHeader from '../../../components/common/PageHeader';
 import MunicipalityDetailModal from '../../../components/dashboard/MunicipalityDetailModal';
+import AttachmentList from '../../../components/reports/AttachmentList';
+import ReportQrButton from '../../../components/reports/ReportQrButton';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import { CATEGORY_CHART_COLORS } from '../../../lib/constants';
 import {
@@ -927,7 +929,7 @@ export default function ProvincialDashboard() {
             onClick={() => setCategoryModal(null)}
           >
             <div
-              className="modal-pop-in flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+              className="modal-pop-in flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
@@ -937,7 +939,7 @@ export default function ProvincialDashboard() {
                     <Icon className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-gray-500">{periodLabel}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-gray-600">{periodLabel}</p>
                     <h2 className={`text-2xl font-bold leading-tight ${meta.accent}`}>{label}</h2>
                   </div>
                 </div>
@@ -955,15 +957,15 @@ export default function ProvincialDashboard() {
                 <div className="grid grid-cols-3 gap-3">
                   <div className={`rounded-xl p-3 text-center ${meta.chip}`}>
                     <p className={`text-2xl font-bold ${meta.accent}`}>{total}</p>
-                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Total</p>
+                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">Total</p>
                   </div>
                   <div className="rounded-xl bg-gray-50 p-3 text-center">
                     <p className="text-2xl font-bold text-gray-800">{individualCount}</p>
-                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Filed Reports</p>
+                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">Filed Reports</p>
                   </div>
                   <div className="rounded-xl bg-gray-50 p-3 text-center">
                     <p className="text-2xl font-bold text-gray-800">{tallyCount}</p>
-                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500">Daily Tallies</p>
+                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">Daily Tallies</p>
                   </div>
                 </div>
                 {tallyCount > 0 && (
@@ -1027,6 +1029,8 @@ export default function ProvincialDashboard() {
                             <th>Municipality</th>
                             <th>Date</th>
                             <th>Status</th>
+                            <th>Files</th>
+                            <th>QR</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1036,6 +1040,11 @@ export default function ProvincialDashboard() {
                               <td>{report.municipality}</td>
                               <td>{new Date(report.reportDate).toLocaleDateString()}</td>
                               <td><StatusBadge status={report.status} /></td>
+                              <td>
+                                <AttachmentList attachments={report.attachments} reportId={report.id} />
+                                {!report.attachments && <span className="text-xs text-gray-400">None</span>}
+                              </td>
+                              <td><ReportQrButton report={report} className="btn btn-secondary px-2.5 py-1.5 text-xs" /></td>
                             </tr>
                           ))}
                         </tbody>

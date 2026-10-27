@@ -513,6 +513,7 @@ export default function MunicipalDashboard() {
                           >
                             View
                           </button>
+                          <ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" />
                           {report.status === 'RETURNED' && (
                             <Link href={`/municipal/reports/${report.id}/edit`} className="btn btn-danger text-sm py-1 px-3">
                               Revise

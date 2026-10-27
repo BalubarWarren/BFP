@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import BFPCrest from '../common/BFPCrest';
 import GoogleSignInButton from './GoogleSignInButton';
@@ -34,6 +34,13 @@ export default function LoginForm({
     if (googleUser) passwordRef.current?.focus();
   }, [googleUser]);
 
+  // The browser's password manager would otherwise fill in a saved email/password as soon as the
+  // page loads — so after logging out, the last user's password sat in the form. Browsers don't
+  // autofill read-only fields, so each field starts read-only and unlocks the moment it's focused
+  // (the user can still pick a saved login from the browser's list themselves).
+  const [unlocked, setUnlocked] = useState({ email: false, password: false });
+  const unlock = (field) => () => setUnlocked((current) => (current[field] ? current : { ...current, [field]: true }));
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-bfp-navy via-bfp-navy to-black px-4 relative overflow-hidden">
       <div className="absolute top-0 left-0 right-0 h-1.5 hazard-trim" />
@@ -63,7 +70,7 @@ export default function LoginForm({
                 </div>
               )}
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} autoComplete="off">
                 {googleUser ? (
                   // Google already identified the account — only the system password is left to enter.
                   <div className="form-group">
@@ -94,6 +101,9 @@ export default function LoginForm({
                       placeholder="your.email@bfp-benguet.gov.ph"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="off"
+                      readOnly={!unlocked.email}
+                      onFocus={unlock('email')}
                       required
                     />
                   </div>
@@ -118,6 +128,9 @@ export default function LoginForm({
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       ref={passwordRef}
+                      autoComplete="off"
+                      readOnly={!unlocked.password}
+                      onFocus={unlock('password')}
                       required
                     />
                     <button
