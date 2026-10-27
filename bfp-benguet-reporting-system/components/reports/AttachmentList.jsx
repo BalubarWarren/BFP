@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Highlighter } from 'lucide-react';
+import { FileText, File } from 'lucide-react';
 
 const PdfAnnotator = dynamic(() => import('./PdfAnnotator'), { ssr: false });
 
@@ -65,9 +65,10 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
               <button
                 type="button"
                 onClick={() => setOpenAttachment(attachment)}
+                title={attachment.name}
                 className="btn btn-secondary inline-flex max-w-[12rem] items-center gap-1.5 px-2.5 py-1.5 text-xs"
               >
-                <Highlighter className="w-3.5 h-3.5 flex-shrink-0" />
+                <FileText className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate">{attachment.name}</span>
               </button>
             ) : (
@@ -78,6 +79,7 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
                 title={attachment.name}
                 className="btn btn-secondary inline-flex max-w-[12rem] items-center gap-1.5 px-2.5 py-1.5 text-xs no-underline"
               >
+                <File className="w-3.5 h-3.5 flex-shrink-0" />
                 <span className="truncate">{attachment.name}</span>
               </a>
             )}
