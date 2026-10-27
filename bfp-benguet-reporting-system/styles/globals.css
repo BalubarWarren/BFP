@@ -124,8 +124,10 @@ body {
     }
   }
 
+  /* Brand navy almost disappears against the dark theme's gray surfaces, so primary buttons
+     switch to a clear blue there. */
   .btn-primary {
-    @apply bg-bfp-navy text-white hover:bg-bfp-navy-light;
+    @apply bg-bfp-navy text-white hover:bg-bfp-navy-light dark:bg-blue-700 dark:hover:bg-blue-600;
   }
 
   .btn-secondary {
@@ -514,4 +516,58 @@ html:not(.dark) .text-gray-400 {
 
 .dark .border-amber-300 {
   @apply border-amber-800;
+}
+
+/* Found by scanning every colour class in the app against these overrides: the remaining dark text
+   shades (amber/yellow/orange status text, faded green, and the translucent navy variants like
+   text-bfp-navy/70 that the plain .text-bfp-navy rule above doesn't match) and the light/navy-tint
+   surfaces that would otherwise put light dark-theme text on a light background, or vanish. */
+.dark .text-amber-700,
+.dark .text-amber-600 {
+  @apply text-amber-300;
+}
+
+.dark .text-yellow-700 {
+  @apply text-yellow-300;
+}
+
+.dark .text-orange-700 {
+  @apply text-orange-300;
+}
+
+.dark .text-green-700\/80 {
+  @apply text-green-300/80;
+}
+
+.dark .text-bfp-navy\/70 {
+  @apply text-white/70;
+}
+
+.dark .text-bfp-navy\/50 {
+  @apply text-white/50;
+}
+
+.dark .hover\:text-bfp-navy-light:hover {
+  @apply text-blue-300;
+}
+
+.dark .bg-gray-200 {
+  @apply bg-gray-700;
+}
+
+.dark .hover\:bg-gray-200:hover {
+  @apply bg-gray-600;
+}
+
+.dark .bg-bfp-navy\/5 {
+  @apply bg-white/5;
+}
+
+.dark .bg-bfp-navy\/10 {
+  @apply bg-white/10;
+}
+
+.dark .border-bfp-navy\/15,
+.dark .border-bfp-navy\/20 {
+  @apply border-white/15;
 }

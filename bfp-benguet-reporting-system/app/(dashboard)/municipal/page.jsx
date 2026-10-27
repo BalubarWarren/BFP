@@ -292,10 +292,10 @@ export default function MunicipalDashboard() {
               {/* APPROVED — final approval by Provincial Chief IIS */}
               {isFinallyApproved(selectedReport) && (
                 <div className="bg-bfp-green/10 border-l-4 border-bfp-green p-4 rounded">
-                  <p className="flex items-center gap-1.5 text-sm font-bold text-bfp-green mb-1">
+                  <p className="flex items-center gap-1.5 text-sm font-bold text-green-800 mb-1">
                     <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Approved by {reportDetail?.reviewedBy?.name || 'Reviewer'}
                   </p>
-                  <p className="text-sm text-bfp-green">This report has been given final approval and is ready to pass to the system.</p>
+                  <p className="text-sm text-green-800">This report has been given final approval and is ready to pass to the system.</p>
                 </div>
               )}
 

@@ -368,7 +368,7 @@ export default function ApprovedReportsPage() {
               {(reportDetail?.remarks || selectedReport.remarks) && (
                 <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded">
                   <p className="text-sm font-semibold text-green-700">Approval Remarks</p>
-                  <p className="text-sm text-green-700/80 mt-1">{reportDetail?.remarks || selectedReport.remarks}</p>
+                  <p className="text-sm text-green-800 mt-1">{reportDetail?.remarks || selectedReport.remarks}</p>
                 </div>
               )}
             </div>
