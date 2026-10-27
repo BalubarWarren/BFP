@@ -18,7 +18,7 @@ export function useLogin() {
   // "Forgot password?" swaps the sign-in form for components/auth/ForgotPasswordForm.jsx.
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   // Set when Google picked an account that can't use FireTrack — drives
-  // components/auth/GoogleAccountWarningModal.jsx. Keeps the credential for "Request Access".
+  // components/auth/GoogleAccountWarningModal.jsx. Keeps the Google token for "Request Access".
   const [googleWarning, setGoogleWarning] = useState(null);
 
   const toggleShowPassword = () => setShowPassword((prev) => !prev);
@@ -67,23 +67,23 @@ export function useLogin() {
     }
   };
 
-  // Called with the signed ID token Google's own button hands back once someone picks an account
-  // (see components/auth/GoogleSignInButton.jsx). POST /api/auth/google verifies it and returns
+  // Called with the Google access token the "Continue with Google" button gets once someone picks
+  // an account (see components/auth/GoogleSignInButton.jsx). POST /api/auth/google verifies it and returns
   // the matching FireTrack email — this only fills in and locks the email field; the user still
   // has to enter their admin-set system password, which goes through the normal handleSubmit.
-  const handleGoogleCredential = async (credential) => {
+  const handleGoogleCredential = async (accessToken) => {
     setError('');
     setLoading(true);
 
     try {
-      const response = await axios.post('/api/auth/google', { credential });
+      const response = await axios.post('/api/auth/google', { accessToken });
       setEmail(response.data.email);
       setGoogleUser({ email: response.data.email, name: response.data.name });
       setPassword('');
     } catch (err) {
       const data = err.response?.data;
       if (data?.code) {
-        setGoogleWarning({ code: data.code, email: data.email, name: data.name, credential });
+        setGoogleWarning({ code: data.code, email: data.email, name: data.name, accessToken });
       } else {
         setError(data?.error || 'Google sign-in failed. Please try again.');
       }

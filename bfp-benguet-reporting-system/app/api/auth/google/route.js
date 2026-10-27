@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
-import { verifyGoogleCredential, GOOGLE_ACCOUNT_ERRORS } from '../../../../lib/google-auth';
+import { verifyGoogleAccessToken, GOOGLE_ACCOUNT_ERRORS } from '../../../../lib/google-auth';
 
 // "Continue with Google" only identifies *which* account is signing in — it never logs anyone in
 // by itself and never creates an account. It returns the matching FireTrack email so the login
@@ -9,9 +9,9 @@ import { verifyGoogleCredential, GOOGLE_ACCOUNT_ERRORS } from '../../../../lib/g
 // permission are still assigned by an admin (see POST /api/users).
 export async function POST(request) {
   try {
-    const { credential } = await request.json();
+    const { accessToken } = await request.json();
 
-    const google = await verifyGoogleCredential(credential);
+    const google = await verifyGoogleAccessToken(accessToken);
     if (google.error) {
       return NextResponse.json({ error: google.error }, { status: google.status });
     }

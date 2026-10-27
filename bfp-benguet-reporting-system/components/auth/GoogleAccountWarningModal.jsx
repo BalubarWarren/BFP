@@ -26,7 +26,7 @@ export default function GoogleAccountWarningModal({ warning, onClose, onUsePassw
     setSending(true);
     try {
       const res = await axios.post('/api/auth/google/request-access', {
-        credential: warning.credential,
+        accessToken: warning.accessToken,
         note,
       });
       setResult(res.data.alreadyRequested ? 'already' : 'sent');

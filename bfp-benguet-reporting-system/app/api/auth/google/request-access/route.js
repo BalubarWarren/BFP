@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
 import { ROLES, NOTIFICATION_TYPES } from '../../../../../lib/constants';
-import { verifyGoogleCredential } from '../../../../../lib/google-auth';
+import { verifyGoogleAccessToken } from '../../../../../lib/google-auth';
 import { checkRateLimit, recordFailedAttempt, getClientIp } from '../../../../../lib/rate-limit';
 
 const NOTE_MAX_LENGTH = 300;
@@ -10,7 +10,7 @@ const REPEAT_WINDOW_MS = 24 * 60 * 60 * 1000;
 // "Request Access" in the login page's warning dialog, shown when someone signs in with a Google
 // account that has no active FireTrack account. Notifies every admin (in-app, and by email via the
 // Notification hook in lib/prisma.js) so they can create or reactivate it in User Management —
-// which emails the person their login details. Needs the same Google credential the sign-in just
+// which emails the person their login details. Needs the same Google token the sign-in just
 // produced, so only the real owner of the address can ask on its behalf.
 export async function POST(request) {
   try {
@@ -24,9 +24,9 @@ export async function POST(request) {
     }
     recordFailedAttempt(ipKey);
 
-    const { credential, note } = await request.json();
+    const { accessToken, note } = await request.json();
 
-    const google = await verifyGoogleCredential(credential);
+    const google = await verifyGoogleAccessToken(accessToken);
     if (google.error) {
       return NextResponse.json({ error: google.error }, { status: google.status });
     }
