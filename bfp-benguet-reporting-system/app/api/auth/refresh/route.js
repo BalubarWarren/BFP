@@ -29,6 +29,8 @@ export async function POST(request) {
         rank: user.rank,
         municipalityId: user.municipalityId,
         municipality,
+        googleName: user.googleName,
+        avatarUrl: user.avatarUrl,
       },
     });
   } catch (error) {

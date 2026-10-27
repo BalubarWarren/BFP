@@ -43,7 +43,8 @@ const CSP = [
     (process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''),
   // Google Identity Services loads its button stylesheet from accounts.google.com/gsi/style.
   `style-src 'self' 'unsafe-inline' ${GOOGLE_IDENTITY_ORIGIN}/gsi/style`,
-  "img-src 'self' data:" + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
+  // *.googleusercontent.com: profile photos from users' Google accounts (see lib/google-auth.js).
+  "img-src 'self' data: https://*.googleusercontent.com" + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
   "font-src 'self'",
   `connect-src 'self' ${PDFJS_CDN_ORIGIN} ${GOOGLE_IDENTITY_ORIGIN}` + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),
   `frame-src 'self' ${GOOGLE_IDENTITY_ORIGIN}` + (SUPABASE_ORIGIN ? ` ${SUPABASE_ORIGIN}` : ''),

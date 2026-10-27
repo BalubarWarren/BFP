@@ -6,6 +6,8 @@ import { Bell, Settings } from 'lucide-react';
 import ProfilePanel from './ProfilePanel';
 import MenuButton from './MenuButton';
 import TextBlastContent from './TextBlastContent';
+import UserAvatar from './UserAvatar';
+import { displayName, roleTitle } from '../../lib/user-display';
 import { textBlastLinesFromPayload } from '../../lib/text-blast';
 import SettingsModal from './SettingsModal';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
@@ -200,12 +202,10 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
               className="flex items-center gap-2"
               aria-label="Profile"
             >
-              <div className="w-10 h-10 bg-bfp-red rounded-full flex items-center justify-center text-white font-bold">
-                {user?.name?.charAt(0)}
-              </div>
+              <UserAvatar user={user} size={40} />
               <div className="hidden lg:block text-left">
-                <p className="text-sm font-medium text-gray-900">{user?.name}</p>
-                <p className="text-xs text-gray-500">{user?.role?.replace(/_/g, ' ')}</p>
+                <p className="text-sm font-medium text-gray-900">{displayName(user)}</p>
+                <p className="text-xs text-gray-500">{roleTitle(user)}</p>
               </div>
             </button>
 

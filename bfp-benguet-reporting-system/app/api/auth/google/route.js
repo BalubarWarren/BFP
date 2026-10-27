@@ -20,7 +20,7 @@ export async function POST(request) {
     // it with capitals when creating the account.
     const user = await prisma.user.findFirst({
       where: { email: { equals: google.email, mode: 'insensitive' } },
-      select: { email: true, name: true, isActive: true },
+      select: { id: true, email: true, name: true, isActive: true, googleName: true, avatarUrl: true },
     });
 
     // Unlike the password login's deliberately generic "Invalid email or password" (which hides
@@ -41,6 +41,15 @@ export async function POST(request) {
         },
         { status: 403 }
       );
+    }
+
+    // Keep the header's name/photo in step with the Google account (display only — see the
+    // googleName/avatarUrl columns in prisma/schema.prisma).
+    if (user.googleName !== google.name || user.avatarUrl !== google.picture) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { googleName: google.name, avatarUrl: google.picture },
+      });
     }
 
     // No session token here on purpose — the password step at /api/auth/login issues it.

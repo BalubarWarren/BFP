@@ -40,19 +40,26 @@ export async function verifyGoogleAccessToken(accessToken) {
     return { error: 'Google account email is not verified.', status: 401 };
   }
 
-  // tokeninfo has no name — the userinfo endpoint does (best effort; the email is what matters).
+  // tokeninfo has no name or photo — the userinfo endpoint does (best effort; the email is what
+  // matters, these are only used for display).
   let name = null;
+  let picture = null;
   try {
     const profile = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` },
       cache: 'no-store',
     });
-    if (profile.ok) name = (await profile.json()).name || null;
+    if (profile.ok) {
+      const data = await profile.json();
+      name = data.name || null;
+      // Only Google's own image host, so the page never loads a picture from anywhere else.
+      picture = /^https:\/\/[a-z0-9-]+\.googleusercontent\.com\//.test(data.picture || '') ? data.picture : null;
+    }
   } catch {
-    // Name is only used for display.
+    // Display-only.
   }
 
-  return { email: info.email, name };
+  return { email: info.email, name, picture };
 }
 
 // What the login page's warning dialog (components/auth/GoogleAccountWarningModal.jsx) switches on.

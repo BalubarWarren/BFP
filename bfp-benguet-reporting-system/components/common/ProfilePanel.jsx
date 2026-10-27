@@ -1,19 +1,17 @@
 'use client';
 
 import { Mail, ShieldCheck, MapPin, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import UserAvatar from './UserAvatar';
+import { displayName, roleTitle } from '../../lib/user-display';
 
 export default function ProfilePanel({ user, onOpenSettings, onLogout }) {
-  const formattedRole = user?.role?.replace(/_/g, ' ');
-
   return (
     <div className="modal-pop-in fixed inset-x-4 top-16 sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 mt-2 sm:w-80 rounded-lg bg-white shadow-lg z-50 dark:bg-gray-800">
       <div className="flex items-center gap-3 border-b border-gray-200 p-4">
-        <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-bfp-red text-lg font-bold text-white">
-          {user?.name?.charAt(0)}
-        </div>
+        <UserAvatar user={user} size={48} />
         <div className="min-w-0">
-          <p className="truncate font-semibold text-gray-900">{user?.name}</p>
-          <p className="text-xs text-gray-500">{formattedRole}</p>
+          <p className="truncate font-semibold text-gray-900">{displayName(user)}</p>
+          <p className="text-xs text-gray-500">{roleTitle(user)}</p>
         </div>
       </div>
 

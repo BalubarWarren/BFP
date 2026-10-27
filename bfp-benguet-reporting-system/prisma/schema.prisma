@@ -38,6 +38,11 @@ model User {
   // the system right now. isActive only says the account isn't disabled.
   lastSeenAt   DateTime?
   permissions  String? // JSON array of permissions based on role
+  // From the person's Google account, saved each time they use "Continue with Google" (see POST
+  // /api/auth/google) — shown in the header/profile instead of the admin-set name and an initial.
+  // Never used for anything but display; `name` stays the official, admin-managed name.
+  googleName   String?
+  avatarUrl    String?
 
   municipalityId Int?
   municipality   Municipality? @relation(fields: [municipalityId], references: [id], onDelete: SetNull)

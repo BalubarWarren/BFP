@@ -84,6 +84,8 @@ export async function POST(request) {
         rank: user.rank,
         municipalityId: user.municipalityId,
         municipality: user.municipality,
+        googleName: user.googleName,
+        avatarUrl: user.avatarUrl,
       },
       token,
     });

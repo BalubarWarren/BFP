@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
 import MenuButton from './MenuButton';
+import UserAvatar from './UserAvatar';
+import { displayName } from '../../lib/user-display';
 import { APPROVED_REPORTS_PATH, canViewApprovedReports, TRASH_PATH, canViewTrash } from '../../lib/constants';
 import { clearSession } from '../../lib/session';
 
@@ -244,8 +246,13 @@ export default function Sidebar({ isOpen, isCollapsed, user, onClose, onToggle }
           <div className="p-4 border-t border-bfp-gold/30">
             <div className="mb-3 pb-3 border-b border-white/15">
               <p className="text-xs text-white/60">Logged in as</p>
-              <p className="font-semibold text-sm truncate">{user?.name}</p>
-              <p className="text-xs text-white/50">{user?.municipality?.name || 'Provincial'}</p>
+              <div className="mt-1 flex items-center gap-2.5">
+                <UserAvatar user={user} size={32} />
+                <div className="min-w-0">
+                  <p className="font-semibold text-sm truncate">{displayName(user)}</p>
+                  <p className="text-xs text-white/50">{user?.municipality?.name || 'Provincial'}</p>
+                </div>
+              </div>
             </div>
             <button
               onClick={handleLogout}
