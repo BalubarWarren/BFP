@@ -8,6 +8,7 @@ import {
   NOTIFICATION_TYPES,
 } from '../../../lib/constants';
 import { DIRECTIVE_SELECT } from '../../../lib/directives';
+import { DUTY, DUTY_LABELS, dutyStatusOn, nextDutyDate } from '../../../lib/duty';
 
 const MAX_MESSAGE_LENGTH = 2000;
 
@@ -89,10 +90,33 @@ export async function POST(request) {
         municipalityId: user.municipalityId,
         isActive: true,
       },
-      select: { id: true, name: true },
+      select: {
+        id: true, name: true,
+        dutyOverride: true, dutyOverrideUntil: true, dutyOverrideNote: true,
+        dutySchedule: { select: { pattern: true, weekdays: true, rotationStart: true, rotationCycle: true, rotationOnDays: true } },
+      },
     });
     if (!recipient) {
       return NextResponse.json({ error: 'Investigator not found in your municipality' }, { status: 404 });
+    }
+
+    // Being on FireTrack isn't being on duty: an assignment to someone off duty or on leave today
+    // needs the marshal to confirm it (the page asks, then resends with confirmNotOnDuty). Checked
+    // here, not just on the page, so a stale list can't skip it. Plain messages always go through;
+    // with no schedule set, nothing is known, so there's nothing to warn about.
+    if (kind === DIRECTIVE_KINDS.ASSIGNMENT && !body.confirmNotOnDuty) {
+      const duty = dutyStatusOn(recipient, recipient.dutySchedule);
+      if (![DUTY.ON_DUTY, DUTY.NO_SCHEDULE].includes(duty.status)) {
+        return NextResponse.json(
+          {
+            error: `${recipient.name} is ${DUTY_LABELS[duty.status].toLowerCase()} today.`,
+            code: 'RECIPIENT_NOT_ON_DUTY',
+            duty,
+            nextDuty: nextDutyDate(recipient, recipient.dutySchedule),
+          },
+          { status: 409 }
+        );
+      }
     }
 
     const directive = await prisma.directive.create({

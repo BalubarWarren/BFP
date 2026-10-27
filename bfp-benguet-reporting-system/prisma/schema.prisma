@@ -44,6 +44,15 @@ model User {
   googleName   String?
   avatarUrl    String?
 
+  // Investigator's own exception to their duty schedule (see lib/duty.js): "ON_LEAVE",
+  // "UNAVAILABLE" or "ON_DUTY" (called in on a day off), through dutyOverrideUntil — a Manila
+  // calendar date "YYYY-MM-DD", inclusive. Past that date it's ignored and the schedule applies.
+  dutyOverride       String?
+  dutyOverrideUntil  String?
+  dutyOverrideNote   String?
+  dutyOverrideSetAt  DateTime?
+  dutySchedule       DutySchedule? @relation("DutyScheduleUser")
+
   municipalityId Int?
   municipality   Municipality? @relation(fields: [municipalityId], references: [id], onDelete: SetNull)
 
@@ -313,4 +322,24 @@ model PasswordResetCode {
 
   @@index([userId, createdAt])
   @@map("password_reset_codes")
+}
+
+// An investigator's duty schedule, set by their Municipal Fire Marshal on "My Investigators" —
+// what "On duty today" is worked out from (lib/duty.js). Either fixed weekdays, or a rotating
+// shift counted from a day they were on duty (e.g. 24 on / 48 off = cycle 3, on-days 1).
+model DutySchedule {
+  id             Int     @id @default(autoincrement())
+  userId         Int     @unique
+  user           User    @relation("DutyScheduleUser", fields: [userId], references: [id], onDelete: Cascade)
+  pattern        String // "WEEKLY" | "ROTATION"
+  weekdays       String? // WEEKLY: comma-separated days, 0 = Sunday ... 6 = Saturday
+  rotationStart  String? // ROTATION: a Manila date "YYYY-MM-DD" that was an on-duty day
+  rotationCycle  Int? // ROTATION: length of one cycle in days
+  rotationOnDays Int? // ROTATION: how many days at the start of each cycle are on duty
+  updatedById    Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("duty_schedules")
 }

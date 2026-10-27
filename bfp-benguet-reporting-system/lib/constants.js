@@ -313,6 +313,8 @@ export const NOTIFICATION_TYPES = {
   DIRECTIVE_UPDATED: 'DIRECTIVE_UPDATED',
   // To admins: someone without an (active) account asked for access from the login page.
   ACCESS_REQUEST: 'ACCESS_REQUEST',
+  // To the Fire Marshal: an investigator marked themselves on leave/unavailable/called in.
+  DUTY_STATUS_CHANGED: 'DUTY_STATUS_CHANGED',
 };
 
 // Messages and report assignments a Municipal Fire Marshal sends to the investigators of their

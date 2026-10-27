@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { Users, MessageSquare, ClipboardList } from 'lucide-react';
+import { Users, MessageSquare, ClipboardList, CalendarDays, AlertTriangle } from 'lucide-react';
 import PageHeader from '../../../../../components/common/PageHeader';
 import SessionExpiredBanner from '../../../../../components/common/SessionExpiredBanner';
 import TableSkeleton from '../../../../../components/common/TableSkeleton';
@@ -11,6 +11,10 @@ import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 import { formatDateTime, isAuthError } from '../../../../../lib/utils';
 import { ASSIGNABLE_REPORT_TYPES } from '../../../../../lib/constants';
 import { DirectiveStatusBadge, directiveTitle, isOverdue } from '../../../../../components/directives/DirectiveBadges';
+import DutyBadge, { DutyWeek } from '../../../../../components/duty/DutyBadge';
+import DutyScheduleModal from '../../../../../components/duty/DutyScheduleModal';
+import UserAvatar from '../../../../../components/common/UserAvatar';
+import { DUTY, DUTY_LABELS, DUTY_SORT, describeSchedule, formatDutyDate } from '../../../../../lib/duty';
 
 const timeAgo = (date) => {
   if (!date) return 'Never signed in';
@@ -24,6 +28,22 @@ const timeAgo = (date) => {
 
 const emptyForm = { kind: 'MESSAGE', reportType: 'SPOT_INVESTIGATION', dueAt: '', message: '' };
 
+// Off duty, on leave or unavailable today — assigning work needs an explicit "assign anyway".
+const notOnDuty = (duty) => duty && ![DUTY.ON_DUTY, DUTY.NO_SCHEDULE].includes(duty.status);
+
+// The line under the duty badge: why they're in that state, or when they're next on.
+function dutyDetail(investigator) {
+  const { duty, nextDuty } = investigator;
+  if (!duty) return '';
+  if (duty.source === 'self') {
+    const until = duty.until ? `until ${formatDutyDate(duty.until)}` : '';
+    return [duty.status === DUTY.ON_DUTY ? 'Called in' : 'Set by investigator', until, duty.note && `"${duty.note}"`].filter(Boolean).join(' · ');
+  }
+  if (duty.status === DUTY.OFF_DUTY) return nextDuty ? `Next duty: ${formatDutyDate(nextDuty)}` : 'No duty in the next 2 weeks';
+  if (duty.status === DUTY.ON_DUTY) return describeSchedule(investigator.dutySchedule);
+  return '';
+}
+
 export default function MarshalTeamPage() {
   const toast = useToast();
   const [investigators, setInvestigators] = useState([]);
@@ -36,6 +56,10 @@ export default function MarshalTeamPage() {
   const [form, setForm] = useState(emptyForm);
   const [sending, setSending] = useState(false);
   const [filterRecipient, setFilterRecipient] = useState('');
+  const [scheduleTarget, setScheduleTarget] = useState(null);
+  // Set when sending an assignment to someone not on duty — the marshal must tick "assign anyway".
+  const [dutyWarning, setDutyWarning] = useState(null);
+  const [confirmNotOnDuty, setConfirmNotOnDuty] = useState(false);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -79,11 +103,15 @@ export default function MarshalTeamPage() {
   const openCompose = (investigator, kind) => {
     setTarget(investigator);
     setForm({ ...emptyForm, kind });
+    setDutyWarning(notOnDuty(investigator.duty) ? { duty: investigator.duty, nextDuty: investigator.nextDuty } : null);
+    setConfirmNotOnDuty(false);
   };
 
   const closeCompose = () => {
     setTarget(null);
     setForm(emptyForm);
+    setDutyWarning(null);
+    setConfirmNotOnDuty(false);
   };
 
   useEscapeKey(closeCompose, !!target && !sending);
@@ -91,6 +119,10 @@ export default function MarshalTeamPage() {
   const handleSend = async () => {
     if (!form.message.trim()) {
       toast.error(form.kind === 'ASSIGNMENT' ? 'Please enter instructions for this assignment.' : 'Please enter a message.');
+      return;
+    }
+    if (form.kind === 'ASSIGNMENT' && dutyWarning && !confirmNotOnDuty) {
+      toast.error(`Tick "Assign anyway" to assign work to someone who isn't on duty.`);
       return;
     }
     setSending(true);
@@ -104,6 +136,7 @@ export default function MarshalTeamPage() {
           reportType: form.kind === 'ASSIGNMENT' ? form.reportType : null,
           // datetime-local has no zone; converting here sends the marshal's local time as UTC.
           dueAt: form.kind === 'ASSIGNMENT' && form.dueAt ? new Date(form.dueAt).toISOString() : null,
+          confirmNotOnDuty: form.kind === 'ASSIGNMENT' && confirmNotOnDuty,
         },
         { headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` } }
       );
@@ -111,7 +144,14 @@ export default function MarshalTeamPage() {
       closeCompose();
       fetchData({ silent: true });
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to send');
+      // Their duty status changed since this page loaded — show the warning and ask again.
+      if (err.response?.data?.code === 'RECIPIENT_NOT_ON_DUTY') {
+        setDutyWarning({ duty: err.response.data.duty, nextDuty: err.response.data.nextDuty });
+        setConfirmNotOnDuty(false);
+        fetchData({ silent: true });
+      } else {
+        toast.error(err.response?.data?.error || 'Failed to send');
+      }
     } finally {
       setSending(false);
     }
@@ -134,10 +174,13 @@ export default function MarshalTeamPage() {
 
   const visibleInvestigators = investigators
     .filter((investigator) => showInactive || investigator.isActive)
-    // Online first, then most recently seen.
-    .sort((a, b) => (b.isOnline - a.isOnline)
+    // Who can take work today first (on duty), then online, then most recently seen.
+    .sort((a, b) => (Number(!a.isActive) - Number(!b.isActive))
+      || ((DUTY_SORT[a.duty?.status] ?? 9) - (DUTY_SORT[b.duty?.status] ?? 9))
+      || (b.isOnline - a.isOnline)
       || (new Date(b.lastSeenAt || 0) - new Date(a.lastSeenAt || 0)));
   const onlineCount = investigators.filter((investigator) => investigator.isOnline).length;
+  const onDutyCount = investigators.filter((investigator) => investigator.isActive && investigator.duty?.status === DUTY.ON_DUTY).length;
   const activeCount = investigators.filter((investigator) => investigator.isActive).length;
   const filteredDirectives = filterRecipient
     ? directives.filter((directive) => String(directive.recipientId) === filterRecipient)
@@ -149,7 +192,7 @@ export default function MarshalTeamPage() {
         icon={Users}
         eyebrow="Municipal Fire Marshal"
         title="My Investigators"
-        description="See which investigators in your municipality are on the system, send them a message, or assign them a report to prepare. They are notified in-app and by email, and their replies show up below."
+        description="See who is on duty today, set each investigator's duty schedule, and send messages or assign reports. Investigators are notified in-app and by email, and their replies show up below."
       />
 
       {sessionExpired && <SessionExpiredBanner />}
@@ -169,7 +212,7 @@ export default function MarshalTeamPage() {
               <div>
                 <h2 className="text-xl font-bold text-bfp-navy">Investigators</h2>
                 <p className="text-sm text-gray-500">
-                  {onlineCount} online now · {activeCount} active account{activeCount === 1 ? '' : 's'}
+                  <span className="font-semibold text-green-700">{onDutyCount} on duty today</span> · {onlineCount} online now · {activeCount} active account{activeCount === 1 ? '' : 's'}
                 </p>
               </div>
               <label className="flex items-center gap-2 text-sm text-gray-600">
@@ -186,7 +229,8 @@ export default function MarshalTeamPage() {
                   <thead>
                     <tr>
                       <th>Investigator</th>
-                      <th>Status</th>
+                      <th>Duty Today</th>
+                      <th>Online</th>
                       <th>Open Orders</th>
                       <th>Reports Needing Action</th>
                       <th>Actions</th>
@@ -196,16 +240,30 @@ export default function MarshalTeamPage() {
                     {visibleInvestigators.map((investigator) => (
                       <tr key={investigator.id}>
                         <td>
-                          <p className="font-semibold">{investigator.rank ? `${investigator.rank} ` : ''}{investigator.name}</p>
-                          <p className="text-xs text-gray-500">{investigator.email}</p>
+                          <div className="flex items-center gap-3">
+                            <UserAvatar user={investigator} size={36} />
+                            <div className="min-w-0">
+                              <p className="font-semibold">{investigator.rank ? `${investigator.rank} ` : ''}{investigator.name}</p>
+                              <p className="text-xs text-gray-500">{investigator.email}</p>
+                            </div>
+                          </div>
                         </td>
-                        <td>
+                        <td className="min-w-[13rem]">
                           {!investigator.isActive ? (
                             <span className="text-sm text-gray-400">Deactivated</span>
                           ) : (
-                            <span className="flex items-center gap-2 text-sm">
+                            <div className="space-y-1.5">
+                              <DutyBadge status={investigator.duty?.status} />
+                              {dutyDetail(investigator) && <p className="text-xs text-gray-600">{dutyDetail(investigator)}</p>}
+                              <DutyWeek days={investigator.dutyWeek} />
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          {investigator.isActive && (
+                            <span className="flex items-center gap-2 text-sm whitespace-nowrap">
                               <span className={`h-2.5 w-2.5 rounded-full ${investigator.isOnline ? 'bg-bfp-green' : 'bg-gray-300'}`} />
-                              {investigator.isOnline ? 'Online' : `Last seen: ${timeAgo(investigator.lastSeenAt)}`}
+                              {investigator.isOnline ? 'Online' : timeAgo(investigator.lastSeenAt)}
                             </span>
                           )}
                         </td>
@@ -219,6 +277,9 @@ export default function MarshalTeamPage() {
                               </button>
                               <button onClick={() => openCompose(investigator, 'ASSIGNMENT')} className="btn btn-primary flex items-center gap-1">
                                 <ClipboardList className="w-4 h-4" /> Assign Report
+                              </button>
+                              <button onClick={() => setScheduleTarget(investigator)} className="btn btn-secondary flex items-center gap-1">
+                                <CalendarDays className="w-4 h-4" /> Schedule
                               </button>
                             </div>
                           )}
@@ -305,6 +366,27 @@ export default function MarshalTeamPage() {
                 To: <span className="font-semibold text-gray-900">{target.rank ? `${target.rank} ` : ''}{target.name}</span>
               </p>
 
+              {form.kind === 'ASSIGNMENT' && dutyWarning && (
+                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+                  <p className="flex items-center gap-2 font-semibold text-amber-800">
+                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                    {target.name} is {DUTY_LABELS[dutyWarning.duty.status].toLowerCase()} today
+                    {dutyWarning.duty.until ? ` (until ${formatDutyDate(dutyWarning.duty.until)})` : ''}.
+                  </p>
+                  {dutyWarning.duty.note && <p className="mt-1 text-amber-800">Reason: &ldquo;{dutyWarning.duty.note}&rdquo;</p>}
+                  <p className="mt-1 text-gray-700">
+                    {dutyWarning.nextDuty
+                      ? `Their next duty day is ${formatDutyDate(dutyWarning.nextDuty)}. `
+                      : ''}
+                    Consider assigning someone who is on duty.
+                  </p>
+                  <label className="mt-2 flex items-center gap-2 font-medium text-gray-800">
+                    <input type="checkbox" checked={confirmNotOnDuty} onChange={(e) => setConfirmNotOnDuty(e.target.checked)} />
+                    Assign anyway — they will see it when they next open FireTrack
+                  </label>
+                </div>
+              )}
+
               <div className="flex gap-2 flex-wrap">
                 {['MESSAGE', 'ASSIGNMENT'].map((kind) => (
                   <button
@@ -353,12 +435,28 @@ export default function MarshalTeamPage() {
 
             <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
               <button onClick={closeCompose} className="btn btn-secondary" disabled={sending}>Cancel</button>
-              <button onClick={handleSend} className="btn btn-primary" disabled={sending}>
+              <button
+                onClick={handleSend}
+                className="btn btn-primary"
+                disabled={sending || (form.kind === 'ASSIGNMENT' && dutyWarning && !confirmNotOnDuty)}
+              >
                 {sending ? 'Sending...' : form.kind === 'ASSIGNMENT' ? 'Assign' : 'Send'}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {scheduleTarget && (
+        <DutyScheduleModal
+          investigator={scheduleTarget}
+          onClose={() => setScheduleTarget(null)}
+          onSaved={() => {
+            toast.success(`Duty schedule saved for ${scheduleTarget.name}.`);
+            setScheduleTarget(null);
+            fetchData({ silent: true });
+          }}
+        />
       )}
     </div>
   );

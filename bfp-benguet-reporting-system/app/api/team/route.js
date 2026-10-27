@@ -2,9 +2,11 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
 import { getUserFromRequest } from '../../../lib/auth';
 import { ROLES, DIRECTIVE_STATUS, ONLINE_WINDOW_MS } from '../../../lib/constants';
+import { dutyStatusOn, dutyCalendar, nextDutyDate, manilaDate } from '../../../lib/duty';
 
 // The Municipal Fire Marshal's roster: every investigator account in their own municipality, with
-// whether they're on the system right now and how many orders they still have open.
+// whether they're on duty today (lib/duty.js — schedule plus their own leave/unavailable
+// exceptions), whether they're on the system right now, and how many orders they still have open.
 export async function GET(request) {
   try {
     const user = await getUserFromRequest(request);
@@ -18,7 +20,14 @@ export async function GET(request) {
     const [investigators, openCounts, draftCounts] = await Promise.all([
       prisma.user.findMany({
         where: { role: ROLES.INVESTIGATOR, municipalityId: user.municipalityId },
-        select: { id: true, name: true, email: true, rank: true, isActive: true, lastSeenAt: true },
+        select: {
+          id: true, name: true, email: true, rank: true, isActive: true, lastSeenAt: true,
+          googleName: true, avatarUrl: true,
+          dutyOverride: true, dutyOverrideUntil: true, dutyOverrideNote: true, dutyOverrideSetAt: true,
+          dutySchedule: {
+            select: { pattern: true, weekdays: true, rotationStart: true, rotationCycle: true, rotationOnDays: true, updatedAt: true },
+          },
+        },
         orderBy: { name: 'asc' },
       }),
       prisma.directive.groupBy({
@@ -45,11 +54,15 @@ export async function GET(request) {
     const openByUser = Object.fromEntries(openCounts.map((row) => [row.recipientId, row._count._all]));
     const pendingByUser = Object.fromEntries(draftCounts.map((row) => [row.submittedById, row._count._all]));
     const onlineSince = Date.now() - ONLINE_WINDOW_MS;
+    const today = manilaDate();
 
     return NextResponse.json({
       investigators: investigators.map((investigator) => ({
         ...investigator,
         isOnline: investigator.isActive && !!investigator.lastSeenAt && investigator.lastSeenAt.getTime() >= onlineSince,
+        duty: dutyStatusOn(investigator, investigator.dutySchedule, today),
+        dutyWeek: dutyCalendar(investigator, investigator.dutySchedule, 7, today),
+        nextDuty: nextDutyDate(investigator, investigator.dutySchedule, today),
         openDirectives: openByUser[investigator.id] || 0,
         reportsNeedingAction: pendingByUser[investigator.id] || 0,
       })),

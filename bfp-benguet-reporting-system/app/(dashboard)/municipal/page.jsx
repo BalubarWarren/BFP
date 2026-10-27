@@ -17,6 +17,7 @@ import ConfirmDeleteModal from '../../../components/reports/ConfirmDeleteModal';
 import ReportSearchFilters from '../../../components/reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../lib/report-search';
 import InvestigatorDirectives from '../../../components/directives/InvestigatorDirectives';
+import MyDutyStatus from '../../../components/duty/MyDutyStatus';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import ReportQrButton from '../../../components/reports/ReportQrButton';
 
@@ -220,6 +221,8 @@ export default function MunicipalDashboard() {
           <SessionExpiredBanner />
         </div>
       )}
+
+      {!sessionExpired && <MyDutyStatus />}
 
       {!sessionExpired && <InvestigatorDirectives />}
 

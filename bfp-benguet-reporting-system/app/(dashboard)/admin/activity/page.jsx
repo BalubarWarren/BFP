@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { History, CheckCircle2, Undo2, MessageSquare, AlertTriangle, Megaphone, Trash2, ArchiveRestore, XCircle } from 'lucide-react';
+import { History, CheckCircle2, Undo2, MessageSquare, AlertTriangle, Megaphone, Trash2, ArchiveRestore, XCircle, CalendarDays, UserCheck } from 'lucide-react';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import PageHeader from '../../../../components/common/PageHeader';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
@@ -17,7 +17,11 @@ const ACTION_META = {
   TRASH_REPORT: { label: 'Moved to Trash', icon: Trash2, className: 'bg-gray-100 text-gray-800' },
   RESTORE_REPORT: { label: 'Restored', icon: ArchiveRestore, className: 'bg-bfp-green/15 text-bfp-green' },
   PURGE_REPORT: { label: 'Permanently Deleted', icon: XCircle, className: 'bg-bfp-red/10 text-bfp-red' },
+  SET_DUTY_SCHEDULE: { label: 'Duty Schedule', icon: CalendarDays, className: 'bg-bfp-navy/10 text-bfp-navy' },
+  SET_DUTY_STATUS: { label: 'Duty Status', icon: UserCheck, className: 'bg-bfp-navy/10 text-bfp-navy' },
 };
+
+const DUTY_STATUS_LABELS = { ON_LEAVE: 'On Leave', UNAVAILABLE: 'Unavailable', ON_DUTY: 'On Duty (called in)' };
 
 const formatReportType = (type) =>
   type
@@ -42,6 +46,14 @@ const describeChanges = (entry) => {
   }
   if (entry.action === 'PURGE_REPORT') {
     return changes.label || '—';
+  }
+  if (entry.action === 'SET_DUTY_SCHEDULE') {
+    return `${changes.investigatorName ?? '?'}: ${changes.schedule ?? '—'}`;
+  }
+  if (entry.action === 'SET_DUTY_STATUS') {
+    return changes.status
+      ? `${DUTY_STATUS_LABELS[changes.status] || changes.status} until ${changes.until}${changes.note ? ` — "${changes.note}"` : ''}`
+      : 'Back to schedule';
   }
   return '—';
 };
@@ -143,6 +155,8 @@ export default function ActivityLogPage() {
               <option value="TRASH_REPORT">Moved to Trash</option>
               <option value="RESTORE_REPORT">Restored</option>
               <option value="PURGE_REPORT">Permanently Deleted</option>
+              <option value="SET_DUTY_SCHEDULE">Duty Schedule</option>
+              <option value="SET_DUTY_STATUS">Duty Status</option>
             </select>
           </div>
         </div>
