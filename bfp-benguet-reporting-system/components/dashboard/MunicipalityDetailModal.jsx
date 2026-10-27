@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
-import { X, MapPin, Flame, HeartPulse, Coins, Inbox, FileSearch, Home, Building2, TreePine, Truck } from 'lucide-react';
+import { X, MapPin, Flame, HeartPulse, Coins, Inbox, FileSearch, Home, Building2, TreePine, Truck, Eye, ChevronRight } from 'lucide-react';
 import StatusBadge from '../common/StatusBadge';
 import AttachmentList from '../reports/AttachmentList';
 import ReportQrButton from '../reports/ReportQrButton';
+import ReportDetailsModal from '../reports/ReportDetailsModal';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const CATEGORY_META = [
@@ -27,6 +28,9 @@ const peso = (value) => `₱${Number(value || 0).toLocaleString('en-PH', { maxim
 export default function MunicipalityDetailModal({ row, rank, municipalityCount, periodLabel, periodStart, periodEnd, filedReports, onClose }) {
   const [incidents, setIncidents] = useState(null);
   const [incidentError, setIncidentError] = useState('');
+  // A filed report opened in full (ReportDetailsModal) on top of this popup.
+  const [viewReport, setViewReport] = useState(null);
+  const filedReportsRef = useRef(null);
 
   useEscapeKey(onClose, true);
 
@@ -93,14 +97,33 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
               { label: 'Filed Reports', value: filedReports.length, icon: FileSearch, className: 'bg-gray-50 text-gray-800' },
               { label: 'Casualties', value: incidents === null ? '…' : `${injured} / ${fatalities}`, hint: 'injured / deaths', icon: HeartPulse, className: 'bg-gray-50 text-gray-800' },
               { label: 'Est. Damage', value: incidents === null ? '…' : peso(damage), icon: Coins, className: 'bg-gray-50 text-gray-800' },
-            ].map(({ label, value, hint, icon: Icon, className }) => (
-              <div key={label} className={`rounded-xl p-3 ${className}`}>
-                <Icon className="h-4 w-4 opacity-70" />
-                <p className="mt-1 truncate text-xl font-bold">{value}</p>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">{label}</p>
-                {hint && <p className="text-[10px] text-gray-400">{hint}</p>}
-              </div>
-            ))}
+            ].map(({ label, value, hint, icon: Icon, className }) => {
+              const body = (
+                <>
+                  <Icon className="h-4 w-4 opacity-70" />
+                  <p className="mt-1 truncate text-xl font-bold">{value}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">{label}</p>
+                  {hint && <p className="text-[10px] text-gray-400">{hint}</p>}
+                </>
+              );
+              // "Filed Reports" jumps to the list of those reports, where each can be opened.
+              return label === 'Filed Reports' && filedReports.length > 0 ? (
+                <button
+                  key={label}
+                  type="button"
+                  onClick={() => filedReportsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                  title="Show the filed reports"
+                  className={`group relative rounded-xl p-3 text-left ring-1 ring-bfp-navy/20 transition hover:ring-2 hover:ring-bfp-navy/40 ${className}`}
+                >
+                  {body}
+                  <span className="absolute right-2 top-2 flex items-center text-[10px] font-semibold text-gray-600 group-hover:text-bfp-navy">
+                    View <ChevronRight className="h-3 w-3" />
+                  </span>
+                </button>
+              ) : (
+                <div key={label} className={`rounded-xl p-3 ${className}`}>{body}</div>
+              );
+            })}
           </div>
           {tallyCount > 0 && (
             <p className="-mt-3 text-xs text-gray-400">
@@ -136,6 +159,43 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
               })}
             </ul>
           </div>
+
+          {/* Filed reports that reached the provincial level — each can be opened in full, and its
+              files and QR code opened straight from here */}
+          {filedReports.length > 0 && (
+            <div ref={filedReportsRef} className="scroll-mt-4">
+              <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
+                <FileSearch className="h-4 w-4" /> Filed Investigation Reports ({filedReports.length})
+              </h3>
+              <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+                {filedReports.map((report) => (
+                  <li key={report.id} className="space-y-2 px-4 py-3 text-sm">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <span className="font-semibold text-gray-800">{report.referenceNumber || `#${report.id}`}</span>
+                        <span className="block text-xs text-gray-500">
+                          {humanize(report.reportType)} · {new Date(report.reportDate).toLocaleDateString()}
+                          {report.submittedBy ? ` · ${report.submittedBy}` : ''}
+                        </span>
+                      </div>
+                      <StatusBadge status={report.status} />
+                    </div>
+                    <div className="flex flex-wrap items-start gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setViewReport(report)}
+                        className="btn btn-primary inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs"
+                      >
+                        <Eye className="h-3.5 w-3.5" /> View Report
+                      </button>
+                      <AttachmentList attachments={report.attachments} reportId={report.id} />
+                      <ReportQrButton report={report} className="btn btn-secondary px-2.5 py-1.5 text-xs" />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           {/* Incident status */}
           {periodIncidents.length > 0 && (
@@ -217,36 +277,22 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
             )}
           </div>
 
-          {/* Filed reports that reached the provincial level */}
-          {filedReports.length > 0 && (
-            <div>
-              <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
-                <FileSearch className="h-4 w-4" /> Filed Investigation Reports ({filedReports.length})
-              </h3>
-              <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
-                {filedReports.map((report) => (
-                  <li key={report.id} className="space-y-2 px-4 py-3 text-sm">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="font-semibold text-gray-800">{report.referenceNumber || `#${report.id}`}</span>
-                      <span className="text-xs text-gray-500">{new Date(report.reportDate).toLocaleDateString()}</span>
-                      <StatusBadge status={report.status} />
-                    </div>
-                    {/* The provincial office can open the report's files and QR code from here */}
-                    <div className="flex flex-wrap items-start gap-2">
-                      <AttachmentList attachments={report.attachments} reportId={report.id} />
-                      <ReportQrButton report={report} className="btn btn-secondary px-2.5 py-1.5 text-xs" />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </div>
 
         <div className="flex justify-end border-t border-gray-100 bg-gray-50 px-4 py-3 sm:px-6">
           <button onClick={onClose} className="btn btn-secondary px-6">Close</button>
         </div>
       </div>
+
+      {viewReport && (
+        // Its own clicks must not reach this popup's backdrop, which would close both.
+        <div onClick={(e) => e.stopPropagation()}>
+          <ReportDetailsModal
+            report={{ ...viewReport, municipality: { name: viewReport.municipality } }}
+            onClose={() => setViewReport(null)}
+          />
+        </div>
+      )}
     </div>
   );
 }

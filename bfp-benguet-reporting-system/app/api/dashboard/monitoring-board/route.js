@@ -101,6 +101,7 @@ export async function GET(request) {
         },
         select: {
           id: true,
+          reportType: true,
           category: true,
           reportDate: true,
           status: true,
@@ -213,6 +214,7 @@ export async function GET(request) {
       if (!field) return;
       reportsByCategory[field].push({
         id: report.id,
+        reportType: report.reportType,
         referenceNumber: report.incident?.referenceNumber || null,
         municipality: report.municipality.name,
         reportDate: report.reportDate,

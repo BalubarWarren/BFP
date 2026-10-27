@@ -505,3 +505,13 @@ body {
 html:not(.dark) .text-gray-400 {
   color: theme('colors.gray.500');
 }
+
+/* Amber tint (e.g. Report Details' "Incident Information" section, load warnings) — same light-chip
+   treatment as the other tints above; without it light dark-theme text sat on a cream background. */
+.dark .bg-amber-50 {
+  @apply bg-amber-950/40;
+}
+
+.dark .border-amber-300 {
+  @apply border-amber-800;
+}

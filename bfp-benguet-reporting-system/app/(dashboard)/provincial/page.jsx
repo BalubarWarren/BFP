@@ -13,6 +13,7 @@ import PageHeader from '../../../components/common/PageHeader';
 import MunicipalityDetailModal from '../../../components/dashboard/MunicipalityDetailModal';
 import AttachmentList from '../../../components/reports/AttachmentList';
 import ReportQrButton from '../../../components/reports/ReportQrButton';
+import ReportDetailsModal from '../../../components/reports/ReportDetailsModal';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import { CATEGORY_CHART_COLORS } from '../../../lib/constants';
 import {
@@ -303,6 +304,8 @@ export default function ProvincialDashboard() {
   const [reportsByCategory, setReportsByCategory] = useState({});
   const [histReportsByCategory, setHistReportsByCategory] = useState({});
   const [categoryModal, setCategoryModal] = useState(null); // { field, label } | null
+  // A filed report from the classification popup, opened in full on top of it.
+  const [categoryViewReport, setCategoryViewReport] = useState(null);
   useEscapeKey(() => setCategoryModal(null), !!categoryModal);
 
   // Clicking a municipality (Monitoring Board row or map) opens its detail modal. The map always
@@ -1031,6 +1034,7 @@ export default function ProvincialDashboard() {
                             <th>Status</th>
                             <th>Files</th>
                             <th>QR</th>
+                            <th></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1045,6 +1049,15 @@ export default function ProvincialDashboard() {
                                 {!report.attachments && <span className="text-xs text-gray-400">None</span>}
                               </td>
                               <td><ReportQrButton report={report} className="btn btn-secondary px-2.5 py-1.5 text-xs" /></td>
+                              <td>
+                                <button
+                                  type="button"
+                                  onClick={() => setCategoryViewReport(report)}
+                                  className="btn btn-primary whitespace-nowrap px-2.5 py-1.5 text-xs"
+                                >
+                                  View Report
+                                </button>
+                              </td>
                             </tr>
                           ))}
                         </tbody>
@@ -1060,6 +1073,16 @@ export default function ProvincialDashboard() {
                 </button>
               </div>
             </div>
+
+            {categoryViewReport && (
+              // Its own clicks must not reach this popup's backdrop, which would close both.
+              <div onClick={(e) => e.stopPropagation()}>
+                <ReportDetailsModal
+                  report={{ ...categoryViewReport, municipality: { name: categoryViewReport.municipality } }}
+                  onClose={() => setCategoryViewReport(null)}
+                />
+              </div>
+            )}
           </div>
         );
       })()}
