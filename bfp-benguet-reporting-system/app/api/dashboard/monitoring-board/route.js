@@ -215,6 +215,9 @@ export async function GET(request) {
       reportsByCategory[field].push({
         id: report.id,
         reportType: report.reportType,
+        // Which bucket it counts in, so drill-downs can group and filter by them.
+        category: field,
+        subCategory: getReportSubCategory(report),
         referenceNumber: report.incident?.referenceNumber || null,
         municipality: report.municipality.name,
         reportDate: report.reportDate,
