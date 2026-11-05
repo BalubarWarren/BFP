@@ -84,6 +84,10 @@ const SECURITY_HEADERS = [
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  // Isolates our window from any cross-origin page that opens it or that it opens.
+  // "-allow-popups" rather than "same-origin": Continue with Google opens a Google popup that
+  // must still be able to hand the token back to this window (Google's documented setting).
+  { key: 'Cross-Origin-Opener-Policy', value: 'same-origin-allow-popups' },
   ...(SELF_ORIGIN ? [{ key: 'Access-Control-Allow-Origin', value: SELF_ORIGIN }] : []),
 ];
 

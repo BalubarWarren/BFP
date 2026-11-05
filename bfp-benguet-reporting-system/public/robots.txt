@@ -1,2 +1,6 @@
 User-agent: *
+# Only the public landing page and the login page may be indexed; every dashboard, report and API
+# route needs a login and stays out of search engines.
+Allow: /$
+Allow: /login$
 Disallow: /
