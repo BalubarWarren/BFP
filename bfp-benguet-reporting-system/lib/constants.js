@@ -306,6 +306,9 @@ export const NOTIFICATION_TYPES = {
   REPORT_RETURNED: 'REPORT_RETURNED',
   REPORT_OVERDUE: 'REPORT_OVERDUE',
   REPORT_TEXT_BLAST: 'REPORT_TEXT_BLAST',
+  // To the investigator who sent a text blast: whether it was sent, and whether its emails got
+  // out. In-app only — see IN_APP_ONLY_NOTIFICATION_TYPES.
+  TEXT_BLAST_STATUS: 'TEXT_BLAST_STATUS',
   REPORT_SPOT_OVERDUE: 'REPORT_SPOT_OVERDUE',
   REPORT_PROGRESS_OVERDUE: 'REPORT_PROGRESS_OVERDUE',
   REPORT_DEADLINE_WARNING: 'REPORT_DEADLINE_WARNING',
@@ -316,6 +319,13 @@ export const NOTIFICATION_TYPES = {
   // To the Fire Marshal: an investigator marked themselves on leave/unavailable/called in.
   DUTY_STATUS_CHANGED: 'DUTY_STATUS_CHANGED',
 };
+
+// Window event a page fires after an action that creates notifications for the current user, so
+// the header bell (components/common/Header.jsx) refreshes at once instead of on its next poll.
+export const NOTIFICATIONS_CHANGED_EVENT = 'firetrack:notifications-changed';
+
+// Notification types lib/prisma.js does not also send as an email.
+export const IN_APP_ONLY_NOTIFICATION_TYPES = [NOTIFICATION_TYPES.TEXT_BLAST_STATUS];
 
 // Messages and report assignments a Municipal Fire Marshal sends to the investigators of their
 // own municipality (see /api/directives and /municipal/marshal/team).

@@ -1,6 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { sendEmail, notificationEmail, APP_URL } from './email.js';
 import { textBlastLinesFromPayload } from './text-blast.js';
+import { IN_APP_ONLY_NOTIFICATION_TYPES } from './constants.js';
 
 // On Vercel every concurrently running function instance gets its own PrismaClient, and Prisma's
 // default pool opens several connections per instance (num_cpus * 2 + 1). With the dashboards
@@ -58,6 +59,8 @@ const readableNotification = (message) => {
 // BCC) — a text blast or report fan-out used to do a query plus a separate SMTP send per
 // recipient while the user's request waited, which on Vercel's function time limit could time
 // the request out after the data was already saved.
+// Resolves to { emailed, failed }: how many recipients' emails Gmail accepted, and how many didn't
+// go out (send error, or email not configured).
 async function emailNotifications(client, notifications) {
   const userIds = [...new Set(notifications.map((data) => data.userId))];
   const users = await client.user.findMany({
@@ -74,17 +77,23 @@ async function emailNotifications(client, notifications) {
     byMessage.get(data.message).add(email);
   }
 
-  await Promise.all(
-    [...byMessage].map(([rawMessage, emails]) => {
+  const results = await Promise.all(
+    [...byMessage].map(async ([rawMessage, emails]) => {
       const { message, lines } = readableNotification(rawMessage);
       // The site root sends a signed-in user to their own role's dashboard (reviewers don't
       // use /municipal/reports), so it's the one link that works for every recipient.
       const { subject, html } = notificationEmail({ message, lines, reportUrl: APP_URL });
       const recipients = [...emails];
-      return recipients.length === 1
-        ? sendEmail({ to: recipients[0], subject, html })
-        : sendEmail({ bcc: recipients, subject, html });
+      const sent = recipients.length === 1
+        ? await sendEmail({ to: recipients[0], subject, html })
+        : await sendEmail({ bcc: recipients, subject, html });
+      return { count: recipients.length, sent };
     })
+  );
+
+  return results.reduce(
+    (totals, { count, sent }) => (sent ? { ...totals, emailed: totals.emailed + count } : { ...totals, failed: totals.failed + count }),
+    { emailed: 0, failed: 0 }
   );
 }
 
@@ -95,12 +104,23 @@ if (!prisma.__notificationEmailMiddlewareRegistered) {
     const result = await next(params);
 
     if (params.model === 'Notification' && (params.action === 'create' || params.action === 'createMany')) {
-      const notifications = params.action === 'create' ? [params.args.data] : params.args.data;
+      const notifications = [].concat(params.args.data)
+        .filter((data) => !IN_APP_ONLY_NOTIFICATION_TYPES.includes(data.type));
 
       // Awaited (not fire-and-forget) because on serverless hosts like Vercel the function can be
       // frozen as soon as the response is sent, silently dropping any still-pending email.
-      await emailNotifications(prisma, notifications)
-        .catch((error) => console.error('[email] Notification email dispatch failed:', error));
+      const delivery = notifications.length
+        ? await emailNotifications(prisma, notifications).catch((error) => {
+            console.error('[email] Notification email dispatch failed:', error);
+            return { emailed: 0, failed: notifications.length };
+          })
+        : { emailed: 0, failed: 0 };
+
+      // Handed back to the caller on the result (non-enumerable, so it never shows up in an API
+      // response) — POST /api/reports/text-blast tells the sender whether the emails went out.
+      if (result && typeof result === 'object') {
+        Object.defineProperty(result, 'emailDelivery', { value: delivery, enumerable: false });
+      }
     }
 
     return result;

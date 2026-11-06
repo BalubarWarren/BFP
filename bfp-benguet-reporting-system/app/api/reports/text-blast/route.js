@@ -12,10 +12,42 @@ const TEXT_BLAST_RECIPIENT_ROLES = [
   ROLES.PROVINCIAL_CHIEF_IIS,
 ];
 const MUNICIPAL_RECIPIENT_ROLES = [ROLES.MUNICIPAL_FIRE_MARSHAL, ROLES.MUNICIPAL_CHIEF_IIS];
+const RECIPIENT_TITLES = {
+  [ROLES.MUNICIPAL_FIRE_MARSHAL]: 'Municipal Fire Marshal',
+  [ROLES.MUNICIPAL_CHIEF_IIS]: 'Municipal Chief IIS',
+  [ROLES.PROVINCIAL_CHIEF_IIS]: 'Provincial Chief IIS',
+};
+
+const plural = (count, word) => `${count} ${word}${count === 1 ? '' : 's'}`;
+
+// "Sent to 3 recipients…" plus how the emails went — undefined delivery means it wasn't reported.
+function sentMessage(recipientCount, recipientRoles, delivery) {
+  const to = recipientRoles.map((role) => RECIPIENT_TITLES[role]).join(', ');
+  const sent = `Your text blast was sent to ${plural(recipientCount, 'recipient')} (${to}).`;
+  if (!delivery) return sent;
+  if (!delivery.failed) return `${sent} Emailed to ${plural(delivery.emailed, 'recipient')}.`;
+  return `${sent} The email could not be sent to ${delivery.failed} of them — they can still read it in FireTrack.`;
+}
+
+// The sender's bell entry — never emailed (IN_APP_ONLY_NOTIFICATION_TYPES). Best effort: a
+// failure here must not turn a delivered text blast into an error response.
+async function notifySender(userId, message) {
+  try {
+    await prisma.notification.create({
+      data: { userId, message, type: NOTIFICATION_TYPES.TEXT_BLAST_STATUS },
+    });
+  } catch (error) {
+    console.error('Error saving text blast status notification:', error);
+  }
+}
 
 export async function POST(request) {
+  let user = null;
+  // Set once recipients have it (and the sender has been told), so a later failure such as the
+  // audit log isn't reported to the sender as unsent.
+  let delivered = false;
   try {
-    const user = await getUserFromRequest(request);
+    user = await getUserFromRequest(request);
 
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -80,10 +112,9 @@ export async function POST(request) {
     const recipientIds = [...new Set(recipients.map((recipient) => recipient.id))];
 
     if (!recipientIds.length) {
-      return NextResponse.json(
-        { error: 'No active accounts were found for the selected recipients' },
-        { status: 400 }
-      );
+      const error = 'No active accounts were found for the selected recipients';
+      await notifySender(user.id, `Your text blast was NOT sent: ${error.toLowerCase()}.`);
+      return NextResponse.json({ error }, { status: 400 });
     }
 
     const payload = {
@@ -92,13 +123,17 @@ export async function POST(request) {
       lines,
     };
 
-    await prisma.notification.createMany({
+    // emailDelivery is attached by the email middleware in lib/prisma.js.
+    const { emailDelivery } = await prisma.notification.createMany({
       data: recipientIds.map((userId) => ({
         userId,
         message: JSON.stringify(payload),
         type: NOTIFICATION_TYPES.REPORT_TEXT_BLAST,
       })),
     });
+    delivered = true;
+    const message = sentMessage(recipientIds.length, recipientRoles, emailDelivery);
+    await notifySender(user.id, message);
 
     await prisma.auditLog.create({
       data: {
@@ -113,11 +148,15 @@ export async function POST(request) {
     });
 
     return NextResponse.json({
-      message: `Text blast sent to ${recipientIds.length} recipient${recipientIds.length === 1 ? '' : 's'}.`,
+      message,
       recipientCount: recipientIds.length,
+      emailFailed: emailDelivery?.failed || 0,
     });
   } catch (error) {
     console.error('Error sending text blast:', error);
+    if (user && !delivered) {
+      await notifySender(user.id, 'Your text blast was NOT sent because of a server error. Please try again.');
+    }
     return NextResponse.json(
       { error: 'Failed to send text blast' },
       { status: 500 }

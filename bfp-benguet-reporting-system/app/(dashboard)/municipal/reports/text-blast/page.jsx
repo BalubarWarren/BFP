@@ -7,6 +7,7 @@ import BackButton from '../../../../../components/common/BackButton';
 import PageHeader from '../../../../../components/common/PageHeader';
 import TextBlastEditor from '../../../../../components/reports/TextBlastEditor';
 import { useToast } from '../../../../../components/common/ToastProvider';
+import { NOTIFICATIONS_CHANGED_EVENT } from '../../../../../lib/constants';
 import {
   TEXT_BLAST_TEMPLATE_LINES,
   TEXT_BLAST_MAX_CHARACTERS,
@@ -122,11 +123,16 @@ export default function TextBlastPage() {
       );
       // Ready for the next one: back to the investigator's template, answers cleared.
       editorRef.current.setLines(loadTemplate());
-      toast.success(response.data.message || 'Text blast sent.');
+      // Sent either way, but say so loudly when some emails didn't go out.
+      (response.data.emailFailed ? toast.error : toast.success)(response.data.message || 'Text blast sent.');
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to send text blast.');
+      const message = err.response?.data?.error || 'Failed to send text blast.';
+      setError(message);
+      toast.error(`Text blast not sent: ${message}`);
     } finally {
       setSending(false);
+      // The server also left a sent / not-sent entry in the bell — show it now, not on the next poll.
+      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED_EVENT));
     }
   };
 

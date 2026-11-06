@@ -9,6 +9,7 @@ import TextBlastContent from './TextBlastContent';
 import UserAvatar from './UserAvatar';
 import { displayName, roleTitle } from '../../lib/user-display';
 import { textBlastLinesFromPayload } from '../../lib/text-blast';
+import { NOTIFICATIONS_CHANGED_EVENT } from '../../lib/constants';
 import SettingsModal from './SettingsModal';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
@@ -48,9 +49,11 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
         if (document.visibilityState === 'visible') fetchNotifications();
       };
       document.addEventListener('visibilitychange', onVisibilityChange);
+      window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, fetchNotifications);
       return () => {
         clearInterval(interval);
         document.removeEventListener('visibilitychange', onVisibilityChange);
+        window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, fetchNotifications);
       };
     }
   }, [user]);
