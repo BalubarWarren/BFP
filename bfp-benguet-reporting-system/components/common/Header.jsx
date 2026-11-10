@@ -11,6 +11,7 @@ import { displayName, roleTitle } from '../../lib/user-display';
 import { textBlastLinesFromPayload } from '../../lib/text-blast';
 import { NOTIFICATIONS_CHANGED_EVENT } from '../../lib/constants';
 import SettingsModal from './SettingsModal';
+import InstallAppButton from './InstallAppButton';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { clearSession } from '../../lib/session';
@@ -188,6 +189,9 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
               </div>
             )}
           </div>
+
+          {/* Install as an app — renders nothing when already installed or not supported */}
+          <InstallAppButton variant="header" />
 
           {/* Settings */}
           <button

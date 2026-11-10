@@ -24,9 +24,24 @@ export const metadata = {
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',
-    apple: '/favicon.svg',
+    // iOS ignores SVG home-screen icons, so "Add to Home Screen" needs a PNG.
+    apple: '/pwa/apple-touch-icon.png',
+  },
+  themeColor: '#1A2B4A',
+  appleWebApp: {
+    capable: true,
+    title: 'FireTrack',
+    statusBarStyle: 'black-translucent',
   },
 };
+
+// Runs in <head> before React loads. Chrome/Edge fire `beforeinstallprompt` once, early, and only
+// that event can open the install dialog later — so it's stashed on window here (and announced)
+// rather than relying on InstallAppButton having mounted in time to catch it.
+const INSTALL_PROMPT_SCRIPT = `(function(){window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__fireTrackInstallPrompt=e;window.dispatchEvent(new Event('firetrack:installable'));});window.addEventListener('appinstalled',function(){window.__fireTrackInstallPrompt=null;window.dispatchEvent(new Event('firetrack:installed'));});})();`;
+
+// Production only: in `next dev` a service worker just gets in the way of hot reloading.
+const SW_REGISTER_SCRIPT = `if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){});});}`;
 
 export default function RootLayout({
   children,
@@ -41,6 +56,10 @@ export default function RootLayout({
             __html: `(function(){try{var t=localStorage.getItem('bfp-theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
           }}
         />
+        <script dangerouslySetInnerHTML={{ __html: INSTALL_PROMPT_SCRIPT }} />
+        {process.env.NODE_ENV === 'production' && (
+          <script dangerouslySetInnerHTML={{ __html: SW_REGISTER_SCRIPT }} />
+        )}
       </head>
       <body>
         <ThemeProvider>{children}</ThemeProvider>

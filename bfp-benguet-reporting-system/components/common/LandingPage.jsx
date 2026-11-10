@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Flame, Database, BarChart3 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
+import InstallAppButton from './InstallAppButton';
 
 const FEATURES = [
   {
@@ -29,17 +30,20 @@ export default function LandingPage() {
       <div className="h-1.5 w-full hazard-trim" />
 
       {/* Navbar */}
-      <nav className="flex items-center justify-between px-6 sm:px-10 py-5">
-        <div className="flex items-center gap-2.5">
+      <nav className="flex items-center justify-between gap-3 px-4 sm:px-10 py-5">
+        <div className="flex min-w-0 items-center gap-2.5">
           <BFPCrest size={32} />
           <span className="font-bold tracking-wide text-white">FIRETRACK</span>
         </div>
-        <Link
-          href="/login"
-          className="rounded border border-white/70 px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-bfp-navy"
-        >
-          Sign In
-        </Link>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <InstallAppButton variant="landing" />
+          <Link
+            href="/login"
+            className="whitespace-nowrap rounded border border-white/70 px-4 py-2 sm:px-5 text-sm font-semibold text-white transition-colors hover:bg-white hover:text-bfp-navy"
+          >
+            Sign In
+          </Link>
+        </div>
       </nav>
 
       {/* Hero */}
