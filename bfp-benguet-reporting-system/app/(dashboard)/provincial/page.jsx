@@ -93,7 +93,13 @@ const BENGUET_MUNICIPALITIES = [
 // municipality and not part of the fire incident data above; drawn only for geographic context.
 const BAGUIO_SHAPE = { markerX: 92, markerY: 331, labelX: 92, labelY: 340, points: '62.3,314.8 61.8,318.1 68.4,329.1 67.1,330.3 69.1,331.8 74.7,333.6 75.8,336.4 75.6,337.7 76.7,338.8 74,337.9 72.1,338.5 72,344.3 74.2,346.8 74.1,348.7 74.9,349.6 91.4,352.2 93.6,351.7 93.4,352.9 97,355.6 101.3,356.5 105.6,353.5 108.5,353.7 109.5,341 108,335.2 106.1,318 98.3,318 94.9,316.3 92.1,317.3 92.1,316.4 89.9,316.6 88.2,315.8 82.2,316 78.9,315.1' };
 
-function BenguetFireMap({ monitoringBoard, onPrint, onExport, onSelect }) {
+// A municipality's rank by total incidents, where ties share a rank: totals 33, 15, 15, 14 rank
+// #1, #2, #2, #4. (Rank by sorted position would rank tied municipalities by alphabetical order.)
+function rankByTotal(rows, row) {
+  return rows.filter((other) => (other.total || 0) > (row.total || 0)).length + 1;
+}
+
+function BenguetFireMap({ monitoringBoard, periodLabel, onPrint, onExport, onSelect }) {
   const [hovered, setHovered] = useState(null);
 
   const dataMap = {};
@@ -122,9 +128,8 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport, onSelect }) {
     return `rgb(${r},${g},${b})`;
   };
 
-  const sorted = [...monitoringBoard].sort((a, b) => (b.total || 0) - (a.total || 0));
   const rankMap = {};
-  sorted.forEach((m, i) => { rankMap[m.code] = i + 1; });
+  monitoringBoard.forEach((m) => { rankMap[m.code] = rankByTotal(monitoringBoard, m); });
 
   const labelFont = "'Georgia', 'Times New Roman', serif";
 
@@ -133,7 +138,10 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport, onSelect }) {
       <div className="flex justify-between items-start gap-3 mb-4">
         <div>
           <h2 className="text-xl font-bold text-bfp-navy">Municipality Fire Incident Rate Map</h2>
-          <p className="text-sm text-gray-500">Color shows relative fire incident rate — green (lowest) to red (highest). Click a municipality for details.</p>
+          <p className="text-sm text-gray-500">
+            {periodLabel && <span className="font-semibold text-bfp-navy">{periodLabel} · </span>}
+            Color shows relative fire incident rate — green (lowest) to red (highest). Click a municipality for details.
+          </p>
         </div>
         {onPrint && <SectionMenu onPrint={onPrint} onExport={onExport} />}
       </div>
@@ -577,8 +585,7 @@ export default function ProvincialDashboard() {
   };
 
   const handleExportFireMap = () => {
-    const periodLabel = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
-    exportBoardPdf(monitoringBoard, totals, periodLabel);
+    exportBoardPdf(boardRows, boardShowsCurrent ? totals : histTotals, boardPeriodLabel);
   };
 
   const handleExportComparison = () => {
@@ -596,7 +603,13 @@ export default function ProvincialDashboard() {
 
   const now = new Date();
   const currentMonthName = now.toLocaleString('default', { month: 'long' });
+  // The period the monitoring board is showing (This Month, or the month/year picked under By
+  // Month / By Year, once loaded). The fire map and the municipality popup follow it, so the map
+  // always matches the table.
+  const boardShowsCurrent = boardTab === 'current' || histData === null;
+  const boardRows = boardShowsCurrent ? monitoringBoard : histData;
   const currentYear = now.getFullYear();
+  const boardPeriodLabel = boardShowsCurrent ? `${currentMonthName} ${currentYear}` : histLabel;
   const monthOptions = [
     'January','February','March','April','May','June',
     'July','August','September','October','November','December',
@@ -1133,15 +1146,17 @@ export default function ProvincialDashboard() {
 
       {/* ── 2b. Municipality Fire Rate SVG Map ── */}
       <BenguetFireMap
-        monitoringBoard={monitoringBoard}
+        monitoringBoard={boardRows}
+        periodLabel={boardPeriodLabel}
         onPrint={() => handlePrint('section-fire-map')}
         onExport={handleExportFireMap}
         onSelect={(code) => setMunicipalityModal({ code, source: 'map' })}
       />
 
       {municipalityModal && (() => {
-        const useCurrent = municipalityModal.source === 'map' || boardTab === 'current';
-        const rows = useCurrent ? monitoringBoard : (histData || []);
+        // Map and board both show the board's selected period, so the popup does too.
+        const useCurrent = boardShowsCurrent;
+        const rows = boardRows;
         const row = rows.find((r) => r.code === municipalityModal.code);
         if (!row) return null;
         const byCategory = useCurrent ? reportsByCategory : histReportsByCategory;
@@ -1149,7 +1164,7 @@ export default function ProvincialDashboard() {
           .flatMap((f) => byCategory[f] || [])
           .filter((report) => report.municipality === row.municipality)
           .sort((a, b) => new Date(b.reportDate) - new Date(a.reportDate));
-        const rank = [...rows].sort((a, b) => (b.total || 0) - (a.total || 0)).findIndex((r) => r.code === row.code) + 1;
+        const rank = rankByTotal(rows, row);
 
         let periodStart;
         let periodEnd;
