@@ -1,17 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Download, Share, PlusSquare, X } from 'lucide-react';
+import { Download, Share, PlusSquare, MoreVertical, MoreHorizontal, X } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 // "Install app" button. Installing just opens this same deployment in its own app window with a
 // home-screen / Start-menu / dock icon — the app is still served from Vercel, so there's nothing
-// separate to update. Hidden entirely when it would do nothing (already installed, or a browser
-// that can't install web apps).
+// separate to update. Hidden only once the app is already installed (i.e. we're running inside it).
 //
-// - Chrome / Edge / Android: the browser's own install dialog (event captured in app/layout.jsx).
-// - iPhone / iPad Safari: no install API exists, so the button shows the "Share → Add to Home
-//   Screen" steps instead.
+// - When the browser has handed us its install prompt (Chrome / Edge / Android, captured in
+//   app/layout.jsx), clicking opens the browser's own install dialog.
+// - Otherwise it shows that browser's manual install steps. This covers iPhone/iPad and Mac Safari
+//   (no install API at all), Firefox, and also Chrome/Edge before they decide to offer the prompt —
+//   Chrome withholds it until the visitor has clicked on the page and stayed ~30 seconds, so a
+//   button that waited for it would look missing on a first visit.
 
 function isStandalone() {
   return (
@@ -20,51 +22,85 @@ function isStandalone() {
   );
 }
 
-function isIos() {
+function detectPlatform() {
   const ua = window.navigator.userAgent;
   // iPadOS reports itself as a Mac; touch support tells them apart.
-  return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  if (/iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)) {
+    return 'ios';
+  }
+  if (/Firefox\//.test(ua)) return /Android/.test(ua) ? 'android' : 'firefox';
+  if (/Android/.test(ua)) return 'android';
+  if (/Edg\//.test(ua)) return 'edge';
+  if (/Chrome\//.test(ua)) return 'chrome';
+  if (/Safari\//.test(ua) && /Macintosh/.test(ua)) return 'mac-safari';
+  return 'other';
 }
 
-export default function InstallAppButton({ variant = 'header' }) {
-  const [mode, setMode] = useState(null); // null (hidden) | 'prompt' | 'ios'
-  const [showIosHelp, setShowIosHelp] = useState(false);
+const Icon = ({ as: Component }) => <Component className="inline h-4 w-4 align-text-bottom" />;
 
-  useEscapeKey(() => setShowIosHelp(false), showIosHelp);
+const STEPS = {
+  ios: [
+    <>Tap the <Icon as={Share} /> <b>Share</b> button in Safari&apos;s toolbar.</>,
+    <>Choose <Icon as={PlusSquare} /> <b>Add to Home Screen</b>, then tap <b>Add</b>.</>,
+  ],
+  android: [
+    <>Open the browser menu <Icon as={MoreVertical} /> (top-right corner).</>,
+    <>Tap <b>Install app</b> or <b>Add to Home screen</b>, then confirm.</>,
+  ],
+  chrome: [
+    <>Click the install icon <Icon as={Download} /> at the right end of the address bar, <b>or</b></>,
+    <>open the menu <Icon as={MoreVertical} /> → <b>Cast, save and share</b> → <b>Install page as app</b>.</>,
+  ],
+  edge: [
+    <>Click the <b>App available</b> icon at the right end of the address bar, <b>or</b></>,
+    <>open the menu <Icon as={MoreHorizontal} /> → <b>Apps</b> → <b>Install this site as an app</b>.</>,
+  ],
+  'mac-safari': [
+    <>In the menu bar, choose <b>File</b> → <b>Add to Dock</b>.</>,
+    <>Click <b>Add</b>.</>,
+  ],
+  firefox: [
+    <>Firefox on computers can&apos;t install web apps.</>,
+    <>Open this site in <b>Chrome</b> or <b>Edge</b> and click <b>Install App</b> there.</>,
+  ],
+  other: [
+    <>Look for <b>Install</b> or <b>Add to Home Screen</b> in your browser&apos;s menu.</>,
+    <>If it isn&apos;t there, open this site in <b>Chrome</b> or <b>Edge</b> instead.</>,
+  ],
+};
+
+export default function InstallAppButton({ variant = 'header' }) {
+  const [visible, setVisible] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+
+  useEscapeKey(() => setShowHelp(false), showHelp);
 
   useEffect(() => {
     if (isStandalone()) return undefined;
+    setVisible(true);
 
-    const sync = () => {
-      if (window.__fireTrackInstallPrompt) setMode('prompt');
-      else if (isIos()) setMode('ios');
-      else setMode(null);
+    const onInstalled = () => {
+      setVisible(false);
+      setShowHelp(false);
     };
-    sync();
-
-    window.addEventListener('firetrack:installable', sync);
-    window.addEventListener('firetrack:installed', sync);
-    return () => {
-      window.removeEventListener('firetrack:installable', sync);
-      window.removeEventListener('firetrack:installed', sync);
-    };
+    window.addEventListener('firetrack:installed', onInstalled);
+    return () => window.removeEventListener('firetrack:installed', onInstalled);
   }, []);
 
-  if (!mode) return null;
+  if (!visible) return null;
 
   const handleClick = async () => {
-    if (mode === 'ios') {
-      setShowIosHelp(true);
+    const promptEvent = window.__fireTrackInstallPrompt;
+    if (!promptEvent) {
+      setShowHelp(true);
       return;
     }
-    const promptEvent = window.__fireTrackInstallPrompt;
-    if (!promptEvent) return;
+    // The event can only be used once; if they dismiss it, Chrome fires a fresh one later and
+    // until then the next click falls back to the manual steps.
+    window.__fireTrackInstallPrompt = null;
     promptEvent.prompt();
     const { outcome } = await promptEvent.userChoice;
-    // The event can only be used once; if they dismissed it, Chrome fires a fresh one later.
-    window.__fireTrackInstallPrompt = null;
-    if (outcome === 'accepted') setMode(null);
-    else setMode(isIos() ? 'ios' : null);
+    if (outcome === 'accepted') setVisible(false);
   };
 
   const button =
@@ -92,28 +128,30 @@ export default function InstallAppButton({ variant = 'header' }) {
       </button>
     );
 
+  const steps = showHelp ? STEPS[detectPlatform()] : null;
+
   return (
     <>
       {button}
-      {showIosHelp && (
+      {steps && (
         <div
           className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-4 sm:items-center"
-          onClick={() => setShowIosHelp(false)}
+          onClick={() => setShowHelp(false)}
         >
           <div
             role="dialog"
             aria-modal="true"
-            aria-labelledby="install-ios-title"
+            aria-labelledby="install-help-title"
             className="w-full max-w-sm rounded-xl bg-white p-5 text-left text-gray-900 shadow-xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h2 id="install-ios-title" className="text-lg font-bold text-bfp-navy">
+              <h2 id="install-help-title" className="text-lg font-bold text-bfp-navy">
                 Install FireTrack
               </h2>
               <button
                 type="button"
-                onClick={() => setShowIosHelp(false)}
+                onClick={() => setShowHelp(false)}
                 className="rounded p-1 text-gray-500 hover:bg-gray-100"
                 aria-label="Close"
               >
@@ -121,23 +159,15 @@ export default function InstallAppButton({ variant = 'header' }) {
               </button>
             </div>
             <ol className="space-y-3 text-sm text-gray-700">
-              <li className="flex items-start gap-2">
-                <span className="font-semibold">1.</span>
-                <span>
-                  Tap the <Share className="inline h-4 w-4 align-text-bottom" /> <b>Share</b> button
-                  in Safari&apos;s toolbar.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="font-semibold">2.</span>
-                <span>
-                  Choose <PlusSquare className="inline h-4 w-4 align-text-bottom" />{' '}
-                  <b>Add to Home Screen</b>, then tap <b>Add</b>.
-                </span>
-              </li>
+              {steps.map((step, index) => (
+                <li key={index} className="flex items-start gap-2">
+                  <span className="font-semibold">{index + 1}.</span>
+                  <span>{step}</span>
+                </li>
+              ))}
             </ol>
             <p className="mt-4 text-xs text-gray-500">
-              FireTrack will open from your home screen in its own window, like an app.
+              FireTrack will then open from its own icon, in its own window, like an app.
             </p>
           </div>
         </div>
