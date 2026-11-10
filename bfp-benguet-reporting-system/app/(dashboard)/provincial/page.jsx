@@ -255,6 +255,30 @@ function BenguetFireMap({ monitoringBoard, onPrint, onExport, onSelect }) {
 
 const ANALYTICS_REFRESH_MS = 5 * 60 * 1000;
 
+// Category labels as the analytics endpoint keys them (also the chart's bar dataKeys).
+const COMPARISON_CATEGORIES = ['Residential', 'Non-Residential', 'Non-Structural', 'Transport'];
+
+// A category's sub-category counts (e.g. Forest 11, Grass 3 under Non-Structural), largest first.
+// Only sub-categories that actually have incidents are listed; a category with no sub-category
+// data shows nothing extra. When the listed ones don't account for the whole category total
+// (some incidents were recorded without a sub-category) the rest shows as "Unspecified".
+function SubCategoryBreakdown({ total, subs, className = '' }) {
+  const entries = Object.entries(subs || {}).filter(([, count]) => count > 0).sort((a, b) => b[1] - a[1]);
+  if (entries.length === 0) return null;
+  const unspecified = total - entries.reduce((sum, [, count]) => sum + count, 0);
+  if (unspecified > 0) entries.push(['Unspecified', unspecified]);
+  return (
+    <ul className={`space-y-0.5 text-xs text-gray-600 ${className}`}>
+      {entries.map(([sub, count]) => (
+        <li key={sub} className="flex items-center justify-between gap-2">
+          <span className="truncate text-left">{sub}</span>
+          <span className="flex-shrink-0 font-semibold">{count}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 // One automatic retry for failures that are likely transient (network error, timeout, 5xx) —
 // never for 4xx, which won't change on a retry.
 const getWithRetry = async (url, headers) => {
@@ -1253,15 +1277,15 @@ export default function ProvincialDashboard() {
               <p className="text-sm text-gray-600 mt-1">{highestTrendPeriod.total} total incidents</p>
             </div>
             <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[
-                ['Residential', highestTrendPeriod.Residential],
-                ['Non-Residential', highestTrendPeriod['Non-Residential']],
-                ['Non-Structural', highestTrendPeriod['Non-Structural']],
-                ['Transport', highestTrendPeriod.Transport],
-              ].map(([label, value]) => (
+              {COMPARISON_CATEGORIES.map((label) => (
                 <div key={label} className="bg-gray-50 border rounded-lg p-3">
                   <p className="text-xs text-gray-500">{label}</p>
-                  <p className="text-xl font-bold text-bfp-navy">{value || 0}</p>
+                  <p className="text-xl font-bold text-bfp-navy">{highestTrendPeriod[label] || 0}</p>
+                  <SubCategoryBreakdown
+                    total={highestTrendPeriod[label] || 0}
+                    subs={highestTrendPeriod.subCategories?.[label]}
+                    className="mt-2 border-t pt-2"
+                  />
                 </div>
               ))}
             </div>
@@ -1305,12 +1329,18 @@ export default function ProvincialDashboard() {
                         highestTrendPeriod?.period === row.period ? 'bg-red-50 font-semibold' : 'hover:bg-gray-50'
                       }`}
                     >
-                      <td className="px-3 py-2 font-bold border text-bfp-navy">{row.period}</td>
-                      <td className="px-3 py-2 text-right border">{row.Residential}</td>
-                      <td className="px-3 py-2 text-right border">{row['Non-Residential']}</td>
-                      <td className="px-3 py-2 text-right border">{row['Non-Structural']}</td>
-                      <td className="px-3 py-2 text-right border">{row.Transport}</td>
-                      <td className="px-3 py-2 text-right border font-bold text-bfp-red">{row.total}</td>
+                      <td className="px-3 py-2 font-bold border text-bfp-navy align-top">{row.period}</td>
+                      {COMPARISON_CATEGORIES.map((label) => (
+                        <td key={label} className="px-3 py-2 text-right border align-top">
+                          {row[label]}
+                          <SubCategoryBreakdown
+                            total={row[label] || 0}
+                            subs={row.subCategories?.[label]}
+                            className="mt-1 font-normal"
+                          />
+                        </td>
+                      ))}
+                      <td className="px-3 py-2 text-right border font-bold text-bfp-red align-top">{row.total}</td>
                     </tr>
                   ))}
                 </tbody>

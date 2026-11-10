@@ -3,25 +3,18 @@ import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { DASHBOARD_VIEWER_ROLES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { PROVINCIAL_REVIEWER_ROLES } from '../../../../lib/report-access';
+import {
+  emptySubCategories,
+  getReportSubCategory,
+  getEntrySubCategories,
+  addSubCategory,
+} from '../../../../lib/sub-categories';
 
 const CATEGORY_FIELD_MAP = {
   RESIDENTIAL: 'residential',
   NON_RESIDENTIAL: 'nonResidential',
   NON_STRUCTURAL: 'nonStructural',
   TRANSPORT: 'transport',
-};
-
-const emptySubCategories = () => ({ residential: {}, nonResidential: {}, nonStructural: {}, transport: {} });
-
-// Spot Investigation reports carry their sub-category on the linked Incident; MDFIR reports don't
-// create an Incident at all, so theirs only lives inside the stored content JSON.
-const getReportSubCategory = (report) => {
-  if (report.incident?.subCategory) return report.incident.subCategory;
-  try {
-    return JSON.parse(report.content || '{}').subCategory || null;
-  } catch {
-    return null;
-  }
 };
 
 export async function GET(request) {
@@ -78,6 +71,7 @@ export async function GET(request) {
           nonStructuralCount: true,
           transportCount: true,
           totalCount: true,
+          subCategories: true,
           municipality: { select: { id: true, name: true, code: true } },
         },
         orderBy: { reportDate: 'desc' },
@@ -161,6 +155,9 @@ export async function GET(request) {
       if (!monitoringData[munName].lastUpdated || entry.reportDate > monitoringData[munName].lastUpdated) {
         monitoringData[munName].lastUpdated = entry.reportDate;
       }
+      Object.entries(getEntrySubCategories(entry) || {}).forEach(([field, subs]) => {
+        Object.entries(subs).forEach(([sub, count]) => addSubCategory(monitoringData[munName].subCategories, field, sub, count));
+      });
     });
 
     // Accumulate categorized Spot Investigation reports on top of daily report entries
@@ -228,15 +225,15 @@ export async function GET(request) {
       });
     });
 
-    // Sub-category tallies, province-wide, per general category — only sub-categories an
-    // investigator actually reported appear here (e.g. a category with only "Grass" reports
-    // this period won't list "Forest" or "Rubbish" at all, let alone at zero).
+    // Sub-category tallies, province-wide, per general category — the sum of every municipality's
+    // (filed reports plus any breakdown recorded on daily tallies). Only sub-categories that were
+    // actually reported appear (a category with only "Grass" this period won't list "Forest" or
+    // "Rubbish" at all, let alone at zero).
     const subCategoryTotals = emptySubCategories();
-    spotReports.forEach((report) => {
-      const field = CATEGORY_FIELD_MAP[report.category];
-      const sub = getReportSubCategory(report);
-      if (!field || !sub) return;
-      subCategoryTotals[field][sub] = (subCategoryTotals[field][sub] || 0) + 1;
+    monitoringBoard.forEach((row) => {
+      Object.entries(row.subCategories).forEach(([field, subs]) => {
+        Object.entries(subs).forEach(([sub, count]) => addSubCategory(subCategoryTotals, field, sub, count));
+      });
     });
 
     return NextResponse.json({

@@ -3,6 +3,7 @@ import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { DASHBOARD_VIEWER_ROLES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { PROVINCIAL_REVIEWER_ROLES } from '../../../../lib/report-access';
+import { getReportSubCategory, getEntrySubCategories, addSubCategory } from '../../../../lib/sub-categories';
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
@@ -11,6 +12,14 @@ const CATEGORY_LABEL_MAP = {
   NON_RESIDENTIAL: 'Non-Residential',
   NON_STRUCTURAL: 'Non-Structural',
   TRANSPORT: 'Transport',
+};
+
+// subCategories JSON fields (see lib/sub-categories.js) -> the labels the charts use.
+const FIELD_LABEL_MAP = {
+  residential: 'Residential',
+  nonResidential: 'Non-Residential',
+  nonStructural: 'Non-Structural',
+  transport: 'Transport',
 };
 
 // Builds a (start, end) -> category totals function over data already pulled into memory once —
@@ -24,6 +33,9 @@ const makeGetPeriodTotals = (dailyEntries, categorizedReports) => (start, end) =
     'Non-Structural': 0,
     Transport: 0,
     total: 0,
+    // { 'Non-Structural': { Forest: 11, Grass: 3 }, ... } — only sub-categories that were
+    // actually reported in the period, so the dashboard never lists one at zero.
+    subCategories: {},
   };
 
   dailyEntries.forEach((entry) => {
@@ -33,6 +45,9 @@ const makeGetPeriodTotals = (dailyEntries, categorizedReports) => (start, end) =
     totals['Non-Structural'] += entry.nonStructuralCount;
     totals.Transport += entry.transportCount;
     totals.total += entry.totalCount;
+    Object.entries(entry.parsedSubCategories || {}).forEach(([field, subs]) => {
+      Object.entries(subs).forEach(([sub, count]) => addSubCategory(totals.subCategories, FIELD_LABEL_MAP[field], sub, count));
+    });
   });
 
   categorizedReports.forEach((report) => {
@@ -41,6 +56,7 @@ const makeGetPeriodTotals = (dailyEntries, categorizedReports) => (start, end) =
     if (!label) return;
     totals[label] += 1;
     totals.total += 1;
+    if (report.subCategory) addSubCategory(totals.subCategories, label, report.subCategory);
   });
 
   return totals;
@@ -80,7 +96,7 @@ export async function GET(request) {
     // previously ~80+ separate dailyReportEntry.aggregate() calls (one per month/year/comparison
     // bucket), each a full DB round trip on an endpoint polled every 15s by the provincial
     // dashboard.
-    const [categorizedReports, dailyEntries] = await Promise.all([
+    const [categorizedReportRows, dailyEntryRows] = await Promise.all([
       prisma.report.findMany({
         where: {
           reportType: { in: ['SPOT_INVESTIGATION', 'MDFIR'] },
@@ -91,7 +107,8 @@ export async function GET(request) {
             { status: REPORT_STATUS.APPROVED, passedToRole: null, passedToId: null },
           ],
         },
-        select: { reportDate: true, category: true },
+        // content only for MDFIR reports' sub-category (they have no linked Incident).
+        select: { reportDate: true, category: true, content: true, incident: { select: { subCategory: true } } },
       }),
       prisma.dailyReportEntry.findMany({
         select: {
@@ -101,9 +118,18 @@ export async function GET(request) {
           nonStructuralCount: true,
           transportCount: true,
           totalCount: true,
+          subCategories: true,
         },
       }),
     ]);
+    // Sub-categories resolved once here (JSON parsing) rather than in every period bucket below,
+    // and report content dropped right away so it isn't held for the rest of the request.
+    const categorizedReports = categorizedReportRows.map((report) => ({
+      reportDate: report.reportDate,
+      category: report.category,
+      subCategory: getReportSubCategory(report),
+    }));
+    const dailyEntries = dailyEntryRows.map((entry) => ({ ...entry, parsedSubCategories: getEntrySubCategories(entry) }));
     const getPeriodTotals = makeGetPeriodTotals(dailyEntries, categorizedReports);
 
     // KPI: Total incidents this month / this year / with casualties, plus the municipality and

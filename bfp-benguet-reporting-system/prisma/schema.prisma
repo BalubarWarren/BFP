@@ -184,6 +184,10 @@ model DailyReportEntry {
   nonStructuralCount  Int      @default(0)
   transportCount      Int      @default(0)
   totalCount          Int      @default(0)
+  // Optional sub-category breakdown of the counts above, as JSON keyed by category field and then
+  // sub-category name (names from SUB_CATEGORIES in lib/constants.js), only non-zero ones, e.g.
+  // {"nonStructural":{"Forest":11,"Grass":3}}. Read by the dashboard (see lib/sub-categories.js).
+  subCategories       String?
 
   reportingOfficer String
 
