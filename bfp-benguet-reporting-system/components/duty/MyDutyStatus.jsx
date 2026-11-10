@@ -111,17 +111,20 @@ export default function MyDutyStatus() {
                 onChange={(e) => setForm({ ...form, until: e.target.value })}
               />
             </div>
-            <div>
-              <label className="form-label" htmlFor="duty-note">Reason <span className="font-normal text-gray-400">(optional)</span></label>
-              <input
-                id="duty-note"
-                className="form-input"
-                maxLength={200}
-                placeholder="e.g. Fire investigation training"
-                value={form.note}
-                onChange={(e) => setForm({ ...form, note: e.target.value })}
-              />
-            </div>
+            {/* No reason for Called In: being called in already says why — they're on duty. */}
+            {form.status !== DUTY.ON_DUTY && (
+              <div>
+                <label className="form-label" htmlFor="duty-note">Reason <span className="font-normal text-gray-400">(optional)</span></label>
+                <input
+                  id="duty-note"
+                  className="form-input"
+                  maxLength={200}
+                  placeholder="e.g. Fire investigation training"
+                  value={form.note}
+                  onChange={(e) => setForm({ ...form, note: e.target.value })}
+                />
+              </div>
+            )}
           </div>
           <p className="mt-2 text-xs text-gray-500">Your Fire Marshal is notified. It ends automatically after this date.</p>
           <div className="mt-3 flex flex-wrap justify-end gap-2">
