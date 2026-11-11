@@ -576,3 +576,67 @@ html:not(.dark) .text-gray-400 {
 .dark .bg-amber-100 {
   @apply bg-amber-900/30;
 }
+
+/* Landing page (components/common/LandingPage.jsx) */
+.landing-hero {
+  background:
+    radial-gradient(ellipse 60% 50% at 50% 100%, rgba(204, 0, 0, 0.35), transparent 70%),
+    radial-gradient(ellipse 40% 35% at 50% 35%, rgba(212, 175, 55, 0.12), transparent 70%),
+    linear-gradient(to bottom, #2a4373, #1a2b4a);
+}
+
+.landing-embers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.landing-embers span {
+  position: absolute;
+  bottom: -10px;
+  width: 4px;
+  height: 4px;
+  border-radius: 9999px;
+  background: #f59e0b;
+  box-shadow: 0 0 8px 2px rgba(245, 158, 11, 0.6);
+  opacity: 0;
+}
+
+@keyframes landing-ember-rise {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  10% { opacity: 0.9; }
+  100% { transform: translate(30px, -420px) scale(0.3); opacity: 0; }
+}
+
+@keyframes landing-crest-glow {
+  0%, 100% { filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.25)); }
+  50% { filter: drop-shadow(0 0 28px rgba(212, 175, 55, 0.55)); }
+}
+
+@keyframes landing-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(6px); }
+}
+
+@keyframes landing-fade {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes landing-progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .landing-embers span { animation: landing-ember-rise 7s ease-out infinite; }
+  .landing-crest { animation: landing-crest-glow 4s ease-in-out infinite; }
+  .landing-bounce { animation: landing-bounce 1.8s ease-in-out infinite; }
+  .landing-fade { animation: landing-fade 0.3s ease-out; }
+  .landing-progress { animation: landing-progress 3.5s linear; }
+}
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}

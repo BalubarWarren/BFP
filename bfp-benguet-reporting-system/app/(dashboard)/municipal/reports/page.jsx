@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import Link from 'next/link';
 import { FileText } from 'lucide-react';
 import StatusBadge from '../../../../components/common/StatusBadge';
 import { useToast } from '../../../../components/common/ToastProvider';
 import { formatDateTime, parseJsonField } from '../../../../lib/utils';
 import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../../components/reports/AttachmentList';
-import CaseFollowUpCta from '../../../../components/reports/CaseFollowUpCta';
+import ReportRowActions from '../../../../components/reports/ReportRowActions';
+import ForwardReportModal from '../../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
 import PageHeader from '../../../../components/common/PageHeader';
 import ConfirmDeleteModal from '../../../../components/reports/ConfirmDeleteModal';
@@ -31,6 +31,7 @@ export default function MunicipalReportsPage() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState('');
+  const [forwardTarget, setForwardTarget] = useState(null);
 
   useEffect(() => {
     fetchReports();
@@ -112,7 +113,7 @@ export default function MunicipalReportsPage() {
     setReportDetail(null);
   };
 
-  useEscapeKey(closeReport, !!selectedReport && !deleteTarget);
+  useEscapeKey(closeReport, !!selectedReport && !deleteTarget && !forwardTarget);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -260,12 +261,11 @@ export default function MunicipalReportsPage() {
             <table className="w-full border-collapse">
               <thead className="bg-gray-50">
                 <tr className="border-b border-gray-200">
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report Type</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report</th>
                   <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Reference #</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report Date</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Status</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Submitted At</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Action</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Submitted</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Status &amp; Location</th>
+                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
@@ -279,92 +279,22 @@ export default function MunicipalReportsPage() {
                       <p className="font-semibold text-gray-900">{formatReportType(report.reportType)}</p>
                       <p className="text-xs text-gray-500">#{report.id}</p>
                     </td>
-                    <td className="px-5 py-4 text-sm text-gray-700">{report.incident?.referenceNumber || '-'}</td>
-                    <td className="px-5 py-4 text-sm text-gray-700">
-                      {new Date(report.reportDate).toLocaleDateString()}
-                    </td>
-                    <td className="px-5 py-4">
-                      <StatusBadge status={report.status} />
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-600">
-                      {formatDateTime(report.submittedAt)}
-                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-700 whitespace-nowrap">{report.incident?.referenceNumber || '-'}</td>
                     <td className="px-5 py-4 text-sm">
-                      {report.status === 'DRAFT' && (
-                        <div className="flex flex-wrap items-center gap-3">
-                          <Link
-                            href={`/municipal/reports/${report.id}/edit`}
-                            className="font-semibold text-bfp-navy hover:underline"
-                          >
-                            Edit
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => setDeleteTarget(report)}
-                            className="btn btn-danger px-3 py-1 text-sm"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                      {report.status === 'RETURNED' && (
-                        <div className="flex flex-wrap items-center gap-3">
-                          <Link
-                            href={`/municipal/reports/${report.id}/edit`}
-                            className="btn btn-danger px-3 py-1 text-sm"
-                          >
-                            ↩ Revise &amp; Resubmit
-                          </Link>
-                          <button
-                            type="button"
-                            onClick={() => openReport(report)}
-                            className="font-semibold text-bfp-navy hover:underline"
-                          >
-                            View
-                          </button>
-                          <ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" />
-                          <button
-                            type="button"
-                            onClick={() => setDeleteTarget(report)}
-                            className="btn btn-danger px-3 py-1 text-sm"
-                          >
-                            Delete
-                          </button>
-                          <div>
-                            <p className="font-semibold text-red-600">Needs Revision</p>
-                            {report.remarks && (
-                              <p className="mt-1 max-w-sm truncate text-xs text-gray-500" title={report.remarks}>
-                                {report.remarks}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                      {report.status !== 'DRAFT' && report.status !== 'RETURNED' && (
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => openReport(report)}
-                            className="font-semibold text-bfp-navy hover:underline"
-                          >
-                            View
-                          </button>
-                          <ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" />
-                          {canDelete(report) && (
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(report)}
-                              className="btn btn-danger px-3 py-1 text-sm"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      )}
+                      <p className="text-gray-800">{formatDateTime(report.submittedAt)}</p>
+                      <p className="text-xs text-gray-500">Report date {new Date(report.reportDate).toLocaleDateString()}</p>
+                    </td>
+                    <td className="px-5 py-4 align-top">
+                      <StatusBadge status={report.status} />
                       <ReportProgressBar progress={getReportProgress(report)} compact />
-                      {['SPOT_INVESTIGATION', 'PROGRESS_INVESTIGATION'].includes(report.reportType) && report.status === 'APPROVED' && !report.passedToId && (
-                        <CaseFollowUpCta report={report} allReports={reports} />
+                      {report.status === 'RETURNED' && report.remarks && (
+                        <p className="mt-1 w-40 truncate text-xs text-gray-500" title={report.remarks}>
+                          &ldquo;{report.remarks}&rdquo;
+                        </p>
                       )}
+                    </td>
+                    <td className="px-5 py-4 text-sm align-top">
+                      <ReportRowActions report={report} allReports={reports} onView={openReport} onForward={setForwardTarget} />
                     </td>
                   </tr>
                 ))}
@@ -373,6 +303,18 @@ export default function MunicipalReportsPage() {
           </div>
         )}
       </div>
+
+      {forwardTarget && (
+        <ForwardReportModal
+          report={forwardTarget}
+          onClose={() => setForwardTarget(null)}
+          onForwarded={() => {
+            setForwardTarget(null);
+            closeReport();
+            fetchReports();
+          }}
+        />
+      )}
 
       {deleteTarget && (
         <ConfirmDeleteModal

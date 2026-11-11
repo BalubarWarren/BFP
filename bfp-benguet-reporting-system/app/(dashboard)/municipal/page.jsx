@@ -3,14 +3,15 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Link from 'next/link';
-import { FileEdit, Search, Clock, CheckCircle2, FileText, Building2 } from 'lucide-react';
+import { FileEdit, Search, CheckCircle2, FileText, Building2, ArrowRight, Info } from 'lucide-react';
 import StatusBadge from '../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../../lib/utils';
 import ReportProgressBar, { getReportProgress } from '../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../components/reports/AttachmentList';
-import CaseFollowUpCta from '../../../components/reports/CaseFollowUpCta';
+import ReportRowActions, { needsForwarding } from '../../../components/reports/ReportRowActions';
+import ForwardReportModal from '../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 import PageHeader from '../../../components/common/PageHeader';
 import ConfirmDeleteModal from '../../../components/reports/ConfirmDeleteModal';
@@ -28,9 +29,7 @@ export default function MunicipalDashboard() {
   const [loading, setLoading] = useState(true);
   const [selectedReport, setSelectedReport] = useState(null);
   const [reportDetail, setReportDetail] = useState(null);
-  const [forwardLoading, setForwardLoading] = useState(false);
   const [forwardTarget, setForwardTarget] = useState(null);
-  const [forwardRole, setForwardRole] = useState('');
   const [sessionExpired, setSessionExpired] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [searchFilters, setSearchFilters] = useState(EMPTY_REPORT_FILTERS);
@@ -99,9 +98,6 @@ export default function MunicipalDashboard() {
   const isFinallyApproved = (report) =>
     report?.status === 'APPROVED' && !report?.passedToId;
 
-  const needsForwarding = (report) =>
-    report?.status === 'APPROVED' && !!report?.passedToId;
-
   // Returns a human-readable label for who approved the report and what the next step is
   const getApprovalInfo = (report) => {
     const detail = reportDetail || report;
@@ -115,54 +111,17 @@ export default function MunicipalDashboard() {
     return { approvedBy: 'Reviewer', nextStep: 'next level' };
   };
 
-  const FORWARD_ROLE_LABELS = {
-    MUNICIPAL_FIRE_MARSHAL: 'Municipal Fire Marshal',
-    PROVINCIAL_CHIEF_IIS: 'Provincial Chief IIS',
-  };
-
-  const openForward = (report) => {
-    const suggested = getApprovalInfo(report).nextStep === 'Municipal Fire Marshal'
-      ? 'MUNICIPAL_FIRE_MARSHAL'
-      : 'PROVINCIAL_CHIEF_IIS';
-    setForwardTarget(report);
-    setForwardRole(suggested);
-  };
-
-  const closeForward = () => {
-    setForwardTarget(null);
-    setForwardRole('');
-  };
+  const openForward = (report) => setForwardTarget(report);
+  const closeForward = () => setForwardTarget(null);
 
   // Only the topmost open modal should close on Escape — the delete confirmation and forward
   // modal both stack on top of the report-detail view without closing it underneath.
   useEscapeKey(closeView, !!selectedReport && !forwardTarget && !deleteTarget);
-  useEscapeKey(closeForward, !!forwardTarget);
 
-  const confirmForward = async () => {
-    if (!forwardTarget || !forwardRole) return;
-    setForwardLoading(true);
-    try {
-      const token = sessionStorage.getItem('token');
-      await axios.patch(
-        `/api/reports/${forwardTarget.id}`,
-        { status: 'SUBMITTED', passedToRole: forwardRole },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      closeForward();
-      closeView();
-      await fetchReports();
-      toast.success(`Report submitted to ${FORWARD_ROLE_LABELS[forwardRole]} for review.`);
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Failed to forward report');
-      // 409: already forwarded (e.g. a double-click or another tab) — show the current state.
-      if (err.response?.status === 409) {
-        closeForward();
-        closeView();
-        fetchReports();
-      }
-    } finally {
-      setForwardLoading(false);
-    }
+  const handleForwarded = async () => {
+    closeForward();
+    closeView();
+    await fetchReports();
   };
 
   const canDelete = (report) => !isFinallyApproved(report);
@@ -336,79 +295,49 @@ export default function MunicipalDashboard() {
         </div>
       )}
 
-      {/* Forward (Submit) Modal — the next reviewer tier is fully determined by who last
-          approved this report (the server enforces this regardless of what's sent), so this is
-          a confirmation, not a choice — offering Fire Marshal/Provincial as interchangeable
-          options here was what let a report skip a review tier. */}
       {forwardTarget && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
-          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-sm">
-            <div className="p-6 border-b">
-              <h3 className="text-lg font-bold text-bfp-navy">Submit Report</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                This report will be sent to the <strong>{FORWARD_ROLE_LABELS[forwardRole] || 'next reviewer'}</strong>.
-              </p>
-            </div>
-            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-              <button onClick={closeForward} className="btn btn-secondary" disabled={forwardLoading}>Cancel</button>
-              <button onClick={confirmForward} className="btn btn-primary" disabled={forwardLoading || !forwardRole}>
-                {forwardLoading ? 'Submitting...' : 'Submit'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ForwardReportModal report={forwardTarget} onClose={closeForward} onForwarded={handleForwarded} />
       )}
 
-      {/* Quick Action Cards */}
-      <div className="flex flex-col items-center gap-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl mx-auto">
-          <Link
-            href="/municipal/reports/mdfir"
-            className="card card-hover-lift cursor-pointer text-center"
-          >
-            <FileEdit className="w-9 h-9 mb-2 mx-auto text-bfp-red" />
-            <h3 className="text-xl font-bold text-bfp-navy mb-2">MDFIR</h3>
-            <p className="text-gray-600 mb-4">
-              Submit a minimal damage fire incident report
-            </p>
-            <button className="btn btn-primary w-full">Submit Report →</button>
-          </Link>
+      {/* Quick Action Cards — only reports that open a new case. Progress and Final
+          Investigation continue an existing case, so they start from the "Start Progress/Final
+          Report" button on an approved report in the table below. */}
+      <div className="mb-8 grid w-full grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Link href="/municipal/reports/mdfir" className="card card-hover-lift group flex items-start gap-4">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-bfp-red/10 text-bfp-red">
+            <FileEdit className="h-6 w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-lg font-bold text-bfp-navy">MDFIR</h3>
+            <p className="mt-0.5 text-sm text-gray-600">Minimal damage fire incident report</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-bfp-red transition-all group-hover:gap-2">
+              New report <ArrowRight className="h-4 w-4" />
+            </span>
+          </div>
+        </Link>
 
-          <Link
-            href="/municipal/reports/spot"
-            className="card card-hover-lift cursor-pointer text-center"
-          >
-            <Search className="w-9 h-9 mb-2 mx-auto text-bfp-red" />
-            <h3 className="text-xl font-bold text-bfp-navy mb-2">Spot Investigation</h3>
-            <p className="text-gray-600 mb-4">
-              Submit an on-site spot investigation report
-            </p>
-            <button className="btn btn-primary w-full">Submit Report →</button>
-          </Link>
+        <Link href="/municipal/reports/spot" className="card card-hover-lift group flex items-start gap-4">
+          <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-lg bg-bfp-red/10 text-bfp-red">
+            <Search className="h-6 w-6" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-lg font-bold text-bfp-navy">Spot Investigation</h3>
+            <p className="mt-0.5 text-sm text-gray-600">On-site report that opens a new fire case</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-bfp-red transition-all group-hover:gap-2">
+              New report <ArrowRight className="h-4 w-4" />
+            </span>
+          </div>
+        </Link>
 
-          <Link
-            href="/municipal/reports/progress"
-            className="card card-hover-lift cursor-pointer text-center"
-          >
-            <Clock className="w-9 h-9 mb-2 mx-auto text-bfp-red" />
-            <h3 className="text-xl font-bold text-bfp-navy mb-2">Progress Investigation</h3>
-            <p className="text-gray-600 mb-4">
-              Update an ongoing fire investigation report
+        <div className="flex items-start gap-3 rounded-lg border border-dashed border-bfp-navy/25 bg-bfp-navy/5 p-5 md:col-span-2 lg:col-span-1">
+          <Info className="mt-0.5 h-5 w-5 flex-shrink-0 text-bfp-navy" />
+          <div className="text-sm text-bfp-navy">
+            <p className="font-bold">Progress &amp; Final Investigation</p>
+            <p className="mt-1 text-gray-600">
+              Once a Spot Investigation is finalized, press <strong>Start Progress Report</strong> on
+              it below to continue the same case.
             </p>
-            <button className="btn btn-primary w-full">Submit Report →</button>
-          </Link>
-
-          <Link
-            href="/municipal/reports/final"
-            className="card card-hover-lift cursor-pointer text-center"
-          >
-            <CheckCircle2 className="w-9 h-9 mb-2 mx-auto text-bfp-red" />
-            <h3 className="text-xl font-bold text-bfp-navy mb-2">Final Investigation</h3>
-            <p className="text-gray-600 mb-4">
-              Submit the completed final investigation report
-            </p>
-            <button className="btn btn-primary w-full">Submit Report →</button>
-          </Link>
+          </div>
         </div>
       </div>
 
@@ -479,11 +408,10 @@ export default function MunicipalDashboard() {
               <table className="w-full border-collapse">
                 <thead className="bg-gray-50">
                   <tr className="border-b border-gray-200">
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report Type</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report</th>
                     <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Reference #</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report Date</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Status</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Submitted At</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Submitted</th>
+                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Status &amp; Location</th>
                     <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Actions</th>
                   </tr>
                 </thead>
@@ -498,58 +426,22 @@ export default function MunicipalDashboard() {
                         <p className="font-semibold text-gray-900">{formatReportType(report.reportType)}</p>
                         <p className="text-xs text-gray-500">#{report.id}</p>
                       </td>
-                      <td className="px-5 py-4 text-sm text-gray-700">{report.incident?.referenceNumber || '-'}</td>
-                      <td className="px-5 py-4 text-sm text-gray-700">
-                        {new Date(report.reportDate).toLocaleDateString()}
-                      </td>
-                      <td className="px-5 py-4">
-                        <StatusBadge status={report.status} />
-                      </td>
-                      <td className="px-5 py-4 text-sm text-gray-600">
-                        {formatDateTime(report.submittedAt)}
-                      </td>
+                      <td className="px-5 py-4 text-sm text-gray-700 whitespace-nowrap">{report.incident?.referenceNumber || '-'}</td>
                       <td className="px-5 py-4 text-sm">
-                        <div className="flex flex-wrap gap-2 items-center">
-                          <button
-                            onClick={() => openView(report)}
-                            className="btn btn-primary text-sm py-1 px-3"
-                          >
-                            View
-                          </button>
-                          <ReportQrButton report={report} className="btn btn-secondary text-sm py-1 px-3" />
-                          {report.status === 'RETURNED' && (
-                            <Link href={`/municipal/reports/${report.id}/edit`} className="btn btn-danger text-sm py-1 px-3">
-                              Revise
-                            </Link>
-                          )}
-                          {needsForwarding(report) && (
-                            <button
-                              type="button"
-                              onClick={() => openForward(report)}
-                              className="btn btn-primary text-sm py-1 px-3"
-                            >
-                              Submit
-                            </button>
-                          )}
-                          {canDelete(report) && (
-                            <button
-                              type="button"
-                              onClick={() => setDeleteTarget(report)}
-                              className="btn btn-danger text-sm py-1 px-3"
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </div>
+                        <p className="text-gray-800">{formatDateTime(report.submittedAt)}</p>
+                        <p className="text-xs text-gray-500">Report date {new Date(report.reportDate).toLocaleDateString()}</p>
+                      </td>
+                      <td className="px-5 py-4 align-top">
+                        <StatusBadge status={report.status} />
                         <ReportProgressBar progress={getReportProgress(report)} compact />
-                        {['SPOT_INVESTIGATION', 'PROGRESS_INVESTIGATION'].includes(report.reportType) && isFinallyApproved(report) && (
-                          <CaseFollowUpCta report={report} allReports={reports} />
-                        )}
                         {report.status === 'RETURNED' && report.remarks && (
-                          <p className="text-xs text-red-600 mt-1 max-w-xs truncate" title={report.remarks}>
-                            {report.remarks}
+                          <p className="mt-1 w-40 truncate text-xs text-gray-500" title={report.remarks}>
+                            &ldquo;{report.remarks}&rdquo;
                           </p>
                         )}
+                      </td>
+                      <td className="px-5 py-4 text-sm align-top">
+                        <ReportRowActions report={report} allReports={reports} onView={openView} onForward={openForward} />
                       </td>
                     </tr>
                   ))}

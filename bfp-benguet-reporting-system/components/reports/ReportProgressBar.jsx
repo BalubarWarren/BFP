@@ -25,6 +25,7 @@ export const getReportProgress = (report) => {
       activeIndex: tier + 1,
       variant: 'pending',
       description: `Awaiting review by ${REVIEW_TIER_LABELS[tier]}.`,
+      shortDescription: `With ${REVIEW_TIER_LABELS[tier]}`,
     };
   }
 
@@ -34,6 +35,7 @@ export const getReportProgress = (report) => {
       activeIndex: tier + 1,
       variant: 'returned',
       description: `Returned by ${REVIEW_TIER_LABELS[tier]} — needs revision.`,
+      shortDescription: `Returned by ${REVIEW_TIER_LABELS[tier]}`,
     };
   }
 
@@ -44,6 +46,7 @@ export const getReportProgress = (report) => {
         activeIndex: PROGRESS_STEP_LABELS.length,
         variant: 'done',
         description: `Approved by ${REVIEW_TIER_LABELS[tier]} — finalized.`,
+        shortDescription: 'Finalized',
       };
     }
     const nextTier = Math.min(tier + 1, REVIEW_TIER_LABELS.length - 1);
@@ -51,6 +54,8 @@ export const getReportProgress = (report) => {
       activeIndex: nextTier + 1,
       variant: 'awaiting-forward',
       description: `Approved by ${REVIEW_TIER_LABELS[tier]} — proceed to next step: submit to ${REVIEW_TIER_LABELS[nextTier]}.`,
+      shortDescription: `Ready to send to ${REVIEW_TIER_LABELS[nextTier]}`,
+      nextRoleLabel: REVIEW_TIER_LABELS[nextTier],
     };
   }
 
@@ -59,7 +64,9 @@ export const getReportProgress = (report) => {
 
 export default function ReportProgressBar({ progress, compact }) {
   if (!progress) return null;
-  const { activeIndex, variant, description } = progress;
+  const { activeIndex, variant } = progress;
+  // Table rows show the short "where is it" label; the full sentence is for detail views.
+  const description = compact ? progress.shortDescription || progress.description : progress.description;
 
   const activeColor = {
     pending: 'bg-blue-500',
@@ -71,12 +78,12 @@ export default function ReportProgressBar({ progress, compact }) {
   const descriptionColor = {
     pending: 'text-blue-700',
     returned: 'text-red-600',
-    'awaiting-forward': 'text-bfp-navy',
+    'awaiting-forward': 'text-amber-700',
     done: 'text-bfp-green',
   }[variant] || 'text-gray-600';
 
   return (
-    <div className={compact ? 'mt-2 max-w-xs' : 'mt-1'}>
+    <div className={compact ? 'mt-2 w-40' : 'mt-1'}>
       <div className="flex items-center">
         {PROGRESS_STEP_LABELS.map((label, i) => {
           const isDone = i < activeIndex;
@@ -85,11 +92,12 @@ export default function ReportProgressBar({ progress, compact }) {
             <div key={label} className={`flex items-center ${i < PROGRESS_STEP_LABELS.length - 1 ? 'flex-1' : ''}`}>
               <div className="flex flex-col items-center flex-shrink-0">
                 <div
-                  className={`flex items-center justify-center rounded-full font-bold text-white ${compact ? 'w-5 h-5 text-[9px]' : 'w-7 h-7 text-xs'} ${
+                  title={label}
+                  className={`flex items-center justify-center rounded-full font-bold text-white ${compact ? 'w-4 h-4 text-[8px]' : 'w-7 h-7 text-xs'} ${
                     isDone ? 'bg-bfp-green' : isActive ? activeColor : 'bg-gray-300'
                   }`}
                 >
-                  {isDone ? <Check className={compact ? 'w-3 h-3' : 'w-4 h-4'} /> : i + 1}
+                  {isDone ? <Check className={compact ? 'w-2.5 h-2.5' : 'w-4 h-4'} /> : i + 1}
                 </div>
                 {!compact && (
                   <span className={`mt-1 text-[10px] text-center leading-tight w-16 ${isActive ? 'font-bold text-gray-800' : 'text-gray-500'}`}>
@@ -98,13 +106,13 @@ export default function ReportProgressBar({ progress, compact }) {
                 )}
               </div>
               {i < PROGRESS_STEP_LABELS.length - 1 && (
-                <div className={`flex-1 h-1 mx-1 rounded ${i < activeIndex ? 'bg-bfp-green' : 'bg-gray-300'}`} />
+                <div className={`flex-1 ${compact ? 'h-0.5 mx-0.5' : 'h-1 mx-1'} rounded ${i < activeIndex ? 'bg-bfp-green' : 'bg-gray-300'}`} />
               )}
             </div>
           );
         })}
       </div>
-      {description && <p className={`text-xs mt-2 ${descriptionColor}`}>{description}</p>}
+      {description && <p className={`text-xs ${compact ? 'mt-1.5 font-medium' : 'mt-2'} ${descriptionColor}`}>{description}</p>}
     </div>
   );
 }

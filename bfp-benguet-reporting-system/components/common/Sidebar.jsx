@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useState } from 'react';
 import {
   LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
-  Clock, CheckCircle2, ShieldCheck, LogOut, Users, History, Archive, UserCheck, MessageSquare, Trash2,
+  ShieldCheck, LogOut, Users, History, Archive, UserCheck, MessageSquare, Trash2,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
 import MenuButton from './MenuButton';
@@ -115,7 +115,7 @@ export default function Sidebar({ isOpen, isCollapsed, user, onClose, onToggle }
 
                   <div className="mt-4 pt-4 border-t border-bfp-gold/30">
                     <p className="text-xs font-semibold uppercase text-white/60 mb-2">
-                      Submit Investigation Report
+                      New Report
                     </p>
                     <div className="space-y-2">
                       <Link
@@ -129,18 +129,6 @@ export default function Sidebar({ isOpen, isCollapsed, user, onClose, onToggle }
                         className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
                       >
                         <Search className="w-4 h-4 flex-shrink-0" /> Spot Investigation
-                      </Link>
-                      <Link
-                        href="/municipal/reports/progress"
-                        className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                      >
-                        <Clock className="w-4 h-4 flex-shrink-0" /> Progress Investigation
-                      </Link>
-                      <Link
-                        href="/municipal/reports/final"
-                        className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                      >
-                        <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Final Investigation
                       </Link>
                     </div>
                   </div>
