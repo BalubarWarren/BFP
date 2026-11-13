@@ -8,7 +8,6 @@ import {
   ShieldCheck, Building2, Landmark, ScanLine, MapPin, Bell, Lock, ChevronDown, User,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
-import InstallAppButton from './InstallAppButton';
 
 // The review chain every investigation report walks through — the same four stages the in-app
 // progress tracker and the public QR tracking page show.
@@ -174,7 +173,6 @@ export default function LandingPage() {
             <a href="#track" className="hover:text-white transition-colors">Track a report</a>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <InstallAppButton variant="landing" />
             <Link
               href="/login"
               className="whitespace-nowrap rounded border border-white/70 px-4 py-2 sm:px-5 text-sm font-semibold transition-colors hover:bg-white hover:text-bfp-navy"
