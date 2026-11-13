@@ -95,6 +95,10 @@ const SECURITY_HEADERS = [
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
+  // The Trash page became the Report Archive.
+  async redirects() {
+    return [{ source: '/trash', destination: '/archive', permanent: true }];
+  },
   async headers() {
     return [
       {

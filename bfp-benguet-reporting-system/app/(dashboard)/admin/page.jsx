@@ -6,7 +6,6 @@ import { MapPin, User, Calendar, Tag, ChevronUp, ChevronDown, ClipboardList, Eye
 import StatusBadge from '../../../components/common/StatusBadge';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
 import PageHeader from '../../../components/common/PageHeader';
-import ConfirmDeleteModal from '../../../components/reports/ConfirmDeleteModal';
 import WorkflowTracker, { ROLE_LABELS } from '../../../components/reports/WorkflowTracker';
 import ReportDetailsModal from '../../../components/reports/ReportDetailsModal';
 import ReportSearchFilters from '../../../components/reports/ReportSearchFilters';
@@ -28,9 +27,6 @@ export default function AdminDashboard() {
   const [municipalities, setMunicipalities] = useState([]);
   const [expandedId, setExpandedId] = useState(null);
   const [sessionExpired, setSessionExpired] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -73,24 +69,6 @@ export default function AdminDashboard() {
       }
     } finally {
       if (!silent) setLoading(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleteLoading(true);
-    setDeleteError('');
-    try {
-      const token = sessionStorage.getItem('token');
-      await axios.delete(`/api/reports/${deleteTarget.id}`, { headers: { Authorization: `Bearer ${token}` } });
-      setDeleteTarget(null);
-      setExpandedId(null);
-      toast.success('Report moved to Trash. You can restore it from the Trash page.');
-      fetchAll({ silent: true });
-    } catch (err) {
-      setDeleteError(err.response?.data?.error || 'Failed to delete report.');
-    } finally {
-      setDeleteLoading(false);
     }
   };
 
@@ -300,18 +278,6 @@ export default function AdminDashboard() {
                       >
                         <Eye className="w-4 h-4" /> View Details
                       </button>
-                    {!report.isDemo && (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setDeleteTarget(report);
-                          }}
-                          className="btn btn-danger text-sm py-1 px-3"
-                        >
-                          Delete Report
-                        </button>
-                    )}
                     </div>
                   </div>
                 )}
@@ -323,19 +289,6 @@ export default function AdminDashboard() {
 
       {viewTarget && (
         <ReportDetailsModal report={viewTarget} onClose={() => setViewTarget(null)} showHistory />
-      )}
-
-      {deleteTarget && (
-        <ConfirmDeleteModal
-          message={`Delete this ${fmtType(deleteTarget.reportType)} report submitted by ${deleteTarget.submittedBy?.name || 'this user'}? It will be moved to the Trash, where it can be restored within 30 days.`}
-          loading={deleteLoading}
-          error={deleteError}
-          onConfirm={handleDelete}
-          onCancel={() => {
-            setDeleteTarget(null);
-            setDeleteError('');
-          }}
-        />
       )}
     </div>
   );

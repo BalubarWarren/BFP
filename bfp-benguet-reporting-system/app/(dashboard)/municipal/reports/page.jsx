@@ -12,7 +12,6 @@ import ReportRowActions from '../../../../components/reports/ReportRowActions';
 import ForwardReportModal from '../../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
 import PageHeader from '../../../../components/common/PageHeader';
-import ConfirmDeleteModal from '../../../../components/reports/ConfirmDeleteModal';
 import ReportSearchFilters from '../../../../components/reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../../lib/report-search';
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
@@ -28,9 +27,6 @@ export default function MunicipalReportsPage() {
   const [reportDetail, setReportDetail] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
   const [forwardTarget, setForwardTarget] = useState(null);
 
   useEffect(() => {
@@ -53,26 +49,6 @@ export default function MunicipalReportsPage() {
       console.error('Error fetching reports:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const canDelete = (report) => !(report?.status === 'APPROVED' && !report?.passedToId);
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleteLoading(true);
-    setDeleteError('');
-    try {
-      const token = sessionStorage.getItem('token');
-      await axios.delete(`/api/reports/${deleteTarget.id}`, { headers: { Authorization: `Bearer ${token}` } });
-      setDeleteTarget(null);
-      closeReport();
-      toast.success('Report moved to Trash. You can restore it from the Trash page.');
-      fetchReports();
-    } catch (err) {
-      setDeleteError(err.response?.data?.error || 'Failed to delete report.');
-    } finally {
-      setDeleteLoading(false);
     }
   };
 
@@ -113,7 +89,7 @@ export default function MunicipalReportsPage() {
     setReportDetail(null);
   };
 
-  useEscapeKey(closeReport, !!selectedReport && !deleteTarget && !forwardTarget);
+  useEscapeKey(closeReport, !!selectedReport && !forwardTarget);
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
@@ -180,15 +156,6 @@ export default function MunicipalReportsPage() {
 
             <div className="flex justify-end gap-3 border-t bg-gray-50 p-6">
               <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
-              {canDelete(selectedReport) && (
-                <button
-                  type="button"
-                  onClick={() => setDeleteTarget(selectedReport)}
-                  className="btn btn-danger"
-                >
-                  Delete
-                </button>
-              )}
               <button onClick={closeReport} className="btn btn-secondary">Close</button>
             </div>
           </div>
@@ -315,19 +282,6 @@ export default function MunicipalReportsPage() {
             setForwardTarget(null);
             closeReport();
             fetchReports();
-          }}
-        />
-      )}
-
-      {deleteTarget && (
-        <ConfirmDeleteModal
-          message={`Delete this ${formatReportType(deleteTarget.reportType)} report? It will be moved to the Trash, where it can be restored within 30 days.`}
-          loading={deleteLoading}
-          error={deleteError}
-          onConfirm={handleDelete}
-          onCancel={() => {
-            setDeleteTarget(null);
-            setDeleteError('');
           }}
         />
       )}

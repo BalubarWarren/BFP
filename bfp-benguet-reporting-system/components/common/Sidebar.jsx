@@ -4,13 +4,13 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
-  ShieldCheck, LogOut, Users, History, Archive, UserCheck, MessageSquare, Trash2,
+  ShieldCheck, LogOut, Users, History, Archive, UserCheck, MessageSquare, FolderArchive,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
 import MenuButton from './MenuButton';
 import UserAvatar from './UserAvatar';
 import { displayName } from '../../lib/user-display';
-import { APPROVED_REPORTS_PATH, canViewApprovedReports, TRASH_PATH, canViewTrash } from '../../lib/constants';
+import { APPROVED_REPORTS_PATH, canViewApprovedReports, ARCHIVE_PATH, canViewArchive } from '../../lib/constants';
 import { clearSession } from '../../lib/session';
 
 // Every role whose ROLE_HOME_PATH/isRouteAllowedForRole (lib/constants.js) points at /provincial —
@@ -92,8 +92,8 @@ function getNavSections(role) {
   if (canViewApprovedReports(role)) {
     records.push({ href: APPROVED_REPORTS_PATH, label: 'Reports', hint: 'Approved & filed records', icon: Archive });
   }
-  if (canViewTrash(role)) {
-    records.push({ href: TRASH_PATH, label: 'Trash', hint: 'Recover deleted reports', icon: Trash2 });
+  if (canViewArchive(role)) {
+    records.push({ href: ARCHIVE_PATH, label: 'Archive', hint: 'Earlier versions of revised reports', icon: FolderArchive });
   }
   if (records.length) sections.push({ title: 'Records', items: records });
 

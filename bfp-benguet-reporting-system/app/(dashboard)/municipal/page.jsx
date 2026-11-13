@@ -14,7 +14,6 @@ import ReportRowActions, { needsForwarding } from '../../../components/reports/R
 import ForwardReportModal from '../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 import PageHeader from '../../../components/common/PageHeader';
-import ConfirmDeleteModal from '../../../components/reports/ConfirmDeleteModal';
 import ReportSearchFilters from '../../../components/reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../lib/report-search';
 import InvestigatorDirectives from '../../../components/directives/InvestigatorDirectives';
@@ -33,9 +32,6 @@ export default function MunicipalDashboard() {
   const [sessionExpired, setSessionExpired] = useState(false);
   const [filterStatus, setFilterStatus] = useState('');
   const [searchFilters, setSearchFilters] = useState(EMPTY_REPORT_FILTERS);
-  const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
-  const [deleteError, setDeleteError] = useState('');
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -116,32 +112,12 @@ export default function MunicipalDashboard() {
 
   // Only the topmost open modal should close on Escape — the delete confirmation and forward
   // modal both stack on top of the report-detail view without closing it underneath.
-  useEscapeKey(closeView, !!selectedReport && !forwardTarget && !deleteTarget);
+  useEscapeKey(closeView, !!selectedReport && !forwardTarget);
 
   const handleForwarded = async () => {
     closeForward();
     closeView();
     await fetchReports();
-  };
-
-  const canDelete = (report) => !isFinallyApproved(report);
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleteLoading(true);
-    setDeleteError('');
-    try {
-      const token = sessionStorage.getItem('token');
-      await axios.delete(`/api/reports/${deleteTarget.id}`, { headers: { Authorization: `Bearer ${token}` } });
-      setDeleteTarget(null);
-      closeView();
-      toast.success('Report moved to Trash. You can restore it from the Trash page.');
-      fetchReports();
-    } catch (err) {
-      setDeleteError(err.response?.data?.error || 'Failed to delete report.');
-    } finally {
-      setDeleteLoading(false);
-    }
   };
 
   const parseAttachments = (attachments) => parseJsonField(attachments, []);
@@ -278,15 +254,6 @@ export default function MunicipalDashboard() {
                   className="btn btn-primary"
                 >
                   → Submit Report
-                </button>
-              )}
-              {canDelete(selectedReport) && (
-                <button
-                  type="button"
-                  onClick={() => setDeleteTarget(selectedReport)}
-                  className="btn btn-danger"
-                >
-                  Delete
                 </button>
               )}
               <button onClick={closeView} className="btn btn-secondary">Close</button>
@@ -466,19 +433,6 @@ export default function MunicipalDashboard() {
           )}
         </div>
       </div>
-
-      {deleteTarget && (
-        <ConfirmDeleteModal
-          message={`Delete this ${formatReportType(deleteTarget.reportType)} report? It will be moved to the Trash, where it can be restored within 30 days.`}
-          loading={deleteLoading}
-          error={deleteError}
-          onConfirm={handleDelete}
-          onCancel={() => {
-            setDeleteTarget(null);
-            setDeleteError('');
-          }}
-        />
-      )}
     </div>
   );
 }

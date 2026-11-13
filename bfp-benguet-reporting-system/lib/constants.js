@@ -398,13 +398,13 @@ export const APPROVED_REPORTS_ROLES = [
 
 export const canViewApprovedReports = (role) => APPROVED_REPORTS_ROLES.includes(role);
 
-// Trash bin for deleted reports (see lib/trash.js). Open to the roles that can delete reports:
-// investigators see the reports they deleted/submitted, admins see everything.
-export const TRASH_PATH = '/trash';
+// Report Archive: earlier versions of reports that were returned and revised (see lib/archive.js).
+// Read-only. Investigators see the versions of their own reports; admins see everything.
+export const ARCHIVE_PATH = '/archive';
 
-export const TRASH_ROLES = [ROLES.INVESTIGATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN];
+export const ARCHIVE_ROLES = [ROLES.INVESTIGATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN];
 
-export const canViewTrash = (role) => TRASH_ROLES.includes(role);
+export const canViewArchive = (role) => ARCHIVE_ROLES.includes(role);
 
 // Whether a given pathname belongs to the dashboard section a role is allowed to view.
 // Used to bounce a signed-in user back to their own dashboard if the URL they're on
@@ -415,8 +415,8 @@ export function isRouteAllowedForRole(role, pathname) {
   if (pathname.startsWith(APPROVED_REPORTS_PATH)) {
     return canViewApprovedReports(role);
   }
-  if (pathname.startsWith(TRASH_PATH)) {
-    return canViewTrash(role);
+  if (pathname.startsWith(ARCHIVE_PATH)) {
+    return canViewArchive(role);
   }
 
   switch (role) {

@@ -10,12 +10,10 @@ import {
   nextTierRoles,
   REVIEW_TIERS,
 } from '../../../../lib/report-access';
-import { moveReportToTrash } from '../../../../lib/trash';
+import { archiveReportVersion } from '../../../../lib/archive';
 import { notifyReportRecipients } from '../../../../lib/report-notifications';
 import { canUserViewReport } from '../../../../lib/report-view-access';
 import { generateQrToken } from '../../../../lib/qr-token';
-
-const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
 export async function GET(request, { params }) {
   try {
@@ -275,15 +273,27 @@ export async function PATCH(request, { params }) {
       }
     }
 
+    // Revising a returned report replaces its content, so the version the reviewer returned is
+    // saved to the Report Archive first (see lib/archive.js). Reports are never deleted: every
+    // earlier version stays on file with the remarks it was returned with.
+    const archivesPreviousVersion = isEditingFields && report.status === REPORT_STATUS.RETURNED;
+
     // Guarded on the exact version just read: a double-clicked Forward/Resubmit, or the same
     // report open in two tabs, would otherwise both pass the status checks above and both apply
     // (sending every reviewer duplicate notifications). Only the first write wins; the other
-    // gets a 409 instead of re-routing a report that has already moved on.
-    const guarded = await prisma.report.updateMany({
-      where: { id: report.id, status: report.status, updatedAt: report.updatedAt },
-      data: updateData,
+    // gets a 409 instead of re-routing a report that has already moved on. The archive copy is
+    // written in the same transaction, so it exists exactly when the revision does.
+    const updatedCount = await prisma.$transaction(async (tx) => {
+      const guarded = await tx.report.updateMany({
+        where: { id: report.id, status: report.status, updatedAt: report.updatedAt },
+        data: updateData,
+      });
+      if (guarded.count > 0 && archivesPreviousVersion) {
+        await archiveReportVersion(tx, report, user);
+      }
+      return guarded.count;
     });
-    if (guarded.count === 0) {
+    if (updatedCount === 0) {
       return NextResponse.json(
         { error: 'This report was changed in the meantime. Refresh to see its current status.' },
         { status: 409 }
@@ -326,73 +336,5 @@ export async function PATCH(request, { params }) {
   }
 }
 
-// Lets the original submitter retract their own report, or an admin remove any report. Once a
-// report has received final approval (APPROVED with nothing left to forward), it's treated as
-// part of the official record and only an admin can remove it.
-export async function DELETE(request, { params }) {
-  try {
-    const user = await getUserFromRequest(request);
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    if (isDemoReportId(params.id)) {
-      return NextResponse.json({ error: 'Demo reports cannot be deleted' }, { status: 400 });
-    }
-
-    const reportId = parseInt(params.id);
-    const report = await prisma.report.findUnique({ where: { id: reportId } });
-
-    if (!report) {
-      return NextResponse.json({ error: 'Report not found' }, { status: 404 });
-    }
-
-    const isAdmin = ADMIN_ROLES.includes(user.role);
-    const isOwner = report.submittedById === user.id;
-
-    if (!isAdmin && !isOwner) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
-
-    const isFinallyApproved = report.status === REPORT_STATUS.APPROVED && !report.passedToId;
-
-    // A report an intermediate reviewer already approved-and-bounced-back (status APPROVED,
-    // passedToId pointing back at the submitter to forward it on) isn't "finally approved" yet,
-    // so the check above alone would let the owner delete it — silently destroying that
-    // reviewer's AuditLog-backed "Reports Reviewed" history along with it. Once any reviewer has
-    // actually acted on a report, only an admin may remove it, regardless of its current status.
-    const hasBeenReviewed = await prisma.auditLog.findFirst({
-      where: { reportId, action: { in: ['APPROVE_REPORT', 'RETURN_REPORT'] } },
-      select: { id: true },
-    });
-
-    if (!isAdmin && (isFinallyApproved || hasBeenReviewed)) {
-      return NextResponse.json(
-        {
-          error: hasBeenReviewed
-            ? 'This report has already been reviewed and can no longer be deleted. Contact an admin if it needs to be removed.'
-            : 'This report has received final approval and can no longer be deleted.',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Moved to the trash rather than destroyed, so an accidental delete can be undone from
-    // /trash (see lib/trash.js). Conditional on the version just checked, so a reviewer
-    // approving/returning the report at the same moment can't have their review trashed out from
-    // under them.
-    const moved = await moveReportToTrash(report, user);
-    if (!moved) {
-      return NextResponse.json(
-        { error: 'This report was changed in the meantime. Refresh and try again.' },
-        { status: 409 }
-      );
-    }
-
-    return NextResponse.json({ message: 'Report moved to Trash' });
-  } catch (error) {
-    console.error('Error deleting report:', error);
-    return NextResponse.json({ error: 'Failed to delete report' }, { status: 500 });
-  }
-}
+// There is deliberately no DELETE handler: reports are part of the official record and cannot be
+// deleted. Earlier versions of revised reports are kept in the Report Archive (lib/archive.js).

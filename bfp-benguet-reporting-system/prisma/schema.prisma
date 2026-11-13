@@ -285,12 +285,11 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// Recycle bin for deleted reports (see lib/trash.js and /api/trash). Deleting a report moves a
-// full snapshot of it here instead of destroying it, so it can be restored with its original id,
-// annotations and (if it was the last report on it) its incident. Its attachment files stay in
-// storage until the item is purged — by hand, or automatically once expiresAt passes.
-// Deliberately has no foreign keys: a trashed report must survive its submitter or deleter being
-// removed, and restore re-checks those references itself.
+// Report Archive (see lib/archive.js and /api/archive). Originally the Trash bin; the table and
+// column names are kept so no migration was needed. Each row is a full JSON snapshot of a report
+// version that was replaced by a revision (itemType REPORT_VERSION), or a report removed under the
+// old Delete feature (itemType REPORT). deleted* columns mean "archived by/at"; expiresAt is unused.
+// Deliberately has no foreign keys, so an archived version survives its submitter being removed.
 model TrashItem {
   id             Int      @id @default(autoincrement())
   itemType       String // "REPORT"

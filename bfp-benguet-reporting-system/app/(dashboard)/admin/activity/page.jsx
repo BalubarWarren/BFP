@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { History, CheckCircle2, Undo2, MessageSquare, AlertTriangle, Megaphone, Trash2, ArchiveRestore, XCircle, CalendarDays, UserCheck } from 'lucide-react';
+import { History, CheckCircle2, Undo2, MessageSquare, AlertTriangle, Megaphone, Trash2, ArchiveRestore, FolderArchive, XCircle, CalendarDays, UserCheck } from 'lucide-react';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import PageHeader from '../../../../components/common/PageHeader';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
@@ -17,6 +17,7 @@ const ACTION_META = {
   TRASH_REPORT: { label: 'Moved to Trash', icon: Trash2, className: 'bg-gray-100 text-gray-800' },
   RESTORE_REPORT: { label: 'Restored', icon: ArchiveRestore, className: 'bg-bfp-green/15 text-bfp-green' },
   PURGE_REPORT: { label: 'Permanently Deleted', icon: XCircle, className: 'bg-bfp-red/10 text-bfp-red' },
+  ARCHIVE_REPORT_VERSION: { label: 'Revised (Archived)', icon: FolderArchive, className: 'bg-amber-50 text-amber-800' },
   SET_DUTY_SCHEDULE: { label: 'Duty Schedule', icon: CalendarDays, className: 'bg-bfp-navy/10 text-bfp-navy' },
   SET_DUTY_STATUS: { label: 'Duty Status', icon: UserCheck, className: 'bg-bfp-navy/10 text-bfp-navy' },
 };
@@ -43,6 +44,9 @@ const describeChanges = (entry) => {
   }
   if (entry.action === 'TRASH_REPORT' || entry.action === 'RESTORE_REPORT') {
     return formatReportType(changes.reportType);
+  }
+  if (entry.action === 'ARCHIVE_REPORT_VERSION') {
+    return `${formatReportType(changes.reportType)}, version ${changes.version ?? '?'} archived`;
   }
   if (entry.action === 'PURGE_REPORT') {
     return changes.label || '—';
@@ -152,6 +156,7 @@ export default function ActivityLogPage() {
               <option value="RETURN_REPORT">Returned</option>
               <option value="TEXT_BLAST_REPORT">Text Blast</option>
               <option value="SEND_DIRECTIVE">Directive</option>
+              <option value="ARCHIVE_REPORT_VERSION">Revised (Archived)</option>
               <option value="TRASH_REPORT">Moved to Trash</option>
               <option value="RESTORE_REPORT">Restored</option>
               <option value="PURGE_REPORT">Permanently Deleted</option>
