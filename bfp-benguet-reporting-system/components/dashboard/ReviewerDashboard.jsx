@@ -9,6 +9,7 @@ import { useToast } from '../common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../lib/utils';
 import AttachmentList from '../reports/AttachmentList';
 import RevisionHistory from '../reports/RevisionHistory';
+import CaseChain from '../reports/CaseChain';
 import TableSkeleton from '../common/TableSkeleton';
 import PageHeader from '../common/PageHeader';
 import ReportSearchFilters from '../reports/ReportSearchFilters';
@@ -362,6 +363,12 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                     )}
   
                     {/* Was this returned and revised? Investigator's notes + earlier versions to compare */}
+                    <CaseChain
+                      reports={reportDetail?.caseReports}
+                      currentId={selectedReport.id}
+                      referenceNumber={reportDetail?.incident?.referenceNumber || selectedReport.incident?.referenceNumber}
+                    />
+
                     <RevisionHistory report={reportDetail} />
   
                     {reportDetail?.remarks && (

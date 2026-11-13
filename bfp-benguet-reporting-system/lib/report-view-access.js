@@ -34,5 +34,28 @@ export async function canUserViewReport(report, user) {
     where: { userId: user.id, reportId: report.id, action: { in: ['APPROVE_REPORT', 'RETURN_REPORT'] } },
     select: { id: true },
   });
-  return !!hasReviewedReport;
+  if (hasReviewedReport) return true;
+
+  // Spot -> Progress -> Final are one case: a reviewer who has (or had) any report of the case in
+  // front of them can read the case's other reports, e.g. the Spot report a Progress report
+  // continues. Only direct recipient/review links count here (no recursion through the case).
+  if (report.incidentId) {
+    const caseReports = await prisma.report.findMany({
+      where: { incidentId: report.incidentId, id: { not: report.id } },
+      select: { id: true, passedToId: true, passedToRole: true, municipalityId: true, submittedById: true },
+    });
+    if (caseReports.some((r) => r.submittedById === user.id || isReportRecipient(r, user))) return true;
+    if (caseReports.length) {
+      const reviewedInCase = await prisma.auditLog.findFirst({
+        where: {
+          userId: user.id,
+          reportId: { in: caseReports.map((r) => r.id) },
+          action: { in: ['APPROVE_REPORT', 'RETURN_REPORT'] },
+        },
+        select: { id: true },
+      });
+      if (reviewedInCase) return true;
+    }
+  }
+  return false;
 }

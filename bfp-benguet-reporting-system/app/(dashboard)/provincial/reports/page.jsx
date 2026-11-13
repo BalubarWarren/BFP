@@ -18,6 +18,7 @@ import ReportDetailsModal from '../../../../components/reports/ReportDetailsModa
 import { useOpenReportParam } from '../../../../hooks/useOpenReportParam';
 import { fetchReportForModal } from '../../../../lib/notification-target';
 import Portal from '../../../../components/common/Portal';
+import CaseChain from '../../../../components/reports/CaseChain';
 
 export default function ProvincialReportsPage() {
   const toast = useToast();
@@ -340,6 +341,12 @@ export default function ProvincialReportsPage() {
                   )}
                 </div>
   
+                <CaseChain
+                  reports={reportDetail?.caseReports}
+                  currentId={selectedReport.id}
+                  referenceNumber={reportDetail?.incident?.referenceNumber || selectedReport.incident?.referenceNumber}
+                />
+
                 {/* Incident info */}
                 {reportDetail?.incident && (
                   <div className="bg-yellow-50 rounded-lg p-4">
