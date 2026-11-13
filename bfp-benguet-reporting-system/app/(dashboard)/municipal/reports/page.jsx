@@ -9,6 +9,7 @@ import { formatDateTime, parseJsonField } from '../../../../lib/utils';
 import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../../components/reports/AttachmentList';
 import CaseChain from '../../../../components/reports/CaseChain';
+import { getReportTitle, getReportSubtitle } from '../../../../lib/report-title';
 import CaseLinks from '../../../../components/reports/CaseLinks';
 import RevisionHistory from '../../../../components/reports/RevisionHistory';
 import ReportRowActions from '../../../../components/reports/ReportRowActions';
@@ -276,8 +277,8 @@ export default function MunicipalReportsPage() {
                     style={{ animationDelay: `${Math.min(index, 10) * 30}ms` }}
                   >
                     <td className="px-5 py-4">
-                      <p className="font-semibold text-gray-900">{formatReportType(report.reportType)}</p>
-                      <p className="text-xs text-gray-500">#{report.id}</p>
+                      <p className="font-semibold text-gray-900">{getReportTitle(report)}</p>
+                      <p className="text-xs text-gray-500">{getReportSubtitle(report)} · #{report.id}</p>
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-700">
                       <p className="whitespace-nowrap">{report.incident?.referenceNumber || '-'}</p>
