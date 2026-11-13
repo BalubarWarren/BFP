@@ -103,7 +103,10 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 border-b border-gray-200 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/70 dark:border-gray-800 dark:bg-gray-950/80">
+    // Solid background on purpose: a backdrop blur here makes the header the containing block for
+    // every `position: fixed` element inside it (the phone-size notification and profile menus),
+    // which cut them off. Modals are portaled (components/common/Portal.jsx) for the same reason.
+    <header className="sticky top-0 z-30 border-b border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950">
       <div className="flex h-14 items-center justify-between gap-2 px-4 sm:px-6">
         {/* Left side - Menu toggle: opens the slide-out menu on phones. On wider screens the
             sidebar has its own button, so this one only appears to bring a hidden sidebar back

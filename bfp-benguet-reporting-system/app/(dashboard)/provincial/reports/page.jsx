@@ -14,6 +14,7 @@ import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 import ReportSearchFilters from '../../../../components/reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../../lib/report-search';
 import ReportQrButton from '../../../../components/reports/ReportQrButton';
+import Portal from '../../../../components/common/Portal';
 
 export default function ProvincialReportsPage() {
   const toast = useToast();
@@ -277,102 +278,104 @@ export default function ProvincialReportsPage() {
 
       {/* Review Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
-          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 sm:p-6 border-b">
-              <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Report Review</h2>
-              <button onClick={closeReview} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-
-            <div className="p-4 sm:p-6 space-y-6">
-              {/* Report Meta */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
-                <div><p className="text-gray-500">Municipality</p><p className="font-semibold">{reportDetail?.municipality?.name || selectedReport.municipality?.name}</p></div>
-                <div><p className="text-gray-500">Report Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
-                <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
-                <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
-                <div><p className="text-gray-500">Submitted By</p><p className="font-semibold">{selectedReport.submittedBy?.name}</p></div>
-                <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
-                {reportDetail?.respondingOfficer && (
-                  <div><p className="text-gray-500">Reporting Officer</p><p className="font-semibold">{reportDetail.respondingOfficer}</p></div>
-                )}
-                {reportDetail?.reportingOfficerRank && (
-                  <div><p className="text-gray-500">Rank</p><p className="font-semibold">{reportDetail.reportingOfficerRank}</p></div>
-                )}
+        <Portal>
+          <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+            <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center p-4 sm:p-6 border-b">
+                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Report Review</h2>
+                <button onClick={closeReview} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
               </div>
-
-              {/* Always-visible attachments list */}
-              <div className="mt-3">
-                {(parseAttachments(reportDetail?.attachments).length || parseAttachments(selectedReport?.attachments).length) > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
-                    <AttachmentList
-                      attachments={
-                        parseAttachments(reportDetail?.attachments).length
-                          ? reportDetail.attachments
-                          : selectedReport?.attachments
-                      }
-                      reportId={selectedReport.id}
-                      canAnnotate={selectedReport.status === 'SUBMITTED'}
-                    />
+  
+              <div className="p-4 sm:p-6 space-y-6">
+                {/* Report Meta */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+                  <div><p className="text-gray-500">Municipality</p><p className="font-semibold">{reportDetail?.municipality?.name || selectedReport.municipality?.name}</p></div>
+                  <div><p className="text-gray-500">Report Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
+                  <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
+                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
+                  <div><p className="text-gray-500">Submitted By</p><p className="font-semibold">{selectedReport.submittedBy?.name}</p></div>
+                  <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
+                  {reportDetail?.respondingOfficer && (
+                    <div><p className="text-gray-500">Reporting Officer</p><p className="font-semibold">{reportDetail.respondingOfficer}</p></div>
+                  )}
+                  {reportDetail?.reportingOfficerRank && (
+                    <div><p className="text-gray-500">Rank</p><p className="font-semibold">{reportDetail.reportingOfficerRank}</p></div>
+                  )}
+                </div>
+  
+                {/* Always-visible attachments list */}
+                <div className="mt-3">
+                  {(parseAttachments(reportDetail?.attachments).length || parseAttachments(selectedReport?.attachments).length) > 0 && (
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
+                      <AttachmentList
+                        attachments={
+                          parseAttachments(reportDetail?.attachments).length
+                            ? reportDetail.attachments
+                            : selectedReport?.attachments
+                        }
+                        reportId={selectedReport.id}
+                        canAnnotate={selectedReport.status === 'SUBMITTED'}
+                      />
+                    </div>
+                  )}
+                </div>
+  
+                {/* Incident info */}
+                {reportDetail?.incident && (
+                  <div className="bg-yellow-50 rounded-lg p-4">
+                    <h3 className="font-bold text-bfp-navy mb-2">Incident Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div><p className="text-gray-500">Reference</p><p className="font-semibold">{reportDetail.incident.referenceNumber}</p></div>
+                      <div><p className="text-gray-500">Category</p><p className="font-semibold">{reportDetail.incident.generalCategory}</p></div>
+                      <div><p className="text-gray-500">Status</p><p className="font-semibold">{reportDetail.incident.status}</p></div>
+                    </div>
                   </div>
                 )}
-              </div>
-
-              {/* Incident info */}
-              {reportDetail?.incident && (
-                <div className="bg-yellow-50 rounded-lg p-4">
-                  <h3 className="font-bold text-bfp-navy mb-2">Incident Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    <div><p className="text-gray-500">Reference</p><p className="font-semibold">{reportDetail.incident.referenceNumber}</p></div>
-                    <div><p className="text-gray-500">Category</p><p className="font-semibold">{reportDetail.incident.generalCategory}</p></div>
-                    <div><p className="text-gray-500">Status</p><p className="font-semibold">{reportDetail.incident.status}</p></div>
+  
+  
+  
+                {/* Previous remarks */}
+                {reportDetail?.remarks && (
+                  <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">
+                    <p className="text-sm font-semibold text-red-700">Previous Remarks</p>
+                    <p className="text-sm text-red-600 mt-1">{reportDetail.remarks}</p>
                   </div>
+                )}
+  
+                {/* Comments box — always visible so reviewer can comment at any time */}
+                <div>
+                  <label className="form-label">Correction Comments <span className="text-gray-400 font-normal">(required when returning)</span></label>
+                  <textarea
+                    className="form-textarea w-full"
+                    rows={6}
+                    placeholder="Enter corrections or notes here..."
+                    value={comments}
+                    onChange={(e) => setComments(e.target.value)}
+                  />
                 </div>
-              )}
-
-
-
-              {/* Previous remarks */}
-              {reportDetail?.remarks && (
-                <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">
-                  <p className="text-sm font-semibold text-red-700">Previous Remarks</p>
-                  <p className="text-sm text-red-600 mt-1">{reportDetail.remarks}</p>
-                </div>
-              )}
-
-              {/* Comments box — always visible so reviewer can comment at any time */}
-              <div>
-                <label className="form-label">Correction Comments <span className="text-gray-400 font-normal">(required when returning)</span></label>
-                <textarea
-                  className="form-textarea w-full"
-                  rows={6}
-                  placeholder="Enter corrections or notes here..."
-                  value={comments}
-                  onChange={(e) => setComments(e.target.value)}
-                />
+  
+  
               </div>
-
-
-            </div>
-
-            {/* Action Buttons — show for SUBMITTED status */}
-            <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
-              <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
-              <button onClick={closeReview} className="btn btn-secondary" disabled={actionLoading}>Cancel</button>
-              {selectedReport.status === 'SUBMITTED' && (
-                <>
-                  <button onClick={handleReturn} disabled={actionLoading} className="btn btn-danger">
-                    {actionLoading ? 'Processing...' : 'Return'}
-                  </button>
-                  <button onClick={handleApprove} disabled={actionLoading} className="btn btn-success">
-                    {actionLoading ? 'Processing...' : 'Approve'}
-                  </button>
-                </>
-              )}
+  
+              {/* Action Buttons — show for SUBMITTED status */}
+              <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
+                <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
+                <button onClick={closeReview} className="btn btn-secondary" disabled={actionLoading}>Cancel</button>
+                {selectedReport.status === 'SUBMITTED' && (
+                  <>
+                    <button onClick={handleReturn} disabled={actionLoading} className="btn btn-danger">
+                      {actionLoading ? 'Processing...' : 'Return'}
+                    </button>
+                    <button onClick={handleApprove} disabled={actionLoading} className="btn btn-success">
+                      {actionLoading ? 'Processing...' : 'Approve'}
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </div>
   );

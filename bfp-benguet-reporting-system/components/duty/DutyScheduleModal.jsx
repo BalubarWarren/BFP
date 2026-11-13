@@ -13,6 +13,7 @@ import {
   parseWeekdays,
   parseDutySchedule,
 } from '../../lib/duty';
+import Portal from '../common/Portal';
 
 // The Fire Marshal sets one investigator's duty schedule (PUT /api/team/[id]/schedule): fixed
 // weekdays, a rotating shift, or none. The preview below uses the same lib/duty.js logic the
@@ -85,103 +86,105 @@ export default function DutyScheduleModal({ investigator, onClose, onSaved }) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={saving ? undefined : onClose}>
-      <div className="modal-pop-in max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start justify-between gap-3 border-b p-4 sm:p-6">
-          <div>
-            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-gray-900">
-              <CalendarDays className="h-5 w-5" /> Duty Schedule
-            </h2>
-            <p className="text-sm text-gray-600">{investigator.rank ? `${investigator.rank} ` : ''}{investigator.name}</p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-
-        <div className="space-y-5 p-4 sm:p-6">
-          <div className="flex flex-wrap gap-2">
-            {typeButton('WEEKLY', 'Fixed days')}
-            {typeButton('ROTATION', 'Rotating shift')}
-            {typeButton('NONE', 'No schedule')}
-          </div>
-
-          {pattern === 'WEEKLY' && (
+    <Portal>
+      <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={saving ? undefined : onClose}>
+        <div className="modal-pop-in max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-start justify-between gap-3 border-b p-4 sm:p-6">
             <div>
-              <p className="form-label">On duty every</p>
-              <div className="flex flex-wrap gap-2">
-                {[1, 2, 3, 4, 5, 6, 0].map((day) => (
-                  <button
-                    key={day}
-                    type="button"
-                    onClick={() => toggleDay(day)}
-                    aria-pressed={weekdays.includes(day)}
-                    className={`h-10 w-12 rounded-lg border text-sm font-semibold transition-colors ${
-                      weekdays.includes(day) ? 'border-green-700 bg-green-700 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    {WEEKDAY_SHORT[day]}
-                  </button>
-                ))}
-              </div>
+              <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-gray-900">
+                <CalendarDays className="h-5 w-5" /> Duty Schedule
+              </h2>
+              <p className="text-sm text-gray-600">{investigator.rank ? `${investigator.rank} ` : ''}{investigator.name}</p>
             </div>
-          )}
-
-          {pattern === 'ROTATION' && (
-            <div className="space-y-4">
+            <button type="button" onClick={onClose} aria-label="Close" className="text-gray-400 hover:text-gray-600">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+  
+          <div className="space-y-5 p-4 sm:p-6">
+            <div className="flex flex-wrap gap-2">
+              {typeButton('WEEKLY', 'Fixed days')}
+              {typeButton('ROTATION', 'Rotating shift')}
+              {typeButton('NONE', 'No schedule')}
+            </div>
+  
+            {pattern === 'WEEKLY' && (
               <div>
-                <label className="form-label" htmlFor="duty-preset">Shift pattern</label>
-                <select id="duty-preset" className="form-select" value={preset} onChange={(e) => setPreset(e.target.value)}>
-                  {ROTATION_PRESETS.map((p) => (
-                    <option key={p.key} value={p.key}>{p.label}</option>
+                <p className="form-label">On duty every</p>
+                <div className="flex flex-wrap gap-2">
+                  {[1, 2, 3, 4, 5, 6, 0].map((day) => (
+                    <button
+                      key={day}
+                      type="button"
+                      onClick={() => toggleDay(day)}
+                      aria-pressed={weekdays.includes(day)}
+                      className={`h-10 w-12 rounded-lg border text-sm font-semibold transition-colors ${
+                        weekdays.includes(day) ? 'border-green-700 bg-green-700 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {WEEKDAY_SHORT[day]}
+                    </button>
                   ))}
-                  <option value="custom">Custom…</option>
-                </select>
-              </div>
-              {preset === 'custom' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="form-label" htmlFor="duty-on">Days on duty</label>
-                    <input id="duty-on" type="number" min={1} max={13} className="form-input" value={onDays} onChange={(e) => setOnDays(e.target.value)} />
-                  </div>
-                  <div>
-                    <label className="form-label" htmlFor="duty-cycle">Repeats every (days)</label>
-                    <input id="duty-cycle" type="number" min={2} max={14} className="form-input" value={cycle} onChange={(e) => setCycle(e.target.value)} />
-                  </div>
                 </div>
-              )}
-              <div>
-                <label className="form-label" htmlFor="duty-start">A day they are (or were) on duty</label>
-                <input id="duty-start" type="date" className="form-input" value={rotationStart} onChange={(e) => setRotationStart(e.target.value)} />
-                <p className="mt-1 text-xs text-gray-500">The rotation is counted forward and back from this date.</p>
               </div>
-            </div>
-          )}
-
-          {pattern === 'NONE' && (
-            <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
-              Without a schedule their duty status shows as &ldquo;No Schedule&rdquo;, and FireTrack won&rsquo;t warn before
-              assigning them work. They can still mark themselves on leave or unavailable.
-            </p>
-          )}
-
-          {preview && (
-            <div>
-              <p className="form-label">Next two weeks</p>
-              <DutyWeek days={preview} />
-            </div>
-          )}
-
-          {error && <div className="rounded-lg border border-red-400 bg-red-100 px-3 py-2 text-sm text-red-700">{error}</div>}
-        </div>
-
-        <div className="flex flex-wrap justify-end gap-3 border-t bg-gray-50 p-4 sm:p-6">
-          <button type="button" onClick={onClose} className="btn btn-secondary" disabled={saving}>Cancel</button>
-          <button type="button" onClick={handleSave} className="btn btn-primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save Schedule'}
-          </button>
+            )}
+  
+            {pattern === 'ROTATION' && (
+              <div className="space-y-4">
+                <div>
+                  <label className="form-label" htmlFor="duty-preset">Shift pattern</label>
+                  <select id="duty-preset" className="form-select" value={preset} onChange={(e) => setPreset(e.target.value)}>
+                    {ROTATION_PRESETS.map((p) => (
+                      <option key={p.key} value={p.key}>{p.label}</option>
+                    ))}
+                    <option value="custom">Custom…</option>
+                  </select>
+                </div>
+                {preset === 'custom' && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="form-label" htmlFor="duty-on">Days on duty</label>
+                      <input id="duty-on" type="number" min={1} max={13} className="form-input" value={onDays} onChange={(e) => setOnDays(e.target.value)} />
+                    </div>
+                    <div>
+                      <label className="form-label" htmlFor="duty-cycle">Repeats every (days)</label>
+                      <input id="duty-cycle" type="number" min={2} max={14} className="form-input" value={cycle} onChange={(e) => setCycle(e.target.value)} />
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <label className="form-label" htmlFor="duty-start">A day they are (or were) on duty</label>
+                  <input id="duty-start" type="date" className="form-input" value={rotationStart} onChange={(e) => setRotationStart(e.target.value)} />
+                  <p className="mt-1 text-xs text-gray-500">The rotation is counted forward and back from this date.</p>
+                </div>
+              </div>
+            )}
+  
+            {pattern === 'NONE' && (
+              <p className="rounded-lg bg-gray-50 p-3 text-sm text-gray-600">
+                Without a schedule their duty status shows as &ldquo;No Schedule&rdquo;, and FireTrack won&rsquo;t warn before
+                assigning them work. They can still mark themselves on leave or unavailable.
+              </p>
+            )}
+  
+            {preview && (
+              <div>
+                <p className="form-label">Next two weeks</p>
+                <DutyWeek days={preview} />
+              </div>
+            )}
+  
+            {error && <div className="rounded-lg border border-red-400 bg-red-100 px-3 py-2 text-sm text-red-700">{error}</div>}
+          </div>
+  
+          <div className="flex flex-wrap justify-end gap-3 border-t bg-gray-50 p-4 sm:p-6">
+            <button type="button" onClick={onClose} className="btn btn-secondary" disabled={saving}>Cancel</button>
+            <button type="button" onClick={handleSave} className="btn btn-primary" disabled={saving}>
+              {saving ? 'Saving…' : 'Save Schedule'}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
+    </Portal>
   );
 }

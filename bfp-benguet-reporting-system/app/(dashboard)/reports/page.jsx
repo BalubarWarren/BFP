@@ -14,6 +14,7 @@ import ReportQrModal from '../../../components/reports/ReportQrModal';
 import { useToast } from '../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../../lib/utils';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
+import Portal from '../../../components/common/Portal';
 
 // The shared Reports archive: every report that has cleared final approval by the Provincial
 // Chief IIS. Read by the Provincial Chief IIS, the Municipal Fire Marshal and the Municipal
@@ -312,79 +313,81 @@ export default function ApprovedReportsPage() {
 
       {/* Read-only detail view — no approve/return actions: this report is already final. */}
       {selectedReport && (
-        <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
-          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 sm:p-6 border-b">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-wider text-bfp-red">Approved Report</p>
-                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
-                  {selectedReport.incident?.referenceNumber || formatReportType(selectedReport.reportType)}
-                </h2>
-              </div>
-              <button onClick={closeReport} className="text-gray-400 hover:text-gray-600 text-2xl" aria-label="Close">
-                &times;
-              </button>
-            </div>
-
-            <div className="p-4 sm:p-6 space-y-6">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
-                <div><p className="text-gray-500">Report Type</p><p className="font-semibold">{formatReportType(selectedReport.reportType)}</p></div>
-                <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
-                <div><p className="text-gray-500">Municipality</p><p className="font-semibold">{selectedReport.municipality?.name || '-'}</p></div>
-                <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
-                <div><p className="text-gray-500">Submitted By</p><p className="font-semibold">{selectedReport.submittedBy?.name || '-'}</p></div>
-                <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
-                <div><p className="text-gray-500">Approved By</p><p className="font-semibold">{selectedReport.reviewedBy?.name || 'Provincial Chief IIS'}</p></div>
-                <div><p className="text-gray-500">Approved At</p><p className="font-semibold">{selectedReport.reviewedAt ? formatDateTime(selectedReport.reviewedAt) : '-'}</p></div>
-                {(reportDetail?.respondingOfficer || selectedReport.respondingOfficer) && (
-                  <div><p className="text-gray-500">Reporting Officer</p><p className="font-semibold">{reportDetail?.respondingOfficer || selectedReport.respondingOfficer}</p></div>
-                )}
-                {(reportDetail?.category || selectedReport.category) && (
-                  <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.category || selectedReport.category).replace(/_/g, ' ')}</p></div>
-                )}
-              </div>
-
-              {parseJsonField(reportDetail?.attachments ?? selectedReport.attachments, []).length > 0 && (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
-                  <AttachmentList
-                    attachments={reportDetail?.attachments ?? selectedReport.attachments}
-                    reportId={selectedReport.id}
-                  />
+        <Portal>
+          <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+            <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center p-4 sm:p-6 border-b">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-bfp-red">Approved Report</p>
+                  <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+                    {selectedReport.incident?.referenceNumber || formatReportType(selectedReport.reportType)}
+                  </h2>
                 </div>
-              )}
-
-              {reportDetail?.incident && (
-                <div className="bg-yellow-50 rounded-lg p-4">
-                  <h3 className="font-bold text-bfp-navy mb-2">Incident Details</h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    <div><p className="text-gray-500">Reference</p><p className="font-semibold">{reportDetail.incident.referenceNumber}</p></div>
-                    <div><p className="text-gray-500">Category</p><p className="font-semibold">{reportDetail.incident.generalCategory}</p></div>
-                    <div><p className="text-gray-500">Status</p><p className="font-semibold">{reportDetail.incident.status}</p></div>
+                <button onClick={closeReport} className="text-gray-400 hover:text-gray-600 text-2xl" aria-label="Close">
+                  &times;
+                </button>
+              </div>
+  
+              <div className="p-4 sm:p-6 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+                  <div><p className="text-gray-500">Report Type</p><p className="font-semibold">{formatReportType(selectedReport.reportType)}</p></div>
+                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
+                  <div><p className="text-gray-500">Municipality</p><p className="font-semibold">{selectedReport.municipality?.name || '-'}</p></div>
+                  <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
+                  <div><p className="text-gray-500">Submitted By</p><p className="font-semibold">{selectedReport.submittedBy?.name || '-'}</p></div>
+                  <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
+                  <div><p className="text-gray-500">Approved By</p><p className="font-semibold">{selectedReport.reviewedBy?.name || 'Provincial Chief IIS'}</p></div>
+                  <div><p className="text-gray-500">Approved At</p><p className="font-semibold">{selectedReport.reviewedAt ? formatDateTime(selectedReport.reviewedAt) : '-'}</p></div>
+                  {(reportDetail?.respondingOfficer || selectedReport.respondingOfficer) && (
+                    <div><p className="text-gray-500">Reporting Officer</p><p className="font-semibold">{reportDetail?.respondingOfficer || selectedReport.respondingOfficer}</p></div>
+                  )}
+                  {(reportDetail?.category || selectedReport.category) && (
+                    <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.category || selectedReport.category).replace(/_/g, ' ')}</p></div>
+                  )}
+                </div>
+  
+                {parseJsonField(reportDetail?.attachments ?? selectedReport.attachments, []).length > 0 && (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
+                    <AttachmentList
+                      attachments={reportDetail?.attachments ?? selectedReport.attachments}
+                      reportId={selectedReport.id}
+                    />
                   </div>
-                </div>
-              )}
-
-              {(reportDetail?.remarks || selectedReport.remarks) && (
-                <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded">
-                  <p className="text-sm font-semibold text-green-700">Approval Remarks</p>
-                  <p className="text-sm text-green-800 mt-1">{reportDetail?.remarks || selectedReport.remarks}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-              <button
-                onClick={() => openQr(selectedReport)}
-                disabled={qrLoadingId === selectedReport.id}
-                className="btn btn-secondary flex items-center gap-1.5 disabled:opacity-50"
-              >
-                <QrCode className="w-4 h-4" /> {qrLoadingId === selectedReport.id ? 'Generating…' : 'QR Code'}
-              </button>
-              <button onClick={closeReport} className="btn btn-secondary">Close</button>
+                )}
+  
+                {reportDetail?.incident && (
+                  <div className="bg-yellow-50 rounded-lg p-4">
+                    <h3 className="font-bold text-bfp-navy mb-2">Incident Details</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      <div><p className="text-gray-500">Reference</p><p className="font-semibold">{reportDetail.incident.referenceNumber}</p></div>
+                      <div><p className="text-gray-500">Category</p><p className="font-semibold">{reportDetail.incident.generalCategory}</p></div>
+                      <div><p className="text-gray-500">Status</p><p className="font-semibold">{reportDetail.incident.status}</p></div>
+                    </div>
+                  </div>
+                )}
+  
+                {(reportDetail?.remarks || selectedReport.remarks) && (
+                  <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded">
+                    <p className="text-sm font-semibold text-green-700">Approval Remarks</p>
+                    <p className="text-sm text-green-800 mt-1">{reportDetail?.remarks || selectedReport.remarks}</p>
+                  </div>
+                )}
+              </div>
+  
+              <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+                <button
+                  onClick={() => openQr(selectedReport)}
+                  disabled={qrLoadingId === selectedReport.id}
+                  className="btn btn-secondary flex items-center gap-1.5 disabled:opacity-50"
+                >
+                  <QrCode className="w-4 h-4" /> {qrLoadingId === selectedReport.id ? 'Generating…' : 'QR Code'}
+                </button>
+                <button onClick={closeReport} className="btn btn-secondary">Close</button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {qrTarget && <ReportQrModal report={qrTarget} onClose={() => setQrTarget(null)} />}

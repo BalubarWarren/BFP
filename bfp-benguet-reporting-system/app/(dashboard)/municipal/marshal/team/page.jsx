@@ -15,6 +15,7 @@ import DutyBadge, { DutyWeek } from '../../../../../components/duty/DutyBadge';
 import DutyScheduleModal from '../../../../../components/duty/DutyScheduleModal';
 import UserAvatar from '../../../../../components/common/UserAvatar';
 import { DUTY, DUTY_LABELS, DUTY_SORT, describeSchedule, formatDutyDate } from '../../../../../lib/duty';
+import Portal from '../../../../../components/common/Portal';
 
 const timeAgo = (date) => {
   if (!date) return 'Never signed in';
@@ -352,99 +353,101 @@ export default function MarshalTeamPage() {
       )}
 
       {target && (
-        <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
-          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 sm:p-6 border-b">
-              <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
-                {form.kind === 'ASSIGNMENT' ? 'Assign Report' : 'Send Message'}
-              </h2>
-              <button onClick={closeCompose} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-gray-600">
-                To: <span className="font-semibold text-gray-900">{target.rank ? `${target.rank} ` : ''}{target.name}</span>
-              </p>
-
-              {form.kind === 'ASSIGNMENT' && dutyWarning && (
-                <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
-                  <p className="flex items-center gap-2 font-semibold text-amber-800">
-                    <AlertTriangle className="h-4 w-4 flex-shrink-0" />
-                    {target.name} is {DUTY_LABELS[dutyWarning.duty.status].toLowerCase()} today
-                    {dutyWarning.duty.until ? ` (until ${formatDutyDate(dutyWarning.duty.until)})` : ''}.
-                  </p>
-                  {dutyWarning.duty.note && <p className="mt-1 text-amber-800">Reason: &ldquo;{dutyWarning.duty.note}&rdquo;</p>}
-                  <p className="mt-1 text-gray-700">
-                    {dutyWarning.nextDuty
-                      ? `Their next duty day is ${formatDutyDate(dutyWarning.nextDuty)}. `
-                      : ''}
-                    Consider assigning someone who is on duty.
-                  </p>
-                  <label className="mt-2 flex items-center gap-2 font-medium text-gray-800">
-                    <input type="checkbox" checked={confirmNotOnDuty} onChange={(e) => setConfirmNotOnDuty(e.target.checked)} />
-                    Assign anyway — they will see it when they next open FireTrack
-                  </label>
-                </div>
-              )}
-
-              <div className="flex gap-2 flex-wrap">
-                {['MESSAGE', 'ASSIGNMENT'].map((kind) => (
-                  <button
-                    key={kind}
-                    onClick={() => setForm({ ...form, kind })}
-                    className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                      form.kind === kind ? 'bg-bfp-navy text-white border-bfp-navy' : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-                    }`}
-                  >
-                    {kind === 'ASSIGNMENT' ? 'Assign Report' : 'Message'}
-                  </button>
-                ))}
+        <Portal>
+          <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+            <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center p-4 sm:p-6 border-b">
+                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+                  {form.kind === 'ASSIGNMENT' ? 'Assign Report' : 'Send Message'}
+                </h2>
+                <button onClick={closeCompose} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
               </div>
-
-              {form.kind === 'ASSIGNMENT' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label">Report to prepare</label>
-                    <select className="form-select w-full" value={form.reportType} onChange={(e) => setForm({ ...form, reportType: e.target.value })}>
-                      {Object.entries(ASSIGNABLE_REPORT_TYPES).map(([value, { label }]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
+  
+              <div className="p-6 space-y-4">
+                <p className="text-sm text-gray-600">
+                  To: <span className="font-semibold text-gray-900">{target.rank ? `${target.rank} ` : ''}{target.name}</span>
+                </p>
+  
+                {form.kind === 'ASSIGNMENT' && dutyWarning && (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm">
+                    <p className="flex items-center gap-2 font-semibold text-amber-800">
+                      <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                      {target.name} is {DUTY_LABELS[dutyWarning.duty.status].toLowerCase()} today
+                      {dutyWarning.duty.until ? ` (until ${formatDutyDate(dutyWarning.duty.until)})` : ''}.
+                    </p>
+                    {dutyWarning.duty.note && <p className="mt-1 text-amber-800">Reason: &ldquo;{dutyWarning.duty.note}&rdquo;</p>}
+                    <p className="mt-1 text-gray-700">
+                      {dutyWarning.nextDuty
+                        ? `Their next duty day is ${formatDutyDate(dutyWarning.nextDuty)}. `
+                        : ''}
+                      Consider assigning someone who is on duty.
+                    </p>
+                    <label className="mt-2 flex items-center gap-2 font-medium text-gray-800">
+                      <input type="checkbox" checked={confirmNotOnDuty} onChange={(e) => setConfirmNotOnDuty(e.target.checked)} />
+                      Assign anyway — they will see it when they next open FireTrack
+                    </label>
                   </div>
-                  <div>
-                    <label className="form-label">Due <span className="text-gray-400 font-normal">(optional)</span></label>
-                    <input type="datetime-local" className="form-input w-full" value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} />
-                  </div>
+                )}
+  
+                <div className="flex gap-2 flex-wrap">
+                  {['MESSAGE', 'ASSIGNMENT'].map((kind) => (
+                    <button
+                      key={kind}
+                      onClick={() => setForm({ ...form, kind })}
+                      className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                        form.kind === kind ? 'bg-bfp-navy text-white border-bfp-navy' : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
+                      }`}
+                    >
+                      {kind === 'ASSIGNMENT' ? 'Assign Report' : 'Message'}
+                    </button>
+                  ))}
                 </div>
-              )}
-
-              <div>
-                <label className="form-label">{form.kind === 'ASSIGNMENT' ? 'Instructions' : 'Message'}</label>
-                <textarea
-                  className="form-textarea w-full"
-                  rows={5}
-                  maxLength={2000}
-                  placeholder={form.kind === 'ASSIGNMENT'
-                    ? 'e.g. Conduct the spot investigation for the fire at Brgy. Poblacion this morning (Ref. BFP-BEN-2026-014).'
-                    : 'Type your message or order...'}
-                  value={form.message}
-                  onChange={(e) => setForm({ ...form, message: e.target.value })}
-                />
+  
+                {form.kind === 'ASSIGNMENT' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="form-label">Report to prepare</label>
+                      <select className="form-select w-full" value={form.reportType} onChange={(e) => setForm({ ...form, reportType: e.target.value })}>
+                        {Object.entries(ASSIGNABLE_REPORT_TYPES).map(([value, { label }]) => (
+                          <option key={value} value={value}>{label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="form-label">Due <span className="text-gray-400 font-normal">(optional)</span></label>
+                      <input type="datetime-local" className="form-input w-full" value={form.dueAt} onChange={(e) => setForm({ ...form, dueAt: e.target.value })} />
+                    </div>
+                  </div>
+                )}
+  
+                <div>
+                  <label className="form-label">{form.kind === 'ASSIGNMENT' ? 'Instructions' : 'Message'}</label>
+                  <textarea
+                    className="form-textarea w-full"
+                    rows={5}
+                    maxLength={2000}
+                    placeholder={form.kind === 'ASSIGNMENT'
+                      ? 'e.g. Conduct the spot investigation for the fire at Brgy. Poblacion this morning (Ref. BFP-BEN-2026-014).'
+                      : 'Type your message or order...'}
+                    value={form.message}
+                    onChange={(e) => setForm({ ...form, message: e.target.value })}
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
-              <button onClick={closeCompose} className="btn btn-secondary" disabled={sending}>Cancel</button>
-              <button
-                onClick={handleSend}
-                className="btn btn-primary"
-                disabled={sending || (form.kind === 'ASSIGNMENT' && dutyWarning && !confirmNotOnDuty)}
-              >
-                {sending ? 'Sending...' : form.kind === 'ASSIGNMENT' ? 'Assign' : 'Send'}
-              </button>
+  
+              <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
+                <button onClick={closeCompose} className="btn btn-secondary" disabled={sending}>Cancel</button>
+                <button
+                  onClick={handleSend}
+                  className="btn btn-primary"
+                  disabled={sending || (form.kind === 'ASSIGNMENT' && dutyWarning && !confirmNotOnDuty)}
+                >
+                  {sending ? 'Sending...' : form.kind === 'ASSIGNMENT' ? 'Assign' : 'Send'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {scheduleTarget && (

@@ -18,6 +18,7 @@ import ReportSearchFilters from '../../../../components/reports/ReportSearchFilt
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../../lib/report-search';
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 import ReportQrButton from '../../../../components/reports/ReportQrButton';
+import Portal from '../../../../components/common/Portal';
 
 export default function MunicipalReportsPage() {
   const toast = useToast();
@@ -96,80 +97,82 @@ export default function MunicipalReportsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
-          <div className="modal-pop-in max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b p-6">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Report Details</p>
-                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
-                  {formatReportType(selectedReport.reportType)}
-                </h2>
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
+            <div className="modal-pop-in max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
+              <div className="flex items-center justify-between border-b p-6">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Report Details</p>
+                  <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+                    {formatReportType(selectedReport.reportType)}
+                  </h2>
+                </div>
+                <button onClick={closeReport} className="text-2xl text-gray-400 hover:text-gray-600">&times;</button>
               </div>
-              <button onClick={closeReport} className="text-2xl text-gray-400 hover:text-gray-600">&times;</button>
-            </div>
-
-            <div className="space-y-5 p-6">
-              <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 text-sm md:grid-cols-2">
-                <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
-                <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
-                <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
-                <div><p className="text-gray-500">Submitted To</p><p className="font-semibold">{(reportDetail?.passedToRole || selectedReport.passedToRole || 'Filed').replace(/_/g, ' ')}</p></div>
-                {(reportDetail?.respondingOfficer || selectedReport.respondingOfficer) && (
-                  <div><p className="text-gray-500">Reporting Officer</p><p className="font-semibold">{reportDetail?.respondingOfficer || selectedReport.respondingOfficer}</p></div>
-                )}
-                {(reportDetail?.respondingUnits || selectedReport.respondingUnits) && (
-                  <div><p className="text-gray-500">Responding Units</p><p className="font-semibold">{reportDetail?.respondingUnits || selectedReport.respondingUnits}</p></div>
-                )}
-              </div>
-
-              {(reportDetail?.incident || selectedReport.incident) && (
-                <div className="rounded-lg bg-yellow-50 p-4">
-                  <h3 className="mb-3 font-bold text-bfp-navy">Incident Details</h3>
-                  <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
-                    <div><p className="text-gray-500">Reference</p><p className="font-semibold">{(reportDetail?.incident || selectedReport.incident).referenceNumber}</p></div>
-                    <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.incident || selectedReport.incident).generalCategory}</p></div>
-                    <div><p className="text-gray-500">Status</p><p className="font-semibold">{(reportDetail?.incident || selectedReport.incident).status}</p></div>
+  
+              <div className="space-y-5 p-6">
+                <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 text-sm md:grid-cols-2">
+                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
+                  <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
+                  <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
+                  <div><p className="text-gray-500">Submitted To</p><p className="font-semibold">{(reportDetail?.passedToRole || selectedReport.passedToRole || 'Filed').replace(/_/g, ' ')}</p></div>
+                  {(reportDetail?.respondingOfficer || selectedReport.respondingOfficer) && (
+                    <div><p className="text-gray-500">Reporting Officer</p><p className="font-semibold">{reportDetail?.respondingOfficer || selectedReport.respondingOfficer}</p></div>
+                  )}
+                  {(reportDetail?.respondingUnits || selectedReport.respondingUnits) && (
+                    <div><p className="text-gray-500">Responding Units</p><p className="font-semibold">{reportDetail?.respondingUnits || selectedReport.respondingUnits}</p></div>
+                  )}
+                </div>
+  
+                {(reportDetail?.incident || selectedReport.incident) && (
+                  <div className="rounded-lg bg-yellow-50 p-4">
+                    <h3 className="mb-3 font-bold text-bfp-navy">Incident Details</h3>
+                    <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+                      <div><p className="text-gray-500">Reference</p><p className="font-semibold">{(reportDetail?.incident || selectedReport.incident).referenceNumber}</p></div>
+                      <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.incident || selectedReport.incident).generalCategory}</p></div>
+                      <div><p className="text-gray-500">Status</p><p className="font-semibold">{(reportDetail?.incident || selectedReport.incident).status}</p></div>
+                    </div>
                   </div>
-                </div>
-              )}
-
-              <CaseChain
-                reports={reportDetail?.caseReports}
-                currentId={selectedReport.id}
-                referenceNumber={(reportDetail?.incident || selectedReport.incident)?.referenceNumber}
-              />
-
-              <RevisionHistory report={reportDetail} />
-
-              <div className="rounded-lg bg-gray-50 p-4">
-                <h3 className="mb-3 font-bold text-bfp-navy">Attachments</h3>
-                {parseJsonField(reportDetail?.attachments || selectedReport.attachments, []).length ? (
-                  <AttachmentList
-                    attachments={reportDetail?.attachments || selectedReport.attachments}
-                    reportId={selectedReport.id}
-                    canAnnotate={false}
-                  />
-                ) : (
-                  <p className="text-sm text-gray-500">No attachments uploaded.</p>
                 )}
-              </div>
-
-              {(reportDetail?.remarks || selectedReport.remarks) && (
-                <div className="rounded border-l-4 border-red-500 bg-red-50 p-4">
-                  <p className="text-sm font-bold text-red-700">Reviewer Remarks</p>
-                  <p className="mt-1 text-sm text-red-700">{reportDetail?.remarks || selectedReport.remarks}</p>
+  
+                <CaseChain
+                  reports={reportDetail?.caseReports}
+                  currentId={selectedReport.id}
+                  referenceNumber={(reportDetail?.incident || selectedReport.incident)?.referenceNumber}
+                />
+  
+                <RevisionHistory report={reportDetail} />
+  
+                <div className="rounded-lg bg-gray-50 p-4">
+                  <h3 className="mb-3 font-bold text-bfp-navy">Attachments</h3>
+                  {parseJsonField(reportDetail?.attachments || selectedReport.attachments, []).length ? (
+                    <AttachmentList
+                      attachments={reportDetail?.attachments || selectedReport.attachments}
+                      reportId={selectedReport.id}
+                      canAnnotate={false}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-500">No attachments uploaded.</p>
+                  )}
                 </div>
-              )}
-
-
-            </div>
-
-            <div className="flex justify-end gap-3 border-t bg-gray-50 p-6">
-              <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
-              <button onClick={closeReport} className="btn btn-secondary">Close</button>
+  
+                {(reportDetail?.remarks || selectedReport.remarks) && (
+                  <div className="rounded border-l-4 border-red-500 bg-red-50 p-4">
+                    <p className="text-sm font-bold text-red-700">Reviewer Remarks</p>
+                    <p className="mt-1 text-sm text-red-700">{reportDetail?.remarks || selectedReport.remarks}</p>
+                  </div>
+                )}
+  
+  
+              </div>
+  
+              <div className="flex justify-end gap-3 border-t bg-gray-50 p-6">
+                <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
+                <button onClick={closeReport} className="btn btn-secondary">Close</button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">

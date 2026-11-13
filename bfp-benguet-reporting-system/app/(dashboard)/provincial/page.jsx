@@ -21,6 +21,7 @@ import {
   BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
+import Portal from '../../../components/common/Portal';
 
 // ── Reusable "⋮" section actions menu (Print / Export) ────────────────────────
 function SectionMenu({ onPrint, onExport }) {
@@ -965,163 +966,165 @@ export default function ProvincialDashboard() {
         const maxMunicipalityCount = Math.max(1, ...municipalityRows.map((row) => row.count));
 
         return (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4"
-            onClick={() => setCategoryModal(null)}
-          >
+          <Portal>
             <div
-              className="modal-pop-in flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4"
+              onClick={() => setCategoryModal(null)}
             >
-              {/* Header */}
-              <div className={`flex items-start justify-between gap-4 border-b border-gray-100 p-6 ${meta.chip}`}>
-                <div className="flex items-center gap-4">
-                  <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-white shadow-sm ${meta.solid}`}>
-                    <Icon className="h-6 w-6" />
+              <div
+                className="modal-pop-in flex max-h-[88vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className={`flex items-start justify-between gap-4 border-b border-gray-100 p-6 ${meta.chip}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl text-white shadow-sm ${meta.solid}`}>
+                      <Icon className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold uppercase tracking-wider text-gray-600">{periodLabel}</p>
+                      <h2 className={`text-2xl font-bold leading-tight ${meta.accent}`}>{label}</h2>
+                    </div>
                   </div>
+                  <button
+                    onClick={() => setCategoryModal(null)}
+                    aria-label="Close"
+                    className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/70 text-gray-500 shadow-sm transition hover:bg-white hover:text-gray-800"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+  
+                <div className="space-y-6 overflow-y-auto p-6">
+                  {/* Stat strip */}
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className={`rounded-xl p-3 text-center ${meta.chip}`}>
+                      <p className={`text-2xl font-bold ${meta.accent}`}>{total}</p>
+                      <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">Total</p>
+                    </div>
+                    <div className="rounded-xl bg-gray-50 p-3 text-center">
+                      <p className="text-2xl font-bold text-gray-800">{individualCount}</p>
+                      <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">Filed Reports</p>
+                    </div>
+                    <div className="rounded-xl bg-gray-50 p-3 text-center">
+                      <p className="text-2xl font-bold text-gray-800">{tallyCount}</p>
+                      <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">Daily Tallies</p>
+                    </div>
+                  </div>
+                  {tallyCount > 0 && (
+                    <p className="-mt-4 text-xs text-gray-400">
+                      Daily tallies are aggregate counts from municipalities&rsquo; Daily Reports and have no individual record to list below.
+                    </p>
+                  )}
+  
+                  {/* By Municipality */}
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-gray-600">{periodLabel}</p>
-                    <h2 className={`text-2xl font-bold leading-tight ${meta.accent}`}>{label}</h2>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setCategoryModal(null)}
-                  aria-label="Close"
-                  className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-white/70 text-gray-500 shadow-sm transition hover:bg-white hover:text-gray-800"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-
-              <div className="space-y-6 overflow-y-auto p-6">
-                {/* Stat strip */}
-                <div className="grid grid-cols-3 gap-3">
-                  <div className={`rounded-xl p-3 text-center ${meta.chip}`}>
-                    <p className={`text-2xl font-bold ${meta.accent}`}>{total}</p>
-                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">Total</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 p-3 text-center">
-                    <p className="text-2xl font-bold text-gray-800">{individualCount}</p>
-                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">Filed Reports</p>
-                  </div>
-                  <div className="rounded-xl bg-gray-50 p-3 text-center">
-                    <p className="text-2xl font-bold text-gray-800">{tallyCount}</p>
-                    <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-gray-600">Daily Tallies</p>
-                  </div>
-                </div>
-                {tallyCount > 0 && (
-                  <p className="-mt-4 text-xs text-gray-400">
-                    Daily tallies are aggregate counts from municipalities&rsquo; Daily Reports and have no individual record to list below.
-                  </p>
-                )}
-
-                {/* By Municipality */}
-                <div>
-                  <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
-                    <MapPin className="h-4 w-4" /> By Municipality
-                  </h3>
-                  {municipalityRows.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-gray-200 py-8 text-center">
-                      <Inbox className="h-6 w-6 text-gray-300" />
-                      <p className="text-sm text-gray-400">No incidents recorded in this category for this period.</p>
-                    </div>
-                  ) : (
-                    <ul className="space-y-1.5">
-                      {municipalityRows.map((row, idx) => (
-                        <li key={row.municipality} className="relative overflow-hidden rounded-lg bg-gray-50">
-                          <div
-                            className={`absolute inset-y-0 left-0 opacity-15 ${meta.bar}`}
-                            style={{ width: `${(row.count / maxMunicipalityCount) * 100}%` }}
-                          />
-                          <div className="relative flex items-center justify-between px-4 py-2.5 text-sm">
-                            <span className="flex items-center gap-2.5 text-gray-700">
-                              <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-bold text-gray-400 shadow-sm">
-                                {idx + 1}
+                    <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
+                      <MapPin className="h-4 w-4" /> By Municipality
+                    </h3>
+                    {municipalityRows.length === 0 ? (
+                      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-gray-200 py-8 text-center">
+                        <Inbox className="h-6 w-6 text-gray-300" />
+                        <p className="text-sm text-gray-400">No incidents recorded in this category for this period.</p>
+                      </div>
+                    ) : (
+                      <ul className="space-y-1.5">
+                        {municipalityRows.map((row, idx) => (
+                          <li key={row.municipality} className="relative overflow-hidden rounded-lg bg-gray-50">
+                            <div
+                              className={`absolute inset-y-0 left-0 opacity-15 ${meta.bar}`}
+                              style={{ width: `${(row.count / maxMunicipalityCount) * 100}%` }}
+                            />
+                            <div className="relative flex items-center justify-between px-4 py-2.5 text-sm">
+                              <span className="flex items-center gap-2.5 text-gray-700">
+                                <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-white text-[10px] font-bold text-gray-400 shadow-sm">
+                                  {idx + 1}
+                                </span>
+                                {row.municipality}
                               </span>
-                              {row.municipality}
-                            </span>
-                            <span className={`font-bold ${meta.accent}`}>{row.count}</span>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-
-                {/* Filed Spot Investigation Reports */}
-                <div>
-                  <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
-                    <FileSearch className="h-4 w-4" /> Filed Spot Investigation Reports ({reports.length})
-                  </h3>
-                  {reports.length === 0 ? (
-                    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-gray-200 py-8 text-center">
-                      <Inbox className="h-6 w-6 text-gray-300" />
-                      <p className="max-w-sm text-sm text-gray-400">
-                        No individually filed reports in this category for this period — the count above comes
-                        entirely from municipalities&rsquo; daily tallies.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="overflow-x-auto rounded-lg">
-                      <table className="data-table">
-                        <thead>
-                          <tr>
-                            <th>Reference #</th>
-                            <th>Municipality</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Files</th>
-                            <th>QR</th>
-                            <th></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {reports.map((report) => (
-                            <tr key={report.id}>
-                              <td className="font-semibold">{report.referenceNumber || `#${report.id}`}</td>
-                              <td>{report.municipality}</td>
-                              <td>{new Date(report.reportDate).toLocaleDateString()}</td>
-                              <td><StatusBadge status={report.status} /></td>
-                              <td>
-                                <AttachmentList attachments={report.attachments} reportId={report.id} />
-                                {!report.attachments && <span className="text-xs text-gray-400">None</span>}
-                              </td>
-                              <td><ReportQrButton report={report} className="btn btn-secondary px-2.5 py-1.5 text-xs" /></td>
-                              <td>
-                                <button
-                                  type="button"
-                                  onClick={() => setCategoryViewReport(report)}
-                                  className="btn btn-primary whitespace-nowrap px-2.5 py-1.5 text-xs"
-                                >
-                                  View Report
-                                </button>
-                              </td>
+                              <span className={`font-bold ${meta.accent}`}>{row.count}</span>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+  
+                  {/* Filed Spot Investigation Reports */}
+                  <div>
+                    <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
+                      <FileSearch className="h-4 w-4" /> Filed Spot Investigation Reports ({reports.length})
+                    </h3>
+                    {reports.length === 0 ? (
+                      <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-gray-200 py-8 text-center">
+                        <Inbox className="h-6 w-6 text-gray-300" />
+                        <p className="max-w-sm text-sm text-gray-400">
+                          No individually filed reports in this category for this period — the count above comes
+                          entirely from municipalities&rsquo; daily tallies.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto rounded-lg">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Reference #</th>
+                              <th>Municipality</th>
+                              <th>Date</th>
+                              <th>Status</th>
+                              <th>Files</th>
+                              <th>QR</th>
+                              <th></th>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                          </thead>
+                          <tbody>
+                            {reports.map((report) => (
+                              <tr key={report.id}>
+                                <td className="font-semibold">{report.referenceNumber || `#${report.id}`}</td>
+                                <td>{report.municipality}</td>
+                                <td>{new Date(report.reportDate).toLocaleDateString()}</td>
+                                <td><StatusBadge status={report.status} /></td>
+                                <td>
+                                  <AttachmentList attachments={report.attachments} reportId={report.id} />
+                                  {!report.attachments && <span className="text-xs text-gray-400">None</span>}
+                                </td>
+                                <td><ReportQrButton report={report} className="btn btn-secondary px-2.5 py-1.5 text-xs" /></td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    onClick={() => setCategoryViewReport(report)}
+                                    className="btn btn-primary whitespace-nowrap px-2.5 py-1.5 text-xs"
+                                  >
+                                    View Report
+                                  </button>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+  
+                <div className="flex justify-end border-t border-gray-100 bg-gray-50 px-6 py-4">
+                  <button onClick={() => setCategoryModal(null)} className="btn btn-secondary px-6">
+                    Close
+                  </button>
                 </div>
               </div>
-
-              <div className="flex justify-end border-t border-gray-100 bg-gray-50 px-6 py-4">
-                <button onClick={() => setCategoryModal(null)} className="btn btn-secondary px-6">
-                  Close
-                </button>
-              </div>
+  
+              {categoryViewReport && (
+                // Its own clicks must not reach this popup's backdrop, which would close both.
+                <div onClick={(e) => e.stopPropagation()}>
+                  <ReportDetailsModal
+                    report={{ ...categoryViewReport, municipality: { name: categoryViewReport.municipality } }}
+                    onClose={() => setCategoryViewReport(null)}
+                  />
+                </div>
+              )}
             </div>
-
-            {categoryViewReport && (
-              // Its own clicks must not reach this popup's backdrop, which would close both.
-              <div onClick={(e) => e.stopPropagation()}>
-                <ReportDetailsModal
-                  report={{ ...categoryViewReport, municipality: { name: categoryViewReport.municipality } }}
-                  onClose={() => setCategoryViewReport(null)}
-                />
-              </div>
-            )}
-          </div>
+          </Portal>
         );
       })()}
 

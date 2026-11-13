@@ -3,6 +3,7 @@
 import { CheckCircle2, Download } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import Portal from '../common/Portal';
 
 // `report` is the newly created report from POST /api/reports — it already carries its QR token
 // (issued the moment a report is passed), so the investigator gets the QR code right here.
@@ -23,41 +24,43 @@ export default function SubmitSuccessModal({ message, onConfirm, report }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center modal-overlay px-4">
-      <div className="modal-pop-in w-full max-w-sm rounded-lg bg-white p-6 shadow-xl text-center">
-        <CheckCircle2 className="w-12 h-12 text-bfp-green mx-auto mb-4" />
-        <h2 className="text-lg font-semibold tracking-tight text-gray-900 mb-2">Report Submitted</h2>
-        <p className="text-sm text-gray-600 mb-6">{message}</p>
-
-        {verifyUrl && (
-          <div className="mb-6">
-            <p className="text-sm font-semibold text-bfp-navy mb-2">{referenceLabel} — QR Code</p>
-            <div className="flex justify-center p-3 border border-gray-200 rounded-lg mb-2">
-              <QRCodeCanvas id={canvasId} value={verifyUrl} size={160} level="M" includeMargin />
+    <Portal>
+      <div className="fixed inset-0 z-[100] flex items-center justify-center modal-overlay px-4">
+        <div className="modal-pop-in w-full max-w-sm rounded-lg bg-white p-6 shadow-xl text-center">
+          <CheckCircle2 className="w-12 h-12 text-bfp-green mx-auto mb-4" />
+          <h2 className="text-lg font-semibold tracking-tight text-gray-900 mb-2">Report Submitted</h2>
+          <p className="text-sm text-gray-600 mb-6">{message}</p>
+  
+          {verifyUrl && (
+            <div className="mb-6">
+              <p className="text-sm font-semibold text-bfp-navy mb-2">{referenceLabel} — QR Code</p>
+              <div className="flex justify-center p-3 border border-gray-200 rounded-lg mb-2">
+                <QRCodeCanvas id={canvasId} value={verifyUrl} size={160} level="M" includeMargin />
+              </div>
+              <p className="text-xs text-gray-500 mb-3">
+                Scanning shows this report&rsquo;s current status. It stays the same even if the report
+                is returned and corrected.
+              </p>
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="btn btn-secondary inline-flex items-center gap-1.5"
+              >
+                <Download className="w-4 h-4" /> Download QR
+              </button>
             </div>
-            <p className="text-xs text-gray-500 mb-3">
-              Scanning shows this report&rsquo;s current status. It stays the same even if the report
-              is returned and corrected.
-            </p>
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="btn btn-secondary inline-flex items-center gap-1.5"
-            >
-              <Download className="w-4 h-4" /> Download QR
-            </button>
-          </div>
-        )}
-
-        <button
-          type="button"
-          onClick={onConfirm}
-          autoFocus
-          className="btn btn-primary px-8"
-        >
-          OK
-        </button>
+          )}
+  
+          <button
+            type="button"
+            onClick={onConfirm}
+            autoFocus
+            className="btn btn-primary px-8"
+          >
+            OK
+          </button>
+        </div>
       </div>
-    </div>
+    </Portal>
   );
 }

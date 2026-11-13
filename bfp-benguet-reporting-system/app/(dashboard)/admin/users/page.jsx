@@ -10,6 +10,7 @@ import RankSelect from '../../../../components/common/RankSelect';
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 import { isAuthError } from '../../../../lib/utils';
 import DeleteAccountModal from '../../../../components/admin/DeleteAccountModal';
+import Portal from '../../../../components/common/Portal';
 
 const ROLE_OPTIONS = [
   { value: 'INVESTIGATOR', label: 'Investigator' },
@@ -370,81 +371,83 @@ export default function UserManagementPage() {
 
       {/* Edit modal */}
       {editingUser && editForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={closeEdit}>
-          <div className="modal-pop-in max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between border-b p-6">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Edit Account</p>
-                <h2 className="text-xl font-semibold tracking-tight text-gray-900">{editingUser.name}</h2>
-              </div>
-              <button onClick={closeEdit} className="text-2xl text-gray-400 hover:text-gray-600">&times;</button>
-            </div>
-
-            <form onSubmit={handleEditSubmit} className="space-y-4 p-6">
-              {editError && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">{editError}</div>
-              )}
-
-              <div>
-                <label className="form-label">Role</label>
-                <select
-                  value={editForm.role}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, role: e.target.value }))}
-                  className="form-input"
-                >
-                  {ROLE_OPTIONS.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
-              </div>
-
-              {MUNICIPAL_ROLES.includes(editForm.role) && (
+        <Portal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={closeEdit}>
+            <div className="modal-pop-in max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between border-b p-6">
                 <div>
-                  <label className="form-label">Municipality</label>
+                  <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Edit Account</p>
+                  <h2 className="text-xl font-semibold tracking-tight text-gray-900">{editingUser.name}</h2>
+                </div>
+                <button onClick={closeEdit} className="text-2xl text-gray-400 hover:text-gray-600">&times;</button>
+              </div>
+  
+              <form onSubmit={handleEditSubmit} className="space-y-4 p-6">
+                {editError && (
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">{editError}</div>
+                )}
+  
+                <div>
+                  <label className="form-label">Role</label>
                   <select
-                    value={editForm.municipalityId}
-                    onChange={(e) => setEditForm((prev) => ({ ...prev, municipalityId: e.target.value }))}
+                    value={editForm.role}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, role: e.target.value }))}
                     className="form-input"
                   >
-                    <option value="">— Select —</option>
-                    {municipalities.map((m) => (
-                      <option key={m.id} value={m.id}>{m.name}</option>
+                    {ROLE_OPTIONS.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
                     ))}
                   </select>
                 </div>
-              )}
-
-              <div>
-                <label className="form-label">Rank</label>
-                <RankSelect
-                  value={editForm.rank}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, rank: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <label className="form-label">Reset Password</label>
-                <input
-                  type="text"
-                  value={editForm.password}
-                  onChange={(e) => setEditForm((prev) => ({ ...prev, password: e.target.value }))}
-                  className="form-input"
-                  placeholder="Leave blank to keep current password"
-                  minLength={8}
-                />
-              </div>
-
-              <div className="flex gap-3 pt-2 flex-wrap">
-                <button type="submit" disabled={savingEdit} className="btn btn-primary px-6">
-                  {savingEdit ? 'Saving…' : 'Save Changes'}
-                </button>
-                <button type="button" onClick={closeEdit} className="btn btn-secondary px-6">
-                  Cancel
-                </button>
-              </div>
-            </form>
+  
+                {MUNICIPAL_ROLES.includes(editForm.role) && (
+                  <div>
+                    <label className="form-label">Municipality</label>
+                    <select
+                      value={editForm.municipalityId}
+                      onChange={(e) => setEditForm((prev) => ({ ...prev, municipalityId: e.target.value }))}
+                      className="form-input"
+                    >
+                      <option value="">— Select —</option>
+                      {municipalities.map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+  
+                <div>
+                  <label className="form-label">Rank</label>
+                  <RankSelect
+                    value={editForm.rank}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, rank: e.target.value }))}
+                  />
+                </div>
+  
+                <div>
+                  <label className="form-label">Reset Password</label>
+                  <input
+                    type="text"
+                    value={editForm.password}
+                    onChange={(e) => setEditForm((prev) => ({ ...prev, password: e.target.value }))}
+                    className="form-input"
+                    placeholder="Leave blank to keep current password"
+                    minLength={8}
+                  />
+                </div>
+  
+                <div className="flex gap-3 pt-2 flex-wrap">
+                  <button type="submit" disabled={savingEdit} className="btn btn-primary px-6">
+                    {savingEdit ? 'Saving…' : 'Save Changes'}
+                  </button>
+                  <button type="button" onClick={closeEdit} className="btn btn-secondary px-6">
+                    Cancel
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {/* Delete confirmation: password first, then type DELETE */}

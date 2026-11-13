@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
 import axios from 'axios';
 import { FolderArchive, Eye, PencilLine } from 'lucide-react';
 import ReportDetailsModal from './ReportDetailsModal';
@@ -15,9 +14,6 @@ export default function RevisionHistory({ report }) {
   const [opening, setOpening] = useState(null);
   const [viewing, setViewing] = useState(null);
   const [error, setError] = useState('');
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   const versions = report?.archivedVersions || [];
   if (!versions.length) return null;
@@ -85,18 +81,14 @@ export default function RevisionHistory({ report }) {
       </ol>
       {error && <p className="mt-2 text-xs text-red-600">{error}</p>}
 
-      {mounted &&
-        viewing &&
-        createPortal(
-          <div className="relative z-[70]">
-            <ReportDetailsModal
-              report={viewing.report}
-              notice={`Earlier version ${viewing.version.version ?? '?'} of report #${report.id}, as it was before it was revised on ${formatDateTime(viewing.version.archivedAt)}. Read-only.`}
-              onClose={() => setViewing(null)}
-            />
-          </div>,
-          document.body
-        )}
+      {/* ReportDetailsModal portals itself to <body>, after the window this panel sits in, so it opens on top. */}
+      {viewing && (
+        <ReportDetailsModal
+          report={viewing.report}
+          notice={`Earlier version ${viewing.version.version ?? '?'} of report #${report.id}, as it was before it was revised on ${formatDateTime(viewing.version.archivedAt)}. Read-only.`}
+          onClose={() => setViewing(null)}
+        />
+      )}
     </section>
   );
 }

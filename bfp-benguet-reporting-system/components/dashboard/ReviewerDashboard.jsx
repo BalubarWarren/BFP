@@ -15,6 +15,7 @@ import ReportSearchFilters from '../reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../lib/report-search';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import ReportQrButton from '../reports/ReportQrButton';
+import Portal from '../common/Portal';
 
 // Shared by the Municipal Chief IIS/Operation and Municipal Fire Marshal dashboards, which were
 // ~95% byte-identical (same incoming/reviewed tabs, same review modal, same approve/return
@@ -302,87 +303,89 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
 
           {/* Review Modal */}
           {selectedReport && (
-            <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
-              <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center p-4 sm:p-6 border-b">
-                  <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Report Review</h2>
-                  <button onClick={closeReview} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-                </div>
-
-                <div className="p-4 sm:p-6 space-y-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
-                    <div><p className="text-gray-500">Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
-                    <div><p className="text-gray-500">Submitted By</p><p className="font-semibold">{selectedReport.submittedBy?.name}</p></div>
-                    <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
-                    <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
-                    <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
-                    {(reportDetail?.category || selectedReport.category) && (
-                      <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.category || selectedReport.category).replace(/_/g, ' ')}</p></div>
-                    )}
+            <Portal>
+              <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+                <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+                  <div className="flex justify-between items-center p-4 sm:p-6 border-b">
+                    <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Report Review</h2>
+                    <button onClick={closeReview} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                   </div>
-
-                  {((reportDetail && parseAttachments(reportDetail.attachments)) || parseAttachments(selectedReport?.attachments)).length > 0 && (
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
-                      <AttachmentList
-                        attachments={
-                          parseAttachments(reportDetail?.attachments).length
-                            ? reportDetail.attachments
-                            : selectedReport?.attachments
-                        }
-                        reportId={selectedReport.id}
-                        canAnnotate
-                      />
-                    </div>
-                  )}
-
-                  {/* Was this returned and revised? Investigator's notes + earlier versions to compare */}
-                  <RevisionHistory report={reportDetail} />
-
-                  {reportDetail?.remarks && (
-                    <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">
-                      <p className="text-sm font-semibold text-red-700">Previous Remarks</p>
-                      <p className="text-sm text-red-600 mt-1">{reportDetail.remarks}</p>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="form-label">Correction Comments <span className="text-gray-400 font-normal">(required when returning)</span></label>
-                    <textarea className="form-textarea w-full" rows={6} placeholder="Enter corrections or notes here..." value={comments} onChange={(e) => setComments(e.target.value)} />
-                  </div>
-
-                  {/* Preview panel */}
-                  {showPreview && (
-                    <div className="mt-4 bg-white border rounded p-3">
-                      <div className="flex justify-between items-center mb-2">
-                        <h4 className="font-semibold">Report Preview</h4>
-                        <button className="text-sm text-gray-600" onClick={() => setShowPreview(false)}>Close</button>
-                      </div>
-                      {previewUrl ? (
-                        <div className="w-full" style={{ height: 400 }}>
-                          {previewUrl.match(/\.(pdf)$/i) ? (
-                            <iframe title="report-preview" src={previewUrl} className="w-full h-full" />
-                          ) : previewUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
-                            <img src={previewUrl} alt="attachment preview" className="w-full h-full object-contain" />
-                          ) : (
-                            <div className="p-6 text-gray-600">Preview not available for this file type. Use the download link above.</div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="p-4 text-gray-600">No attachment to preview.</div>
+  
+                  <div className="p-4 sm:p-6 space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+                      <div><p className="text-gray-500">Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
+                      <div><p className="text-gray-500">Submitted By</p><p className="font-semibold">{selectedReport.submittedBy?.name}</p></div>
+                      <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
+                      <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
+                      <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
+                      {(reportDetail?.category || selectedReport.category) && (
+                        <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.category || selectedReport.category).replace(/_/g, ' ')}</p></div>
                       )}
                     </div>
-                  )}
-                </div>
-
-                <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
-                  <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
-                  <button onClick={closeReview} className="btn btn-secondary" disabled={actionLoading}>Cancel</button>
-                  <button onClick={handleReturn} disabled={actionLoading} className="btn btn-danger">{actionLoading ? 'Processing...' : 'Return'}</button>
-                  <button onClick={handleApprove} disabled={actionLoading} className="btn btn-success">{actionLoading ? 'Processing...' : 'Approve'}</button>
+  
+                    {((reportDetail && parseAttachments(reportDetail.attachments)) || parseAttachments(selectedReport?.attachments)).length > 0 && (
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
+                        <AttachmentList
+                          attachments={
+                            parseAttachments(reportDetail?.attachments).length
+                              ? reportDetail.attachments
+                              : selectedReport?.attachments
+                          }
+                          reportId={selectedReport.id}
+                          canAnnotate
+                        />
+                      </div>
+                    )}
+  
+                    {/* Was this returned and revised? Investigator's notes + earlier versions to compare */}
+                    <RevisionHistory report={reportDetail} />
+  
+                    {reportDetail?.remarks && (
+                      <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">
+                        <p className="text-sm font-semibold text-red-700">Previous Remarks</p>
+                        <p className="text-sm text-red-600 mt-1">{reportDetail.remarks}</p>
+                      </div>
+                    )}
+  
+                    <div>
+                      <label className="form-label">Correction Comments <span className="text-gray-400 font-normal">(required when returning)</span></label>
+                      <textarea className="form-textarea w-full" rows={6} placeholder="Enter corrections or notes here..." value={comments} onChange={(e) => setComments(e.target.value)} />
+                    </div>
+  
+                    {/* Preview panel */}
+                    {showPreview && (
+                      <div className="mt-4 bg-white border rounded p-3">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-semibold">Report Preview</h4>
+                          <button className="text-sm text-gray-600" onClick={() => setShowPreview(false)}>Close</button>
+                        </div>
+                        {previewUrl ? (
+                          <div className="w-full" style={{ height: 400 }}>
+                            {previewUrl.match(/\.(pdf)$/i) ? (
+                              <iframe title="report-preview" src={previewUrl} className="w-full h-full" />
+                            ) : previewUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                              <img src={previewUrl} alt="attachment preview" className="w-full h-full object-contain" />
+                            ) : (
+                              <div className="p-6 text-gray-600">Preview not available for this file type. Use the download link above.</div>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-4 text-gray-600">No attachment to preview.</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+  
+                  <div className="flex flex-wrap gap-3 justify-end p-4 sm:p-6 border-t bg-gray-50">
+                    <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
+                    <button onClick={closeReview} className="btn btn-secondary" disabled={actionLoading}>Cancel</button>
+                    <button onClick={handleReturn} disabled={actionLoading} className="btn btn-danger">{actionLoading ? 'Processing...' : 'Return'}</button>
+                    <button onClick={handleApprove} disabled={actionLoading} className="btn btn-success">{actionLoading ? 'Processing...' : 'Approve'}</button>
+                  </div>
                 </div>
               </div>
-            </div>
+            </Portal>
           )}
         </>
       )}

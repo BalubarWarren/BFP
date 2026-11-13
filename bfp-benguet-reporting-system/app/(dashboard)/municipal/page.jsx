@@ -22,6 +22,7 @@ import InvestigatorDirectives from '../../../components/directives/InvestigatorD
 import MyDutyStatus from '../../../components/duty/MyDutyStatus';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import ReportQrButton from '../../../components/reports/ReportQrButton';
+import Portal from '../../../components/common/Portal';
 
 export default function MunicipalDashboard() {
   const toast = useToast();
@@ -165,112 +166,114 @@ export default function MunicipalDashboard() {
 
       {/* Report View Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
-          <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center p-4 sm:p-6 border-b">
-              <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Report Details</h2>
-              <button onClick={closeView} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
-            </div>
-
-            <div className="p-4 sm:p-6 space-y-6">
-              {/* Meta */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
-                <div><p className="text-gray-500">Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
-                <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
-                <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
-                <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
-                {(reportDetail?.category || selectedReport.category) && (
-                  <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.category || selectedReport.category).replace(/_/g, ' ')}</p></div>
-                )}
-                {(reportDetail?.respondingOfficer || selectedReport.respondingOfficer) && (
-                  <div><p className="text-gray-500">Reporting Officer</p><p className="font-semibold">{reportDetail?.respondingOfficer || selectedReport.respondingOfficer}</p></div>
-                )}
-                {(reportDetail?.passedToRole || selectedReport.passedToRole) && (
-                  <div><p className="text-gray-500">Submitted To</p><p className="font-semibold">{(reportDetail?.passedToRole || selectedReport.passedToRole).replace(/_/g, ' ')}</p></div>
-                )}
+        <Portal>
+          <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
+            <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+              <div className="flex justify-between items-center p-4 sm:p-6 border-b">
+                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Report Details</h2>
+                <button onClick={closeView} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
               </div>
-
-              {/* Review Progress */}
-              <ReportProgressBar progress={getReportProgress(reportDetail || selectedReport)} />
-
-              {/* How this report connects to the rest of its case (Spot -> Progress -> Final) */}
-              <CaseChain
-                reports={reportDetail?.caseReports}
-                currentId={selectedReport.id}
-                referenceNumber={(reportDetail?.incident || selectedReport.incident)?.referenceNumber}
-              />
-
-              <RevisionHistory report={reportDetail} />
-
-              {/* Attachments */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
-                {parseAttachments(reportDetail?.attachments || selectedReport.attachments).length > 0 ? (
-                  <AttachmentList
-                    attachments={reportDetail?.attachments || selectedReport.attachments}
-                    reportId={selectedReport.id}
-                    canAnnotate={false}
-                  />
-                ) : (
-                  <p className="text-sm text-gray-500">No attachments uploaded.</p>
+  
+              <div className="p-4 sm:p-6 space-y-6">
+                {/* Meta */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
+                  <div><p className="text-gray-500">Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
+                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
+                  <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
+                  <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
+                  {(reportDetail?.category || selectedReport.category) && (
+                    <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.category || selectedReport.category).replace(/_/g, ' ')}</p></div>
+                  )}
+                  {(reportDetail?.respondingOfficer || selectedReport.respondingOfficer) && (
+                    <div><p className="text-gray-500">Reporting Officer</p><p className="font-semibold">{reportDetail?.respondingOfficer || selectedReport.respondingOfficer}</p></div>
+                  )}
+                  {(reportDetail?.passedToRole || selectedReport.passedToRole) && (
+                    <div><p className="text-gray-500">Submitted To</p><p className="font-semibold">{(reportDetail?.passedToRole || selectedReport.passedToRole).replace(/_/g, ' ')}</p></div>
+                  )}
+                </div>
+  
+                {/* Review Progress */}
+                <ReportProgressBar progress={getReportProgress(reportDetail || selectedReport)} />
+  
+                {/* How this report connects to the rest of its case (Spot -> Progress -> Final) */}
+                <CaseChain
+                  reports={reportDetail?.caseReports}
+                  currentId={selectedReport.id}
+                  referenceNumber={(reportDetail?.incident || selectedReport.incident)?.referenceNumber}
+                />
+  
+                <RevisionHistory report={reportDetail} />
+  
+                {/* Attachments */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
+                  {parseAttachments(reportDetail?.attachments || selectedReport.attachments).length > 0 ? (
+                    <AttachmentList
+                      attachments={reportDetail?.attachments || selectedReport.attachments}
+                      reportId={selectedReport.id}
+                      canAnnotate={false}
+                    />
+                  ) : (
+                    <p className="text-sm text-gray-500">No attachments uploaded.</p>
+                  )}
+                </div>
+  
+                {/* Reviewer remarks (if returned) */}
+                {(reportDetail?.remarks || selectedReport.remarks) && selectedReport.status === 'RETURNED' && (
+                  <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
+                    <p className="text-sm font-bold text-red-700 mb-1">
+                      Returned by {reportDetail?.reviewedBy?.name || 'Reviewer'}
+                    </p>
+                    <p className="text-sm text-red-700">{reportDetail?.remarks || selectedReport.remarks}</p>
+                  </div>
                 )}
+  
+                {/* APPROVED — still needs forwarding to the next level */}
+                {needsForwarding(selectedReport) && (
+                  <div className="bg-bfp-navy/5 border-l-4 border-bfp-navy p-4 rounded">
+                    <p className="flex items-center gap-1.5 text-sm font-bold text-bfp-navy mb-1">
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Approved by {getApprovalInfo(selectedReport).approvedBy}
+                    </p>
+                    <p className="text-sm text-bfp-navy">
+                      This report has been reviewed and approved. You can now submit it to the <strong>{getApprovalInfo(selectedReport).nextStep}</strong>.
+                    </p>
+                  </div>
+                )}
+  
+                {/* APPROVED — final approval by Provincial Chief IIS */}
+                {isFinallyApproved(selectedReport) && (
+                  <div className="bg-bfp-green/10 border-l-4 border-bfp-green p-4 rounded">
+                    <p className="flex items-center gap-1.5 text-sm font-bold text-green-800 mb-1">
+                      <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Approved by {reportDetail?.reviewedBy?.name || 'Reviewer'}
+                    </p>
+                    <p className="text-sm text-green-800">This report has been given final approval and is ready to pass to the system.</p>
+                  </div>
+                )}
+  
+  
               </div>
-
-              {/* Reviewer remarks (if returned) */}
-              {(reportDetail?.remarks || selectedReport.remarks) && selectedReport.status === 'RETURNED' && (
-                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
-                  <p className="text-sm font-bold text-red-700 mb-1">
-                    Returned by {reportDetail?.reviewedBy?.name || 'Reviewer'}
-                  </p>
-                  <p className="text-sm text-red-700">{reportDetail?.remarks || selectedReport.remarks}</p>
-                </div>
-              )}
-
-              {/* APPROVED — still needs forwarding to the next level */}
-              {needsForwarding(selectedReport) && (
-                <div className="bg-bfp-navy/5 border-l-4 border-bfp-navy p-4 rounded">
-                  <p className="flex items-center gap-1.5 text-sm font-bold text-bfp-navy mb-1">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Approved by {getApprovalInfo(selectedReport).approvedBy}
-                  </p>
-                  <p className="text-sm text-bfp-navy">
-                    This report has been reviewed and approved. You can now submit it to the <strong>{getApprovalInfo(selectedReport).nextStep}</strong>.
-                  </p>
-                </div>
-              )}
-
-              {/* APPROVED — final approval by Provincial Chief IIS */}
-              {isFinallyApproved(selectedReport) && (
-                <div className="bg-bfp-green/10 border-l-4 border-bfp-green p-4 rounded">
-                  <p className="flex items-center gap-1.5 text-sm font-bold text-green-800 mb-1">
-                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Approved by {reportDetail?.reviewedBy?.name || 'Reviewer'}
-                  </p>
-                  <p className="text-sm text-green-800">This report has been given final approval and is ready to pass to the system.</p>
-                </div>
-              )}
-
-
-            </div>
-
-            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-              <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
-              {selectedReport.status === 'RETURNED' && (
-                <Link href={`/municipal/reports/${selectedReport.id}/edit`} className="btn btn-danger">
-                  ↩ Revise & Resubmit
-                </Link>
-              )}
-              {needsForwarding(selectedReport) && (
-                <button
-                  type="button"
-                  onClick={() => openForward(selectedReport)}
-                  className="btn btn-primary"
-                >
-                  → Submit Report
-                </button>
-              )}
-              <button onClick={closeView} className="btn btn-secondary">Close</button>
+  
+              <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+                <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
+                {selectedReport.status === 'RETURNED' && (
+                  <Link href={`/municipal/reports/${selectedReport.id}/edit`} className="btn btn-danger">
+                    ↩ Revise & Resubmit
+                  </Link>
+                )}
+                {needsForwarding(selectedReport) && (
+                  <button
+                    type="button"
+                    onClick={() => openForward(selectedReport)}
+                    className="btn btn-primary"
+                  >
+                    → Submit Report
+                  </button>
+                )}
+                <button onClick={closeView} className="btn btn-secondary">Close</button>
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
 
       {forwardTarget && (
