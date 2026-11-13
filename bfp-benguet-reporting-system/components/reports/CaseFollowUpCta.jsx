@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
-import { getCaseFollowUp } from '../../lib/report-workflow';
+import { getCaseFollowUp, getCaseProgressReport } from '../../lib/report-workflow';
 
 // The only way into the Progress and Final Investigation forms: they continue a case that an
 // approved Spot (or Progress) report already opened, so instead of standalone menu entries the
@@ -11,9 +11,18 @@ import { getCaseFollowUp } from '../../lib/report-workflow';
 // From a finalized Spot report, Progress is the expected next step, with "skip to Final" offered
 // as a quieter secondary link. From a finalized Progress report, only Final is left.
 export default function CaseFollowUpCta({ report, allReports }) {
-  const { showProgressCta, showFinalCta, hasProgressSubmitted } = getCaseFollowUp(report, allReports);
+  const { showProgressCta, showFinalCta, hasProgressSubmitted, hasFinalSubmitted } = getCaseFollowUp(report, allReports);
 
   if (!showProgressCta && !showFinalCta) {
+    // A Spot report whose case already moved on: point to where the next step now lives.
+    if (report.reportType === 'SPOT_INVESTIGATION' && hasProgressSubmitted && !hasFinalSubmitted) {
+      const progress = getCaseProgressReport(report, allReports);
+      return (
+        <p className="max-w-[12rem] text-xs text-gray-500">
+          Progress report{progress ? ` #${progress.id}` : ''} filed. The Final report is started from there.
+        </p>
+      );
+    }
     return null;
   }
 
@@ -40,9 +49,6 @@ export default function CaseFollowUpCta({ report, allReports }) {
         >
           or skip to Final Report
         </Link>
-      )}
-      {hasProgressSubmitted && !showProgressCta && report.reportType === 'SPOT_INVESTIGATION' && (
-        <p className="text-xs text-gray-500">Progress report already submitted.</p>
       )}
     </div>
   );

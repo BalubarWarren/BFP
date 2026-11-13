@@ -18,7 +18,7 @@ const caseLabel = (c) => {
 // final approval and that have no Final report yet are offered, so the new report is always tied
 // to its Spot report. Opened from the Spot report's "Start Progress/Final Report" button (the
 // incident is preselected), the case is locked and shown as a card instead of a dropdown.
-export default function CaseSelect({ value, onChange, locked = false }) {
+export default function CaseSelect({ value, onChange, reportType, locked = false }) {
   const [cases, setCases] = useState(null);
   const [loadError, setLoadError] = useState('');
 
@@ -29,7 +29,7 @@ export default function CaseSelect({ value, onChange, locked = false }) {
         const res = await axios.get('/api/reports', {
           headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
         });
-        if (!cancelled) setCases(getOpenCases(res.data.reports || []));
+        if (!cancelled) setCases(getOpenCases(res.data.reports || [], reportType));
       } catch {
         if (!cancelled) {
           setCases([]);
@@ -40,7 +40,7 @@ export default function CaseSelect({ value, onChange, locked = false }) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reportType]);
 
   if (cases === null) {
     return <p className="text-sm text-gray-500">Loading your cases…</p>;
@@ -74,7 +74,9 @@ export default function CaseSelect({ value, onChange, locked = false }) {
     return (
       <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
         {loadError ||
-          'No open case yet. A Progress or Final report continues a Spot report, so it can be filed once your Spot report has final approval.'}
+          (reportType === 'FINAL_INVESTIGATION'
+            ? 'No case is ready for a Final report. It needs a Spot report with final approval, and if a Progress report was filed, that must have final approval too.'
+            : 'No case is ready for a Progress report. It needs a Spot report with final approval that has no Progress report yet.')}
       </p>
     );
   }
@@ -97,7 +99,7 @@ export default function CaseSelect({ value, onChange, locked = false }) {
       </select>
       {locked && value && !selected && (
         <p className="mt-1 text-xs text-bfp-red">
-          That case can&apos;t take a new report (its Spot report isn&apos;t fully approved, or a Final report was already filed). Pick another.
+          That case can&apos;t take this report right now (an earlier report isn&apos;t fully approved yet, or this step was already filed). Pick another.
         </p>
       )}
     </>

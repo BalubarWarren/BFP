@@ -26,12 +26,27 @@ export function getCaseFollowUp(report, allReports) {
     (r) => r.reportType === 'FINAL_INVESTIGATION' && r.status !== 'DRAFT'
   );
 
+  // The next step always lives on the newest report of the case: once a Progress report is filed,
+  // the Spot report offers nothing more and "Start Final Report" moves to the Progress report.
+  const isSpot = report.reportType === 'SPOT_INVESTIGATION';
+  const isProgress = report.reportType === 'PROGRESS_INVESTIGATION';
+
   return {
     hasProgressSubmitted,
     hasFinalSubmitted,
-    showProgressCta: !hasProgressSubmitted && !hasFinalSubmitted,
-    showFinalCta: !hasFinalSubmitted,
+    showProgressCta: isSpot && !hasProgressSubmitted && !hasFinalSubmitted,
+    showFinalCta: !hasFinalSubmitted && ((isSpot && !hasProgressSubmitted) || isProgress),
   };
+}
+
+// A case's Progress report, if one was filed (only one is allowed per case).
+export function getCaseProgressReport(report, allReports) {
+  if (!report?.incidentId) return null;
+  return (
+    (allReports || []).find(
+      (r) => r.incidentId === report.incidentId && r.reportType === 'PROGRESS_INVESTIGATION' && r.status !== 'DRAFT'
+    ) || null
+  );
 }
 
 const CASE_STEP_TYPES = ['SPOT_INVESTIGATION', 'PROGRESS_INVESTIGATION', 'FINAL_INVESTIGATION'];
@@ -46,7 +61,9 @@ export const isFinallyApprovedReport = (report) => report?.status === 'APPROVED'
 // Cases a new Progress/Final report can continue: a real incident whose Spot report has cleared
 // final approval and that has no Final report filed yet. Same rule the server enforces in
 // POST /api/reports. Each entry carries the Spot report so the form can show what it continues.
-export function getOpenCases(allReports) {
+// With `reportType`, narrowed to what that report can continue: a Progress report needs a case
+// with no Progress report yet; a Final report needs any Progress report to be fully approved.
+export function getOpenCases(allReports, reportType) {
   const byIncident = new Map();
   for (const report of allReports || []) {
     if (!(report.incidentId > 0) || report.status === 'DRAFT') continue;
@@ -59,6 +76,9 @@ export function getOpenCases(allReports) {
     const spot = reports.find((r) => r.reportType === 'SPOT_INVESTIGATION' && isFinallyApprovedReport(r));
     if (!spot) continue;
     if (reports.some((r) => r.reportType === 'FINAL_INVESTIGATION')) continue;
+    const progress = reports.filter((r) => r.reportType === 'PROGRESS_INVESTIGATION');
+    if (reportType === 'PROGRESS_INVESTIGATION' && progress.length) continue;
+    if (reportType === 'FINAL_INVESTIGATION' && progress.some((r) => !isFinallyApprovedReport(r))) continue;
     cases.push({
       incidentId,
       incident: spot.incident || null,

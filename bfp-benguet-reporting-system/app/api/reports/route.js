@@ -429,6 +429,26 @@ export async function POST(request) {
           { status: 400 }
         );
       }
+      // One Progress report per case, and the Final report follows it: Final is filed from the
+      // Progress report once that's fully approved (or straight from the Spot report if the case
+      // skipped Progress).
+      const progressReports = await prisma.report.findMany({
+        where: { incidentId: parsedIncidentId, reportType: 'PROGRESS_INVESTIGATION', status: { not: REPORT_STATUS.DRAFT } },
+        select: { id: true, status: true, passedToId: true },
+      });
+      if (reportType === 'PROGRESS_INVESTIGATION' && progressReports.length) {
+        return NextResponse.json(
+          { error: `A Progress report (#${progressReports[0].id}) was already filed for this case. Continue from it with the Final report.` },
+          { status: 400 }
+        );
+      }
+      const pendingProgress = progressReports.find((r) => !(r.status === REPORT_STATUS.APPROVED && !r.passedToId));
+      if (reportType === 'FINAL_INVESTIGATION' && pendingProgress) {
+        return NextResponse.json(
+          { error: `This case's Progress report (#${pendingProgress.id}) needs final approval before the Final report can be filed.` },
+          { status: 400 }
+        );
+      }
     }
 
     // The EMS report is optional and doesn't count — the investigation report itself is required.

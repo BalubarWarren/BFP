@@ -144,7 +144,7 @@ export default function FinalInvestigationForm() {
             </div>
             <div>
               <label className="form-label">Linked Spot report (case) <span className="text-bfp-red">*</span></label>
-              <CaseSelect value={formData.incidentId} onChange={handleChange} locked={caseLocked} />
+              <CaseSelect value={formData.incidentId} onChange={handleChange} reportType="FINAL_INVESTIGATION" locked={caseLocked} />
             </div>
           </div>
         </div>
