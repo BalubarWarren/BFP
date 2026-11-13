@@ -10,7 +10,7 @@ import {
   nextTierRoles,
   REVIEW_TIERS,
 } from '../../../../lib/report-access';
-import { archiveReportVersion } from '../../../../lib/archive';
+import { archiveReportVersion, listReportVersions } from '../../../../lib/archive';
 import { notifyReportRecipients } from '../../../../lib/report-notifications';
 import { canUserViewReport } from '../../../../lib/report-view-access';
 import { generateQrToken } from '../../../../lib/qr-token';
@@ -97,7 +97,10 @@ export async function GET(request, { params }) {
         })
       : [];
 
-    return NextResponse.json({ report: { ...report, caseReports } });
+    // Earlier versions of this report (it was returned and revised), kept in the Report Archive.
+    const archivedVersions = await listReportVersions(report.id);
+
+    return NextResponse.json({ report: { ...report, caseReports, archivedVersions } });
   } catch (error) {
     console.error('Error fetching report:', error);
     return NextResponse.json(

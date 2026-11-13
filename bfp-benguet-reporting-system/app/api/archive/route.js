@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
 import { getUserFromRequest } from '../../../lib/auth';
 import { canViewArchive } from '../../../lib/constants';
-import { archiveWhereForUser, summarizeArchiveItem } from '../../../lib/archive';
+import { archiveWhereForUser, filterViewableArchiveItems, summarizeArchiveItem } from '../../../lib/archive';
 
 // Lists archived report versions (read-only — nothing in the archive can be changed or deleted).
 export async function GET(request) {
@@ -11,11 +11,12 @@ export async function GET(request) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     if (!canViewArchive(user.role)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-    const items = await prisma.trashItem.findMany({
+    const candidates = await prisma.trashItem.findMany({
       where: archiveWhereForUser(user),
       orderBy: { deletedAt: 'desc' },
       take: 500,
     });
+    const items = await filterViewableArchiveItems(candidates, user);
 
     const ownerIds = [...new Set(items.map((item) => item.ownerId).filter(Boolean))];
     const owners = ownerIds.length

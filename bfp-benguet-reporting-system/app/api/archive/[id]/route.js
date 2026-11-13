@@ -17,7 +17,7 @@ export async function GET(request, { params }) {
 
     const item = await prisma.trashItem.findUnique({ where: { id: parseInt(params.id) } });
     if (!item) return NextResponse.json({ error: 'Archived report not found' }, { status: 404 });
-    if (!canViewArchiveItem(item, user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!(await canViewArchiveItem(item, user))) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { report, incident: snapshotIncident } = parseJsonField(item.data, {});
     if (!report) return NextResponse.json({ error: 'This archived item is damaged.' }, { status: 500 });

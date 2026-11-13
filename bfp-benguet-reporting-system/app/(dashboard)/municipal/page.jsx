@@ -11,6 +11,7 @@ import { formatDateTime, isAuthError, parseJsonField } from '../../../lib/utils'
 import ReportProgressBar, { getReportProgress } from '../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../components/reports/AttachmentList';
 import CaseChain from '../../../components/reports/CaseChain';
+import RevisionHistory from '../../../components/reports/RevisionHistory';
 import ReportRowActions, { needsForwarding } from '../../../components/reports/ReportRowActions';
 import ForwardReportModal from '../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../components/common/TableSkeleton';
@@ -198,6 +199,8 @@ export default function MunicipalDashboard() {
                 currentId={selectedReport.id}
                 referenceNumber={(reportDetail?.incident || selectedReport.incident)?.referenceNumber}
               />
+
+              <RevisionHistory report={reportDetail} />
 
               {/* Attachments */}
               <div className="bg-gray-50 rounded-lg p-4">

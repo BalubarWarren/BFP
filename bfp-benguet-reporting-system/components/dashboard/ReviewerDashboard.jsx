@@ -8,6 +8,7 @@ import SessionExpiredBanner from '../common/SessionExpiredBanner';
 import { useToast } from '../common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../lib/utils';
 import AttachmentList from '../reports/AttachmentList';
+import RevisionHistory from '../reports/RevisionHistory';
 import TableSkeleton from '../common/TableSkeleton';
 import PageHeader from '../common/PageHeader';
 import ReportSearchFilters from '../reports/ReportSearchFilters';
@@ -334,6 +335,9 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                       />
                     </div>
                   )}
+
+                  {/* Was this returned and revised? Investigator's notes + earlier versions to compare */}
+                  <RevisionHistory report={reportDetail} />
 
                   {reportDetail?.remarks && (
                     <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">

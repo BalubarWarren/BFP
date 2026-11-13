@@ -29,6 +29,13 @@ export default function ArchivePage() {
   const [query, setQuery] = useState('');
   const [openingId, setOpeningId] = useState(null);
   const [viewing, setViewing] = useState(null); // { item, report }
+  // ?report=<id> narrows the list to one report's versions (exact id, unlike the search box).
+  const [reportFilter, setReportFilter] = useState(null);
+
+  useEffect(() => {
+    const id = parseInt(new URLSearchParams(window.location.search).get('report'), 10);
+    if (id > 0) setReportFilter(id);
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -46,13 +53,14 @@ export default function ArchivePage() {
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((item) =>
+    const scoped = reportFilter ? items.filter((item) => item.originalId === reportFilter) : items;
+    if (!q) return scoped;
+    return scoped.filter((item) =>
       [item.label, item.referenceNumber, item.ownerName, item.archivedByName, formatReportType(item.report?.reportType), `#${item.originalId}`]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(q))
     );
-  }, [items, query]);
+  }, [items, query, reportFilter]);
 
   const openItem = async (item) => {
     setOpeningId(item.id);
@@ -78,7 +86,7 @@ export default function ArchivePage() {
         icon={FolderArchive}
         eyebrow="Records"
         title="Report Archive"
-        description="Reports are never deleted. When a returned report is revised, the version that was returned is kept here, with the reviewer's remarks, for the record."
+        description="Reports are never deleted. When a returned report is revised, the version that was returned is kept here with its files, remarks and reviewer comments. You see the reports you're allowed to open."
       />
 
       {sessionExpired && <SessionExpiredBanner />}
@@ -87,7 +95,16 @@ export default function ArchivePage() {
         <div className="flex flex-col gap-3 border-b border-gray-200 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
           <div>
             <h2 className="text-base font-semibold tracking-tight text-gray-900">Archived versions</h2>
-            <p className="text-sm text-gray-500">{items.length} item{items.length === 1 ? '' : 's'} on file</p>
+            {reportFilter ? (
+              <p className="text-sm text-gray-500">
+                Showing report #{reportFilter} only ·{' '}
+                <button type="button" onClick={() => setReportFilter(null)} className="font-medium text-gray-900 underline-offset-2 hover:underline dark:text-white">
+                  Show all
+                </button>
+              </p>
+            ) : (
+              <p className="text-sm text-gray-500">{items.length} item{items.length === 1 ? '' : 's'} on file</p>
+            )}
           </div>
           <div className="relative w-full sm:w-72">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

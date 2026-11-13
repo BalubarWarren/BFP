@@ -7,6 +7,7 @@ import StatusBadge from '../common/StatusBadge';
 import AttachmentList from './AttachmentList';
 import WorkflowTracker, { ROLE_LABELS } from './WorkflowTracker';
 import CaseChain from './CaseChain';
+import RevisionHistory from './RevisionHistory';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { formatDateTime, parseJsonField } from '../../lib/utils';
 
@@ -153,6 +154,8 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
           </section>
 
           <CaseChain reports={r.caseReports} currentId={r.id} referenceNumber={incident.referenceNumber} />
+
+          {!report.isArchived && <RevisionHistory report={detail} />}
 
           {/* Report information */}
           <Section icon={FileText} title="Report Information">

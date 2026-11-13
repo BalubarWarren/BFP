@@ -9,6 +9,7 @@ import { formatDateTime, parseJsonField } from '../../../../lib/utils';
 import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../../components/reports/AttachmentList';
 import CaseChain from '../../../../components/reports/CaseChain';
+import RevisionHistory from '../../../../components/reports/RevisionHistory';
 import ReportRowActions from '../../../../components/reports/ReportRowActions';
 import ForwardReportModal from '../../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
@@ -137,6 +138,8 @@ export default function MunicipalReportsPage() {
                 currentId={selectedReport.id}
                 referenceNumber={(reportDetail?.incident || selectedReport.incident)?.referenceNumber}
               />
+
+              <RevisionHistory report={reportDetail} />
 
               <div className="rounded-lg bg-gray-50 p-4">
                 <h3 className="mb-3 font-bold text-bfp-navy">Attachments</h3>

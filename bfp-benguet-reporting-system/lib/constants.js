@@ -399,10 +399,22 @@ export const APPROVED_REPORTS_ROLES = [
 export const canViewApprovedReports = (role) => APPROVED_REPORTS_ROLES.includes(role);
 
 // Report Archive: earlier versions of reports that were returned and revised (see lib/archive.js).
-// Read-only. Investigators see the versions of their own reports; admins see everything.
+// Read-only. Investigators see their own reports' versions, reviewers the versions of reports they
+// can open, admins everything. Reviewer roles mirror lib/report-access.js (which imports this file,
+// so it can't be imported here).
 export const ARCHIVE_PATH = '/archive';
 
-export const ARCHIVE_ROLES = [ROLES.INVESTIGATOR, ROLES.ADMIN, ROLES.SUPER_ADMIN];
+export const ARCHIVE_ROLES = [
+  ROLES.INVESTIGATOR,
+  ROLES.MUNICIPAL_CHIEF_IIS,
+  ROLES.MUNICIPAL_CHIEF_OPERATION,
+  ROLES.MUNICIPAL_FIRE_MARSHAL,
+  ROLES.PROVINCIAL_CHIEF_IIS,
+  ROLES.MARSHAL,
+  ROLES.CHIEF_INVESTIGATOR_IIS,
+  ROLES.ADMIN,
+  ROLES.SUPER_ADMIN,
+];
 
 export const canViewArchive = (role) => ARCHIVE_ROLES.includes(role);
 
