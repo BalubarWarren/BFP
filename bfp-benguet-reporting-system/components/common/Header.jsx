@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Bell, Settings } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Bell, Settings, ArrowRight } from 'lucide-react';
 import ProfilePanel from './ProfilePanel';
 import MenuButton from './MenuButton';
 import TextBlastContent from './TextBlastContent';
@@ -14,6 +15,9 @@ import SettingsModal from './SettingsModal';
 import { useOutsideClick } from '../../hooks/useOutsideClick';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { clearSession } from '../../lib/session';
+import { getNotificationTarget, fetchReportForModal } from '../../lib/notification-target';
+import { useToast } from './ToastProvider';
+import ReportDetailsModal from '../reports/ReportDetailsModal';
 
 export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
   const [notifications, setNotifications] = useState([]);
@@ -21,6 +25,10 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
   const [showProfile, setShowProfile] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  // A report opened from a notification that has no better page to go to (read-only details).
+  const [detailsReport, setDetailsReport] = useState(null);
+  const router = useRouter();
+  const toast = useToast();
   const notificationsRef = useRef(null);
   const profileRef = useRef(null);
 
@@ -82,6 +90,24 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
       fetchNotifications();
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
+    }
+  };
+
+  // Clicking a notification marks it read and takes the user to the exact thing it's about: the
+  // report's review window, its revise page, the directives list, etc. (lib/notification-target.js).
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead) handleMarkAsRead(notif.id);
+    const target = getNotificationTarget(notif, user?.role);
+    if (!target) return;
+    setShowNotifications(false);
+    if (target.href) {
+      router.push(target.href);
+      return;
+    }
+    try {
+      setDetailsReport(await fetchReportForModal(target.reportId));
+    } catch (err) {
+      toast.error(err.message);
     }
   };
 
@@ -166,6 +192,7 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
                 ) : (
                   notifications.map((notif) => {
                     const parsedNotification = parseNotificationMessage(notif.message);
+                    const hasTarget = !!getNotificationTarget(notif, user?.role);
 
                     return (
                       <div
@@ -173,7 +200,15 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
                         className={`relative cursor-pointer border-b border-gray-100 py-3 pl-7 pr-4 transition-colors last:border-b-0 hover:bg-gray-50 ${
                           !notif.isRead ? 'bg-blue-50/40' : ''
                         }`}
-                        onClick={() => handleMarkAsRead(notif.id)}
+                        onClick={() => handleNotificationClick(notif)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            handleNotificationClick(notif);
+                          }
+                        }}
                       >
                         {!notif.isRead && (
                           <span className="absolute left-3 top-[18px] h-1.5 w-1.5 rounded-full bg-blue-500" aria-label="Unread" />
@@ -196,9 +231,14 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
                             ))}
                           </div>
                         )}
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(notif.createdAt).toLocaleString()}
-                        </p>
+                        <div className="mt-1 flex items-center justify-between gap-2">
+                          <p className="text-xs text-gray-500">{new Date(notif.createdAt).toLocaleString()}</p>
+                          {hasTarget && (
+                            <span className="inline-flex items-center gap-0.5 text-xs font-medium text-bfp-navy dark:text-blue-400">
+                              Open <ArrowRight className="h-3 w-3" />
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })
@@ -246,6 +286,10 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
 
       {showSettings && (
         <SettingsModal onClose={() => setShowSettings(false)} onLogout={handleLogout} />
+      )}
+
+      {detailsReport && (
+        <ReportDetailsModal report={detailsReport} onClose={() => setDetailsReport(null)} />
       )}
     </header>
   );

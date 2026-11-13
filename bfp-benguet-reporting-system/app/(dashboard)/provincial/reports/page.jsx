@@ -14,6 +14,9 @@ import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 import ReportSearchFilters from '../../../../components/reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../../lib/report-search';
 import ReportQrButton from '../../../../components/reports/ReportQrButton';
+import ReportDetailsModal from '../../../../components/reports/ReportDetailsModal';
+import { useOpenReportParam } from '../../../../hooks/useOpenReportParam';
+import { fetchReportForModal } from '../../../../lib/notification-target';
 import Portal from '../../../../components/common/Portal';
 
 export default function ProvincialReportsPage() {
@@ -29,6 +32,7 @@ export default function ProvincialReportsPage() {
   const [comments, setComments] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
   const [searchFilters, setSearchFilters] = useState(EMPTY_REPORT_FILTERS);
+  const [detailsReport, setDetailsReport] = useState(null);
 
   useEffect(() => {
     fetchReports();
@@ -83,6 +87,21 @@ export default function ProvincialReportsPage() {
       setReportDetail(report);
     }
   };
+
+  // Opened from a notification (?open=<id>): review it if it's still waiting here, else read-only.
+  useOpenReportParam(async (id) => {
+    const queued = incomingReports.find((r) => r.id === id);
+    if (queued) {
+      openReview(queued);
+      return;
+    }
+    try {
+      setDetailsReport(await fetchReportForModal(id));
+      toast.info('This report is no longer waiting for your review. Showing its current status.');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }, !loading);
 
   const closeReview = () => {
     setSelectedReport(null);
@@ -376,6 +395,10 @@ export default function ProvincialReportsPage() {
             </div>
           </div>
         </Portal>
+      )}
+
+      {detailsReport && (
+        <ReportDetailsModal report={detailsReport} onClose={() => setDetailsReport(null)} />
       )}
     </div>
   );

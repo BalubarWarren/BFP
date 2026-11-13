@@ -19,6 +19,8 @@ import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '..
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 import ReportQrButton from '../../../../components/reports/ReportQrButton';
 import Portal from '../../../../components/common/Portal';
+import { useOpenReportParam } from '../../../../hooks/useOpenReportParam';
+import { fetchReportForModal } from '../../../../lib/notification-target';
 
 export default function MunicipalReportsPage() {
   const toast = useToast();
@@ -86,6 +88,20 @@ export default function MunicipalReportsPage() {
       setReportDetail(report);
     }
   };
+
+  // Opened from a notification (?open=<id>): use the row if it's in the list, else load it.
+  useOpenReportParam(async (id) => {
+    const row = reports.find((r) => r.id === id);
+    if (row) {
+      openReport(row);
+      return;
+    }
+    try {
+      openReport(await fetchReportForModal(id));
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }, !loading);
 
   const closeReport = () => {
     setSelectedReport(null);

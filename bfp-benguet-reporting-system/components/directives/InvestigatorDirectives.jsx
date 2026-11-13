@@ -68,7 +68,7 @@ export default function InvestigatorDirectives() {
   if (directives.length === 0) return null;
 
   return (
-    <section className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8 border-l-4 border-bfp-red">
+    <section id="directives" className="scroll-mt-20 bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8 border-l-4 border-bfp-red">
       <div className="flex items-center justify-between gap-3 mb-4">
         <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-gray-900">
           <Megaphone className="w-5 h-5 text-bfp-red" /> Orders from Fire Marshal

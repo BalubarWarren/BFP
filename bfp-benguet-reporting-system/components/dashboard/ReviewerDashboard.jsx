@@ -16,6 +16,9 @@ import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '..
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import ReportQrButton from '../reports/ReportQrButton';
 import Portal from '../common/Portal';
+import ReportDetailsModal from '../reports/ReportDetailsModal';
+import { useOpenReportParam } from '../../hooks/useOpenReportParam';
+import { fetchReportForModal } from '../../lib/notification-target';
 
 // Shared by the Municipal Chief IIS/Operation and Municipal Fire Marshal dashboards, which were
 // ~95% byte-identical (same incoming/reviewed tabs, same review modal, same approve/return
@@ -35,6 +38,9 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
   const [activeTab, setActiveTab] = useState('incoming');
   const [sessionExpired, setSessionExpired] = useState(false);
   const [searchFilters, setSearchFilters] = useState(EMPTY_REPORT_FILTERS);
+  // A report opened from a notification that is no longer waiting on this reviewer (already
+  // handled, or moved on): shown read-only instead of in the approve/return window.
+  const [detailsReport, setDetailsReport] = useState(null);
   const pollRef = useRef(null);
 
   useEffect(() => {
@@ -94,6 +100,23 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
       setReportDetail(report);
     }
   };
+
+  // Opened from a notification (?open=<id>): straight into the review window if it's still in
+  // this reviewer's queue, otherwise its read-only details.
+  useOpenReportParam(async (id) => {
+    const queued = incomingReports.find((r) => r.id === id);
+    if (queued) {
+      setActiveTab('incoming');
+      openReview(queued);
+      return;
+    }
+    try {
+      setDetailsReport(await fetchReportForModal(id));
+      toast.info('This report is no longer waiting for your review. Showing its current status.');
+    } catch (err) {
+      toast.error(err.message);
+    }
+  }, !loading);
 
   const closeReview = () => {
     setSelectedReport(null);
@@ -388,6 +411,10 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
             </Portal>
           )}
         </>
+      )}
+
+      {detailsReport && (
+        <ReportDetailsModal report={detailsReport} onClose={() => setDetailsReport(null)} />
       )}
     </div>
   );
