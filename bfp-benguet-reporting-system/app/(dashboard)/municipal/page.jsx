@@ -11,6 +11,7 @@ import { formatDateTime, isAuthError, parseJsonField } from '../../../lib/utils'
 import ReportProgressBar, { getReportProgress } from '../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../components/reports/AttachmentList';
 import CaseChain from '../../../components/reports/CaseChain';
+import CaseLinks from '../../../components/reports/CaseLinks';
 import RevisionHistory from '../../../components/reports/RevisionHistory';
 import ReportRowActions, { needsForwarding } from '../../../components/reports/ReportRowActions';
 import ForwardReportModal from '../../../components/reports/ForwardReportModal';
@@ -411,7 +412,10 @@ export default function MunicipalDashboard() {
                         <p className="font-semibold text-gray-900">{formatReportType(report.reportType)}</p>
                         <p className="text-xs text-gray-500">#{report.id}</p>
                       </td>
-                      <td className="px-5 py-4 text-sm text-gray-700 whitespace-nowrap">{report.incident?.referenceNumber || '-'}</td>
+                      <td className="px-5 py-4 text-sm text-gray-700">
+                        <p className="whitespace-nowrap">{report.incident?.referenceNumber || '-'}</p>
+                        <CaseLinks report={report} allReports={reports} onOpen={openView} />
+                      </td>
                       <td className="px-5 py-4 text-sm">
                         <p className="text-gray-800">{formatDateTime(report.submittedAt)}</p>
                         <p className="text-xs text-gray-500">Report date {new Date(report.reportDate).toLocaleDateString()}</p>

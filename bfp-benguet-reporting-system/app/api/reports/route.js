@@ -411,6 +411,24 @@ export async function POST(request) {
           { status: 400 }
         );
       }
+      // The case must have started with a Spot report that cleared final approval — the same
+      // point the "Start Progress/Final Report" button appears — so a follow-up can never be
+      // filed under an incident with no (or an unapproved) Spot report.
+      const approvedSpot = await prisma.report.findFirst({
+        where: {
+          incidentId: parsedIncidentId,
+          reportType: 'SPOT_INVESTIGATION',
+          status: REPORT_STATUS.APPROVED,
+          passedToId: null,
+        },
+        select: { id: true },
+      });
+      if (!approvedSpot) {
+        return NextResponse.json(
+          { error: "This case's Spot report hasn't received final approval yet, so it can't be continued." },
+          { status: 400 }
+        );
+      }
     }
 
     // The EMS report is optional and doesn't count — the investigation report itself is required.

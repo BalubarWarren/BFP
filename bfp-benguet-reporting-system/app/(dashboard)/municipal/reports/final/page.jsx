@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import axios from 'axios';
 import { CheckCircle2, FileText, Send, User, HeartPulse } from 'lucide-react';
 import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
@@ -13,6 +12,7 @@ import BackButton from '../../../../../components/common/BackButton';
 import PageHeader from '../../../../../components/common/PageHeader';
 import RankSelect from '../../../../../components/common/RankSelect';
 import { submitReport } from '../../../../../lib/submit-report';
+import CaseSelect from '../../../../../components/reports/CaseSelect';
 
 export default function FinalInvestigationForm() {
   const router = useRouter();
@@ -32,7 +32,6 @@ export default function FinalInvestigationForm() {
   const [emsHighlight, setEmsHighlight] = useState(false);
   const emsInputRef = useRef(null);
   const attachmentInputRef = useRef(null);
-  const [incidents, setIncidents] = useState([]);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
 
   const [formData, setFormData] = useState({
@@ -44,19 +43,8 @@ export default function FinalInvestigationForm() {
     stationCommanderName: '',
   });
 
-  useEffect(() => {
-    fetchIncidents();
-  }, []);
-
-  const fetchIncidents = async () => {
-    try {
-      const token = sessionStorage.getItem('token');
-      const res = await axios.get('/api/incidents', { headers: { Authorization: `Bearer ${token}` } });
-      setIncidents(res.data.incidents || []);
-    } catch {
-      // Leaves the case list empty; submitting then asks for a case, and the server explains.
-    }
-  };
+  // Started from a Spot report's "Start ... Report" button: the case is fixed to that Spot report.
+  const caseLocked = !!searchParams.get('incidentId');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -76,6 +64,11 @@ export default function FinalInvestigationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.incidentId) {
+      setError('Select the Spot report this report continues.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (!formData.respondingOfficer) { setError('Please enter the reporting officer name.'); return; }
     if (!attachments.length) {
       setAttachmentWarningKind('missing');
@@ -150,15 +143,8 @@ export default function FinalInvestigationForm() {
               <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input" required />
             </div>
             <div>
-              <label className="form-label">Case (from its Spot report) <span className="text-bfp-red">*</span></label>
-              <select name="incidentId" value={formData.incidentId} onChange={handleChange} className="form-input" required>
-                <option value="" className="text-gray-400">Select the case this report continues</option>
-                {incidents.map((inc) => (
-                  <option key={inc.id} value={inc.id}>
-                    {inc.referenceNumber} — {inc.generalCategory} ({new Date(inc.dateOfIncident).toLocaleDateString()})
-                  </option>
-                ))}
-              </select>
+              <label className="form-label">Linked Spot report (case) <span className="text-bfp-red">*</span></label>
+              <CaseSelect value={formData.incidentId} onChange={handleChange} locked={caseLocked} />
             </div>
           </div>
         </div>

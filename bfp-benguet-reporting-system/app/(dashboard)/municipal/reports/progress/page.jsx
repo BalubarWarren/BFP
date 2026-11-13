@@ -1,8 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import axios from 'axios';
 import { Clock, FileText, Send, HeartPulse } from 'lucide-react';
 import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
@@ -12,6 +11,7 @@ import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 import BackButton from '../../../../../components/common/BackButton';
 import PageHeader from '../../../../../components/common/PageHeader';
 import { submitReport } from '../../../../../lib/submit-report';
+import CaseSelect from '../../../../../components/reports/CaseSelect';
 
 export default function ProgressInvestigationForm() {
   const router = useRouter();
@@ -25,7 +25,6 @@ export default function ProgressInvestigationForm() {
   const [showAttachmentWarning, setShowAttachmentWarning] = useState(false);
   const [attachmentWarningKind, setAttachmentWarningKind] = useState('missing');
   const [attachmentHighlight, setAttachmentHighlight] = useState(false);
-  const [incidents, setIncidents] = useState([]);
   const [attachments, setAttachments] = useState([]);
   // Optional EMS (Emergency Medical Services) report — left empty when there was no EMS response.
   const [emsFiles, setEmsFiles] = useState([]);
@@ -39,19 +38,8 @@ export default function ProgressInvestigationForm() {
     incidentId: searchParams.get('incidentId') || '',
   });
 
-  useEffect(() => {
-    fetchIncidents();
-  }, []);
-
-  const fetchIncidents = async () => {
-    try {
-      const token = sessionStorage.getItem('token');
-      const res = await axios.get('/api/incidents', { headers: { Authorization: `Bearer ${token}` } });
-      setIncidents(res.data.incidents || []);
-    } catch {
-      // Leaves the case list empty; submitting then asks for a case, and the server explains.
-    }
-  };
+  // Started from a Spot report's "Start ... Report" button: the case is fixed to that Spot report.
+  const caseLocked = !!searchParams.get('incidentId');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -71,6 +59,11 @@ export default function ProgressInvestigationForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!formData.incidentId) {
+      setError('Select the Spot report this report continues.');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     if (!attachments.length) {
       setAttachmentWarningKind('missing');
       setShowAttachmentWarning(true);
@@ -140,15 +133,8 @@ export default function ProgressInvestigationForm() {
               <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input" required />
             </div>
             <div>
-              <label className="form-label">Case (from its Spot report) <span className="text-bfp-red">*</span></label>
-              <select name="incidentId" value={formData.incidentId} onChange={handleChange} className="form-input" required>
-                <option value="" className="text-gray-400">Select the case this report continues</option>
-                {incidents.map((inc) => (
-                  <option key={inc.id} value={inc.id}>
-                    {inc.referenceNumber} — {inc.generalCategory} ({new Date(inc.dateOfIncident).toLocaleDateString()})
-                  </option>
-                ))}
-              </select>
+              <label className="form-label">Linked Spot report (case) <span className="text-bfp-red">*</span></label>
+              <CaseSelect value={formData.incidentId} onChange={handleChange} locked={caseLocked} />
             </div>
           </div>
         </div>
