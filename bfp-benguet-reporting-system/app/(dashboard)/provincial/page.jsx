@@ -7,9 +7,10 @@ import SessionExpiredBanner from '../../../components/common/SessionExpiredBanne
 import StatusBadge from '../../../components/common/StatusBadge';
 import {
   MoreVertical, Printer, Download, X, Home, Building2, TreePine, Truck,
-  LayoutGrid, MapPin, Inbox, FileSearch,
+  LayoutGrid, MapPin, Inbox, FileSearch, CalendarDays, CalendarRange, Flame, HeartPulse,
 } from 'lucide-react';
 import PageHeader from '../../../components/common/PageHeader';
+import StatCard from '../../../components/common/StatCard';
 import MunicipalityDetailModal from '../../../components/dashboard/MunicipalityDetailModal';
 import AttachmentList from '../../../components/reports/AttachmentList';
 import ReportQrButton from '../../../components/reports/ReportQrButton';
@@ -137,7 +138,7 @@ function BenguetFireMap({ monitoringBoard, periodLabel, onPrint, onExport, onSel
     <div id="section-fire-map" className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
       <div className="flex justify-between items-start gap-3 mb-4">
         <div>
-          <h2 className="text-xl font-bold text-bfp-navy">Municipality Fire Incident Rate Map</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-gray-900">Municipality Fire Incident Rate Map</h2>
           <p className="text-sm text-gray-500">
             {periodLabel && <span className="font-semibold text-bfp-navy">{periodLabel} · </span>}
             Color shows relative fire incident rate — green (lowest) to red (highest). Click a municipality for details.
@@ -672,7 +673,7 @@ export default function ProvincialDashboard() {
       <div id="section-monitoring-board" className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-6">
         <div className="flex justify-between items-start gap-3 mb-1">
           <div>
-            <h2 className="text-xl font-bold text-bfp-navy">Fire Incident Monitoring Board</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-gray-900">Fire Incident Monitoring Board</h2>
             <p className="text-sm text-gray-500 mb-4">Live totals for the current month, or browse a past month or year. Click a municipality to see its incidents and statistics.</p>
           </div>
           <SectionMenu onPrint={() => handlePrint('section-monitoring-board')} onExport={handleExportMonitoringBoard} />
@@ -755,7 +756,7 @@ export default function ProvincialDashboard() {
         {(boardTab === 'current' || histData !== null) && (
           <>
             <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
-              <h3 className="text-lg font-bold text-bfp-navy">
+              <h3 className="text-lg font-semibold tracking-tight text-gray-900">
                 {boardTab === 'current'
                   ? `${currentMonthName} ${currentYear} — as of ${formatDate(asOf)}`
                   : `${histLabel} — Fire Incident Summary`}
@@ -965,7 +966,7 @@ export default function ProvincialDashboard() {
 
         return (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4"
             onClick={() => setCategoryModal(null)}
           >
             <div
@@ -1125,23 +1126,17 @@ export default function ProvincialDashboard() {
       })()}
 
       {/* ── 2. KPI Cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="kpi-card primary">
-          <div className="kpi-label">This Month</div>
-          <div className="kpi-value">{kpis?.thisMonth || 0}</div>
-        </div>
-        <div className="kpi-card success">
-          <div className="kpi-label">This Year</div>
-          <div className="kpi-value">{kpis?.thisYear || 0}</div>
-        </div>
-        <div className="kpi-card warning">
-          <div className="kpi-label">Most Active Municipality</div>
-          <div className="kpi-value text-lg">{kpis?.mostActiveMunicipality || 'N/A'}</div>
-        </div>
-        <div className="kpi-card success">
-          <div className="kpi-label">With Casualties</div>
-          <div className="kpi-value">{kpis?.incidentsWithCasualties || 0}</div>
-        </div>
+      <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard icon={CalendarDays} accent="red" label="Incidents this month" value={kpis?.thisMonth || 0} />
+        <StatCard icon={CalendarRange} accent="navy" label="Incidents this year" value={kpis?.thisYear || 0} />
+        <StatCard
+          icon={Flame}
+          accent="amber"
+          label="Most active municipality"
+          value={kpis?.mostActiveMunicipality || 'N/A'}
+          valueClassName="text-xl mt-3"
+        />
+        <StatCard icon={HeartPulse} accent="green" label="With casualties" value={kpis?.incidentsWithCasualties || 0} />
       </div>
 
       {/* ── 2b. Municipality Fire Rate SVG Map ── */}
@@ -1197,7 +1192,7 @@ export default function ProvincialDashboard() {
       <div id="section-comparison" className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8">
         <div className="flex justify-between items-start mb-5 flex-wrap gap-4">
           <div>
-            <h2 className="text-xl font-bold text-bfp-navy">Fire Incident Comparison</h2>
+            <h2 className="text-xl font-semibold tracking-tight text-gray-900">Fire Incident Comparison</h2>
             <p className="text-sm text-gray-500 mt-1">Compare selected years or months to identify the highest fire incident period.</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
@@ -1295,7 +1290,7 @@ export default function ProvincialDashboard() {
               {COMPARISON_CATEGORIES.map((label) => (
                 <div key={label} className="bg-gray-50 border rounded-lg p-3">
                   <p className="text-xs text-gray-500">{label}</p>
-                  <p className="text-xl font-bold text-bfp-navy">{highestTrendPeriod[label] || 0}</p>
+                  <p className="text-xl font-semibold tracking-tight text-gray-900">{highestTrendPeriod[label] || 0}</p>
                   <SubCategoryBreakdown
                     total={highestTrendPeriod[label] || 0}
                     subs={highestTrendPeriod.subCategories?.[label]}
@@ -1313,11 +1308,11 @@ export default function ProvincialDashboard() {
           <>
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={trendComparisonData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="period" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} />
-                <Tooltip />
-                <Legend />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="period" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={36} />
+                <Tooltip cursor={{ radius: 4 }} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
                 <Bar dataKey="Residential" stackId="a" fill={CATEGORY_CHART_COLORS.Residential} />
                 <Bar dataKey="Non-Residential" stackId="a" fill={CATEGORY_CHART_COLORS['Non-Residential']} />
                 <Bar dataKey="Non-Structural" stackId="a" fill={CATEGORY_CHART_COLORS['Non-Structural']} />

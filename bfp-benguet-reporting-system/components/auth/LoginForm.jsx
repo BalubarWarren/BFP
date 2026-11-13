@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import Link from 'next/link';
+import { Eye, EyeOff, ArrowLeft, MapPin, QrCode, ShieldCheck } from 'lucide-react';
 import BFPCrest from '../common/BFPCrest';
 import GoogleSignInButton from './GoogleSignInButton';
 import ForgotPasswordForm from './ForgotPasswordForm';
@@ -42,30 +43,51 @@ export default function LoginForm({
   const unlock = (field) => () => setUnlocked((current) => (current[field] ? current : { ...current, [field]: true }));
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-bfp-navy via-bfp-navy to-black px-4 relative overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-1.5 hazard-trim" />
-      <div className="absolute bottom-0 left-0 right-0 h-1.5 hazard-trim" />
-      <div className="max-w-md w-full relative">
+    <div className="grid min-h-screen bg-white lg:grid-cols-2 dark:bg-gray-950">
+      {/* Brand panel (desktop) */}
+      <aside className="landing-hero relative hidden flex-col justify-between overflow-hidden p-10 text-white lg:flex">
+        <div className="absolute inset-x-0 top-0 h-1 hazard-trim" />
+        <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold tracking-wide text-white/90 hover:text-white">
+          <BFPCrest size={30} /> FIRETRACK
+        </Link>
+        <div className="max-w-md">
+          <h1 className="text-4xl font-semibold leading-tight tracking-tight">
+            Every fire report, tracked to final approval.
+          </h1>
+          <p className="mt-4 text-white/65">
+            File incident reports and see exactly where each one is in the review chain, and who is checking it.
+          </p>
+          <ul className="mt-8 space-y-3 text-sm text-white/80">
+            <li className="flex items-center gap-2.5"><MapPin className="h-4 w-4 text-bfp-gold" /> Live location of every report</li>
+            <li className="flex items-center gap-2.5"><QrCode className="h-4 w-4 text-bfp-gold" /> QR tracking without exposing contents</li>
+            <li className="flex items-center gap-2.5"><ShieldCheck className="h-4 w-4 text-bfp-gold" /> Role-based access, every action logged</li>
+          </ul>
+        </div>
+        <p className="text-xs text-white/40">Bureau of Fire Protection &mdash; Benguet. For official use only.</p>
+      </aside>
+
+      {/* Form panel */}
+      <main className="flex flex-col px-4 py-6 sm:px-8">
+        <Link href="/" className="inline-flex w-fit items-center gap-1.5 rounded-md px-2 py-1 text-sm text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-900">
+          <ArrowLeft className="h-4 w-4" /> Home
+        </Link>
+      <div className="mx-auto my-auto w-full max-w-sm py-10">
         {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <div className="inline-block mb-4">
-            <BFPCrest size={88} />
+        <div className="mb-8">
+          <div className="mb-5 lg:hidden">
+            <BFPCrest size={48} />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-1 tracking-widest uppercase">FireTrack</h1>
-          <p className="text-bfp-gold text-sm font-semibold uppercase tracking-wide">Bureau of Fire Protection &mdash; Benguet</p>
-          <p className="text-white/60 text-sm mt-1">Fire Incident Report Tracking System</p>
+          <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Sign in to FireTrack</h2>
+          <p className="mt-1 text-sm text-gray-500">Fire Incident Report Tracking System &middot; BFP Benguet</p>
         </div>
 
-        {/* Card */}
-        <div className="card card-accent-gold shadow-2xl">
+        <div>
           {showForgotPassword ? (
             <ForgotPasswordForm initialEmail={googleUser?.email || email} onBack={closeForgotPassword} />
           ) : (
             <>
-              <h2 className="text-2xl font-bold text-bfp-navy mb-6">Sign In</h2>
-
               {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+                <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700 dark:border-red-900">
                   {error}
                 </div>
               )}
@@ -75,7 +97,7 @@ export default function LoginForm({
                   // Google already identified the account — only the system password is left to enter.
                   <div className="form-group">
                     <label className="form-label">Account</label>
-                    <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-300 bg-gray-50 px-3 py-2">
+                    <div className="flex items-center justify-between gap-3 rounded-md border border-gray-200 bg-gray-50 px-3 py-2">
                       <div className="min-w-0">
                         {googleUser.name && <p className="font-semibold text-bfp-navy truncate">{googleUser.name}</p>}
                         <p className="text-sm text-gray-600 truncate">{googleUser.email}</p>
@@ -139,7 +161,7 @@ export default function LoginForm({
                       aria-label={showPassword ? 'Hide password' : 'Show password'}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-bfp-navy"
                     >
-                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                   </div>
                 </div>
@@ -147,8 +169,11 @@ export default function LoginForm({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="btn btn-primary w-full mb-4"
+                  className="btn btn-primary mb-4 h-10 w-full"
                 >
+                  {loading && (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />
+                  )}
                   {loading ? 'Signing in...' : 'Sign In'}
                 </button>
               </form>
@@ -159,7 +184,7 @@ export default function LoginForm({
                 <>
                   <div className="flex items-center gap-3 my-2">
                     <div className="h-px flex-1 bg-gray-200" />
-                    <span className="text-xs font-medium uppercase tracking-wide text-gray-400">or</span>
+                    <span className="text-xs text-gray-400">or continue with</span>
                     <div className="h-px flex-1 bg-gray-200" />
                   </div>
                   <GoogleSignInButton onCredential={handleGoogleCredential} />
@@ -169,6 +194,7 @@ export default function LoginForm({
           )}
         </div>
       </div>
+      </main>
 
       {googleWarning && (
         <GoogleAccountWarningModal

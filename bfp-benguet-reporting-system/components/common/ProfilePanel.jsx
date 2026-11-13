@@ -6,7 +6,7 @@ import { displayName, roleTitle } from '../../lib/user-display';
 
 export default function ProfilePanel({ user, onOpenSettings, onLogout }) {
   return (
-    <div className="modal-pop-in fixed inset-x-4 top-16 sm:absolute sm:inset-x-auto sm:top-auto sm:right-0 mt-2 sm:w-80 rounded-lg bg-white shadow-lg z-50 dark:bg-gray-800">
+    <div className="dropdown-in fixed inset-x-4 top-14 z-50 mt-1 rounded-xl bg-white shadow-xl sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-80 dark:bg-gray-900">
       <div className="flex items-center gap-3 border-b border-gray-200 p-4">
         <UserAvatar user={user} size={48} />
         <div className="min-w-0">

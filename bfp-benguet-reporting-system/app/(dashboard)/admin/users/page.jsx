@@ -249,7 +249,7 @@ export default function UserManagementPage() {
 
       {/* Create account */}
       <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-        <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+        <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-gray-900 mb-4">
           <UserPlus className="w-5 h-5" /> Create Account
         </h2>
 
@@ -305,7 +305,7 @@ export default function UserManagementPage() {
       <div className="bg-white rounded-lg shadow-md">
         <div className="flex flex-col gap-3 border-b border-gray-200 p-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-bfp-navy">Accounts ({filteredUsers.length})</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-gray-900">Accounts ({filteredUsers.length})</h2>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <input
@@ -333,12 +333,12 @@ export default function UserManagementPage() {
             <table className="w-full border-collapse">
               <thead className="bg-gray-50">
                 <tr className="border-b border-gray-200">
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Name</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Email</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Role</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Municipality</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Status</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Actions</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Name</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Email</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Role</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Municipality</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Status</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -384,12 +384,12 @@ export default function UserManagementPage() {
 
       {/* Edit modal */}
       {editingUser && editForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={closeEdit}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={closeEdit}>
           <div className="modal-pop-in max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between border-b p-6">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Edit Account</p>
-                <h2 className="text-xl font-bold text-bfp-navy">{editingUser.name}</h2>
+                <h2 className="text-xl font-semibold tracking-tight text-gray-900">{editingUser.name}</h2>
               </div>
               <button onClick={closeEdit} className="text-2xl text-gray-400 hover:text-gray-600">&times;</button>
             </div>
@@ -463,11 +463,11 @@ export default function UserManagementPage() {
 
       {/* Delete confirmation */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={() => setDeleteTarget(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={() => setDeleteTarget(null)}>
           <div className="modal-pop-in w-full max-w-md rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="border-b p-6">
               <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Delete Account</p>
-              <h2 className="text-xl font-bold text-bfp-navy">{deleteTarget.name}</h2>
+              <h2 className="text-xl font-semibold tracking-tight text-gray-900">{deleteTarget.name}</h2>
             </div>
             <div className="space-y-3 p-6 text-sm text-gray-700">
               <p>This permanently deletes <strong>{deleteTarget.email}</strong>. This cannot be undone.</p>

@@ -205,7 +205,7 @@ export default function ApprovedReportsPage() {
             </div>
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-              <p className="text-2xl font-bold text-bfp-navy">{loading ? '—' : value}</p>
+              <p className="text-2xl font-semibold tracking-tight text-gray-900">{loading ? '—' : value}</p>
             </div>
           </div>
         ))}
@@ -241,7 +241,7 @@ export default function ApprovedReportsPage() {
       </div>
 
       <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-        <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy mb-4">
+        <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-gray-900 mb-4">
           <Archive className="w-5 h-5" /> Approved Reports
           {!loading && filteredReports.length > 0 && (
             <span className="text-sm font-normal text-gray-500">({filteredReports.length})</span>
@@ -312,12 +312,12 @@ export default function ApprovedReportsPage() {
 
       {/* Read-only detail view — no approve/return actions: this report is already final. */}
       {selectedReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
           <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-4 sm:p-6 border-b">
               <div>
                 <p className="text-xs font-bold uppercase tracking-wider text-bfp-red">Approved Report</p>
-                <h2 className="text-2xl font-bold text-bfp-navy">
+                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
                   {selectedReport.incident?.referenceNumber || formatReportType(selectedReport.reportType)}
                 </h2>
               </div>

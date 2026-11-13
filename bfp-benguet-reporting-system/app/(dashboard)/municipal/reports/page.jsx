@@ -118,12 +118,12 @@ export default function MunicipalReportsPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6">
       {selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4">
           <div className="modal-pop-in max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-lg bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b p-6">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Report Details</p>
-                <h2 className="text-2xl font-bold text-bfp-navy">
+                <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
                   {formatReportType(selectedReport.reportType)}
                 </h2>
               </div>
@@ -198,21 +198,24 @@ export default function MunicipalReportsPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
         <PageHeader icon={FileText} eyebrow="Report archive" title="My Submitted Reports" border={false} />
         <div className="rounded-lg border border-gray-200 bg-white px-4 py-3 shadow-sm">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Showing</p>
-          <p className="text-2xl font-bold text-bfp-navy">{filteredReports.length}</p>
+          <p className="text-xs font-medium text-gray-500">Showing</p>
+          <p className="text-2xl font-semibold tabular-nums tracking-tight text-gray-900">{filteredReports.length}</p>
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         {[
-          ['Submitted', statusCounts.SUBMITTED || 0, 'border-bfp-amber'],
-          ['Approved', statusCounts.APPROVED || 0, 'border-green-500'],
-          ['Returned', statusCounts.RETURNED || 0, 'border-red-500'],
-          ['Draft', statusCounts.DRAFT || 0, 'border-gray-400'],
-        ].map(([label, value, borderClass]) => (
-          <div key={label} className={`rounded-lg border-l-4 ${borderClass} bg-white p-4 shadow-sm`}>
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-            <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+          ['Submitted', statusCounts.SUBMITTED || 0, 'bg-amber-500'],
+          ['Approved', statusCounts.APPROVED || 0, 'bg-green-500'],
+          ['Returned', statusCounts.RETURNED || 0, 'bg-red-500'],
+          ['Draft', statusCounts.DRAFT || 0, 'bg-gray-400'],
+        ].map(([label, value, dotClass]) => (
+          <div key={label} className="card p-4">
+            <p className="flex items-center gap-2 text-sm font-medium text-gray-500">
+              <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden="true" />
+              {label}
+            </p>
+            <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight text-gray-900">{value}</p>
           </div>
         ))}
       </div>
@@ -220,7 +223,7 @@ export default function MunicipalReportsPage() {
       <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
         <div className="flex flex-col gap-4 border-b border-gray-200 p-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-bfp-navy">Reports</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-gray-900">Reports</h2>
             <p className="text-sm text-gray-500">
               {filterStatus ? `${formatReportType(filterStatus)} reports` : 'All statuses'}
             </p>
@@ -261,11 +264,11 @@ export default function MunicipalReportsPage() {
             <table className="w-full border-collapse">
               <thead className="bg-gray-50">
                 <tr className="border-b border-gray-200">
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Reference #</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Submitted</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Status &amp; Location</th>
-                  <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Actions</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Report</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Reference #</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Submitted</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Status &amp; Location</th>
+                  <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">

@@ -187,10 +187,10 @@ export default function MunicipalDashboard() {
 
       {/* Report View Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
           <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-4 sm:p-6 border-b">
-              <h2 className="text-2xl font-bold text-bfp-navy">Report Details</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Report Details</h2>
               <button onClick={closeView} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
 
@@ -308,7 +308,7 @@ export default function MunicipalDashboard() {
             <FileEdit className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-bold text-bfp-navy">MDFIR</h3>
+            <h3 className="text-lg font-semibold tracking-tight text-gray-900">MDFIR</h3>
             <p className="mt-0.5 text-sm text-gray-600">Minimal damage fire incident report</p>
             <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-bfp-red transition-all group-hover:gap-2">
               New report <ArrowRight className="h-4 w-4" />
@@ -321,7 +321,7 @@ export default function MunicipalDashboard() {
             <Search className="h-6 w-6" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-bold text-bfp-navy">Spot Investigation</h3>
+            <h3 className="text-lg font-semibold tracking-tight text-gray-900">Spot Investigation</h3>
             <p className="mt-0.5 text-sm text-gray-600">On-site report that opens a new fire case</p>
             <span className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-bfp-red transition-all group-hover:gap-2">
               New report <ArrowRight className="h-4 w-4" />
@@ -345,21 +345,25 @@ export default function MunicipalDashboard() {
       <div className="space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
           {[
-            ['Submitted', 'SUBMITTED', statusCounts.SUBMITTED || 0, 'border-bfp-amber'],
-            ['Approved', 'APPROVED', statusCounts.APPROVED || 0, 'border-green-500'],
-            ['Returned', 'RETURNED', statusCounts.RETURNED || 0, 'border-red-500'],
-            ['Draft', 'DRAFT', statusCounts.DRAFT || 0, 'border-gray-400'],
-          ].map(([label, status, value, borderClass]) => (
+            ['Submitted', 'SUBMITTED', statusCounts.SUBMITTED || 0, 'bg-amber-500'],
+            ['Approved', 'APPROVED', statusCounts.APPROVED || 0, 'bg-green-500'],
+            ['Returned', 'RETURNED', statusCounts.RETURNED || 0, 'bg-red-500'],
+            ['Draft', 'DRAFT', statusCounts.DRAFT || 0, 'bg-gray-400'],
+          ].map(([label, status, value, dotClass]) => (
             <button
               key={label}
               type="button"
+              aria-pressed={filterStatus === status}
               onClick={() => setFilterStatus((current) => (current === status ? '' : status))}
-              className={`card-hover-lift w-full rounded-lg border-l-4 ${borderClass} bg-white p-4 shadow-sm text-left transition-colors ${
-                filterStatus === status ? 'ring-2 ring-bfp-navy bg-bfp-navy/5' : ''
+              className={`card card-hover-lift w-full p-4 text-left ${
+                filterStatus === status ? '!shadow-[0_0_0_2px_theme(colors.bfp-navy)] dark:!shadow-[0_0_0_2px_theme(colors.blue.400)]' : ''
               }`}
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</p>
-              <p className="mt-1 text-2xl font-bold text-gray-900">{value}</p>
+              <p className="flex items-center gap-2 text-sm font-medium text-gray-500">
+                <span className={`h-2 w-2 rounded-full ${dotClass}`} aria-hidden="true" />
+                {label}
+              </p>
+              <p className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight text-gray-900">{value}</p>
             </button>
           ))}
         </div>
@@ -367,7 +371,7 @@ export default function MunicipalDashboard() {
         <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
           <div className="flex flex-col gap-4 border-b border-gray-200 p-5 md:flex-row md:items-end md:justify-between">
             <div>
-              <h2 className="text-lg font-bold text-bfp-navy">Reports</h2>
+              <h2 className="text-lg font-semibold tracking-tight text-gray-900">Reports</h2>
               <p className="text-sm text-gray-500">
                 {filterStatus ? `${formatReportType(filterStatus)} reports` : 'All statuses'}
               </p>
@@ -408,11 +412,11 @@ export default function MunicipalDashboard() {
               <table className="w-full border-collapse">
                 <thead className="bg-gray-50">
                   <tr className="border-b border-gray-200">
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Reference #</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Submitted</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Status &amp; Location</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Actions</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Report</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Reference #</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Submitted</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Status &amp; Location</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">

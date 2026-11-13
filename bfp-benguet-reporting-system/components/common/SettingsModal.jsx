@@ -55,13 +55,13 @@ export default function SettingsModal({ onClose, onLogout }) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center modal-overlay p-4" onClick={onClose}>
       <div
         className="modal-pop-in max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-2xl dark:bg-gray-800"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-gray-200 p-6">
-          <h2 className="text-xl font-bold text-bfp-navy">Settings</h2>
+          <h2 className="text-xl font-semibold tracking-tight text-gray-900">Settings</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
             <X className="w-5 h-5" />
           </button>

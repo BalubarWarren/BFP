@@ -210,7 +210,7 @@ export default function MarshalTeamPage() {
           <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
               <div>
-                <h2 className="text-xl font-bold text-bfp-navy">Investigators</h2>
+                <h2 className="text-xl font-semibold tracking-tight text-gray-900">Investigators</h2>
                 <p className="text-sm text-gray-500">
                   <span className="font-semibold text-green-700">{onDutyCount} on duty today</span> · {onlineCount} online now · {activeCount} active account{activeCount === 1 ? '' : 's'}
                 </p>
@@ -294,7 +294,7 @@ export default function MarshalTeamPage() {
 
           <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
             <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
-              <h2 className="text-xl font-bold text-bfp-navy">Sent Messages &amp; Assignments</h2>
+              <h2 className="text-xl font-semibold tracking-tight text-gray-900">Sent Messages &amp; Assignments</h2>
               <div className="w-60">
                 <label className="form-label">Investigator</label>
                 <select className="form-select w-full" value={filterRecipient} onChange={(e) => setFilterRecipient(e.target.value)}>
@@ -352,10 +352,10 @@ export default function MarshalTeamPage() {
       )}
 
       {target && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
           <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-4 sm:p-6 border-b">
-              <h2 className="text-2xl font-bold text-bfp-navy">
+              <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
                 {form.kind === 'ASSIGNMENT' ? 'Assign Report' : 'Send Message'}
               </h2>
               <button onClick={closeCompose} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>

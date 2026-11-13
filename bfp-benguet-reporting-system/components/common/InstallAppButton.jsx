@@ -119,11 +119,11 @@ export default function InstallAppButton({ variant = 'header' }) {
       <button
         type="button"
         onClick={handleClick}
-        className="flex items-center gap-1.5 rounded-md p-2 text-gray-600 hover:text-gray-900 lg:border lg:border-gray-300 lg:px-3 lg:py-1.5 lg:hover:bg-gray-50"
+        className="flex h-9 min-w-[2.25rem] items-center justify-center gap-1.5 rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 lg:px-2.5 dark:hover:bg-gray-800 dark:hover:text-white"
         aria-label="Install FireTrack app"
         title="Install FireTrack app"
       >
-        <Download className="h-6 w-6 lg:h-4 lg:w-4" />
+        <Download className="h-[18px] w-[18px] lg:h-4 lg:w-4" />
         <span className="hidden text-sm font-medium lg:inline">Install App</span>
       </button>
     );
@@ -135,7 +135,7 @@ export default function InstallAppButton({ variant = 'header' }) {
       {button}
       {steps && (
         <div
-          className="fixed inset-0 z-[100] flex items-end justify-center bg-black/50 p-4 sm:items-center"
+          className="fixed inset-0 z-[100] flex items-end justify-center modal-overlay p-4 sm:items-center"
           onClick={() => setShowHelp(false)}
         >
           <div
@@ -146,7 +146,7 @@ export default function InstallAppButton({ variant = 'header' }) {
             onClick={(event) => event.stopPropagation()}
           >
             <div className="mb-3 flex items-center justify-between">
-              <h2 id="install-help-title" className="text-lg font-bold text-bfp-navy">
+              <h2 id="install-help-title" className="text-lg font-semibold tracking-tight text-gray-900">
                 Install FireTrack
               </h2>
               <button

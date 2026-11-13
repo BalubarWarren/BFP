@@ -109,7 +109,7 @@ export default function TrashPage() {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="flex flex-col gap-3 border-b border-gray-200 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-bfp-navy">Deleted Reports ({items.length})</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-gray-900">Deleted Reports ({items.length})</h2>
             <p className="text-sm text-gray-500">Items are permanently deleted, with their attachments, once their 30 days run out.</p>
           </div>
           <button

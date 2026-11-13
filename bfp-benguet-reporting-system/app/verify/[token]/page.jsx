@@ -182,7 +182,7 @@ function InvalidState() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-bfp-navy via-bfp-navy to-black px-4">
       <div className="max-w-sm w-full rounded-lg bg-white shadow-2xl p-8 text-center">
         <XCircle className="mx-auto h-12 w-12 text-bfp-red" />
-        <h1 className="mt-4 text-xl font-bold text-bfp-navy">Report Not Found</h1>
+        <h1 className="mt-4 text-xl font-semibold tracking-tight text-gray-900">Report Not Found</h1>
         <p className="mt-2 text-sm text-gray-500">
           This QR code doesn&rsquo;t match a report being tracked. It may have been mistyped, or the
           report it pointed to is no longer available.
@@ -282,7 +282,7 @@ export default async function TrackReportPage({ params }) {
             {report.incident?.referenceNumber && (
               <div className="mb-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Reference Number</p>
-                <p className="text-2xl font-bold text-bfp-navy">{report.incident.referenceNumber}</p>
+                <p className="text-2xl font-semibold tracking-tight text-gray-900">{report.incident.referenceNumber}</p>
               </div>
             )}
             <div className="grid grid-cols-2 gap-4 text-sm">

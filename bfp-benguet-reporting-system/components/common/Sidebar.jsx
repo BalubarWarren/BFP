@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, FileText, ClipboardList, FilePlus, Search,
   ShieldCheck, LogOut, Users, History, Archive, UserCheck, MessageSquare, Trash2,
@@ -13,7 +13,105 @@ import { displayName } from '../../lib/user-display';
 import { APPROVED_REPORTS_PATH, canViewApprovedReports, TRASH_PATH, canViewTrash } from '../../lib/constants';
 import { clearSession } from '../../lib/session';
 
+// Every role whose ROLE_HOME_PATH/isRouteAllowedForRole (lib/constants.js) points at /provincial —
+// including the legacy/regional roles.
+const PROVINCIAL_DASHBOARD_ROLES = [
+  'MARSHAL',
+  'PROVINCIAL_CHIEF_IIS',
+  'CHIEF_INVESTIGATOR_IIS',
+  'PROVINCIAL_CHIEF_INVESTIGATOR',
+  'REGION_IIS',
+  'REGIONAL_CHIEF_OPERATION',
+  'PIO',
+];
+
+// The sidebar for a role, as sections of links. Progress and Final Investigation are deliberately
+// absent: they continue a case and are started from the approved report's row (CaseFollowUpCta).
+function getNavSections(role) {
+  const sections = [];
+
+  if (PROVINCIAL_DASHBOARD_ROLES.includes(role)) {
+    sections.push({
+      items: [
+        { href: '/provincial', label: 'Dashboard', icon: LayoutDashboard },
+        { href: '/provincial/reports', label: 'Fire Incident Reports', icon: FileText },
+      ],
+    });
+  }
+
+  if (role === 'INVESTIGATOR') {
+    sections.push(
+      {
+        items: [
+          { href: '/municipal', label: 'Dashboard', icon: LayoutDashboard },
+          { href: '/municipal/reports', label: 'My Reports', icon: ClipboardList },
+        ],
+      },
+      {
+        title: 'New Report',
+        items: [
+          { href: '/municipal/reports/mdfir', label: 'MDFIR', icon: FilePlus },
+          { href: '/municipal/reports/spot', label: 'Spot Investigation', icon: Search },
+        ],
+      },
+      {
+        title: 'Communication',
+        items: [{ href: '/municipal/reports/text-blast', label: 'Text Blast', icon: MessageSquare }],
+      }
+    );
+  }
+
+  if (role === 'MUNICIPAL_CHIEF_IIS' || role === 'MUNICIPAL_CHIEF_OPERATION') {
+    sections.push({ items: [{ href: '/municipal/chief', label: 'Chief IIS Dashboard', icon: LayoutDashboard }] });
+  }
+
+  if (role === 'MUNICIPAL_FIRE_MARSHAL') {
+    sections.push({
+      items: [
+        { href: '/municipal/marshal', label: 'Fire Marshal Dashboard', icon: LayoutDashboard },
+        { href: '/municipal/marshal/team', label: 'My Investigators', icon: UserCheck },
+      ],
+    });
+  }
+
+  if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+    sections.push(
+      { items: [{ href: '/provincial', label: 'Dashboard', icon: LayoutDashboard }] },
+      {
+        title: 'Administration',
+        items: [
+          { href: '/admin', label: 'Report Tracking', icon: ShieldCheck },
+          { href: '/admin/users', label: 'User Management', icon: Users },
+          { href: '/admin/activity', label: 'Activity Log', icon: History },
+        ],
+      }
+    );
+  }
+
+  const records = [];
+  if (canViewApprovedReports(role)) {
+    records.push({ href: APPROVED_REPORTS_PATH, label: 'Reports', hint: 'Approved & filed records', icon: Archive });
+  }
+  if (canViewTrash(role)) {
+    records.push({ href: TRASH_PATH, label: 'Trash', hint: 'Recover deleted reports', icon: Trash2 });
+  }
+  if (records.length) sections.push({ title: 'Records', items: records });
+
+  return sections;
+}
+
+// The link to highlight is the longest href the current path starts with — so on
+// /municipal/reports/mdfir it's "MDFIR", not also "My Reports" or "Dashboard".
+function findActiveHref(pathname, hrefs) {
+  return hrefs
+    .filter((href) => pathname === href || pathname.startsWith(`${href}/`))
+    .sort((a, b) => b.length - a.length)[0];
+}
+
 export default function Sidebar({ isOpen, isCollapsed, user, onClose, onToggle }) {
+  const pathname = usePathname();
+  const sections = getNavSections(user?.role);
+  const activeHref = findActiveHref(pathname || '', sections.flatMap((s) => s.items.map((i) => i.href)));
 
   const handleLogout = () => {
     clearSession();
@@ -22,232 +120,77 @@ export default function Sidebar({ isOpen, isCollapsed, user, onClose, onToggle }
     window.location.replace('/login');
   };
 
-  // Every role whose ROLE_HOME_PATH/isRouteAllowedForRole (lib/constants.js) points at
-  // /provincial — including the legacy/regional roles that previously had no sidebar links
-  // at all once logged in.
-  const PROVINCIAL_DASHBOARD_ROLES = [
-    'MARSHAL',
-    'PROVINCIAL_CHIEF_IIS',
-    'CHIEF_INVESTIGATOR_IIS',
-    'PROVINCIAL_CHIEF_INVESTIGATOR',
-    'REGION_IIS',
-    'REGIONAL_CHIEF_OPERATION',
-    'PIO',
-  ];
-  const isProvincialDashboardRole = PROVINCIAL_DASHBOARD_ROLES.includes(user?.role);
-  const isInvestigator = user?.role === 'INVESTIGATOR';
-  const isMunicipalChiefIIS = user?.role === 'MUNICIPAL_CHIEF_IIS';
-  const isMunicipalChiefOperation = user?.role === 'MUNICIPAL_CHIEF_OPERATION';
-  const isMunicipalFireMarshal = user?.role === 'MUNICIPAL_FIRE_MARSHAL';
-  const isAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
-  // Shared across three tiers (Provincial Chief IIS, Municipal Fire Marshal, Municipal Chief IIS),
-  // so this link is rendered once below the role-specific blocks rather than inside each of them.
-  const showApprovedReports = canViewApprovedReports(user?.role);
-  const showTrash = canViewTrash(user?.role);
-
   return (
     <>
       {/* Mobile Overlay */}
       {isOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40" onClick={onClose} aria-hidden="true"></div>
+        <div className="fixed inset-0 modal-overlay lg:hidden z-40" onClick={onClose} aria-hidden="true"></div>
       )}
 
-      {/* Sidebar */}
       <aside
         // Phones: slides in over the page (isOpen). lg and up: part of the layout, slid off to the
         // left when collapsed — the negative margin lets the page take the freed width, and
         // `invisible` (applied once the slide ends) keeps hidden links out of the Tab order.
-        className={`sidebar app-shell fixed left-0 top-0 w-64 flex-shrink-0 transform transition-[transform,margin,visibility] duration-300 overflow-y-auto z-50 lg:relative lg:translate-x-0 lg:transform-none ${
+        className={`sidebar app-shell fixed left-0 top-0 w-64 flex-shrink-0 transform transition-[transform,margin,visibility] duration-300 ease-out overflow-y-auto z-50 lg:relative lg:translate-x-0 lg:transform-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } ${isCollapsed ? 'lg:-ml-64 lg:invisible' : 'lg:ml-0 lg:visible'}`}
       >
-        <div className="flex flex-col h-full">
-          {/* Logo */}
-          <div className="py-6 pl-5 pr-3 border-b-2 border-bfp-gold">
-            <div className="flex items-center gap-2.5">
-              <BFPCrest size={40} className="flex-shrink-0" />
-              <div className="min-w-0 flex-1">
-                <h1 className="font-bold text-lg leading-tight tracking-wide">FireTrack</h1>
-                <p className="text-xs text-bfp-gold tracking-wide uppercase whitespace-nowrap">Report Tracking</p>
-              </div>
-              {/* Hides the sidebar on wide screens, closes the slide-out menu on phones */}
-              <MenuButton onClick={onToggle} label="Hide menu" className="-mr-1 text-white/80 hover:bg-white/10 hover:text-white" />
+        <div className="flex h-full flex-col">
+          {/* Brand */}
+          <div className="flex h-14 flex-shrink-0 items-center gap-2.5 border-b border-gray-200 pl-4 pr-2 dark:border-gray-800">
+            <BFPCrest size={28} className="flex-shrink-0" />
+            <div className="min-w-0 flex-1 leading-tight">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">FireTrack</p>
+              <p className="truncate text-[11px] text-gray-500">BFP Benguet</p>
             </div>
+            {/* Hides the sidebar on wide screens, closes the slide-out menu on phones */}
+            <MenuButton
+              onClick={onToggle}
+              label="Hide menu"
+              className="text-gray-500 hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-800 dark:hover:text-white"
+            />
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 p-4">
-            <div className="space-y-2">
-              {/* Provincial Dashboard — Marshal, Provincial Chief IIS, and every other
-                  provincial/regional reviewer role (see PROVINCIAL_DASHBOARD_ROLES above) */}
-              {isProvincialDashboardRole && (
-                <>
-                  <Link
-                    href="/provincial"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
-                  </Link>
-                  <Link
-                    href="/provincial/reports"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <FileText className="w-4 h-4 flex-shrink-0" /> Fire Incident Reports
-                  </Link>
-                </>
-              )}
-
-              {/* Municipal Dashboard (INVESTIGATOR) */}
-              {isInvestigator && (
-                <>
-                  <Link
-                    href="/municipal"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
-                  </Link>
-                  <Link
-                    href="/municipal/reports"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <ClipboardList className="w-4 h-4 flex-shrink-0" /> My Reports
-                  </Link>
-
-                  <div className="mt-4 pt-4 border-t border-bfp-gold/30">
-                    <p className="text-xs font-semibold uppercase text-white/60 mb-2">
-                      New Report
-                    </p>
-                    <div className="space-y-2">
-                      <Link
-                        href="/municipal/reports/mdfir"
-                        className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                      >
-                        <FilePlus className="w-4 h-4 flex-shrink-0" /> MDFIR
-                      </Link>
-                      <Link
-                        href="/municipal/reports/spot"
-                        className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                      >
-                        <Search className="w-4 h-4 flex-shrink-0" /> Spot Investigation
-                      </Link>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 pt-4 border-t border-bfp-gold/30">
+          <nav className="flex-1 px-3 py-3" aria-label="Main">
+            {sections.map((section, index) => (
+              <div key={section.title || `section-${index}`} className={index > 0 && !section.title ? 'mt-3' : ''}>
+                {section.title && <p className="nav-section">{section.title}</p>}
+                <div className="space-y-0.5">
+                  {section.items.map(({ href, label, hint, icon: Icon }) => (
                     <Link
-                      href="/municipal/reports/text-blast"
-                      className="flex items-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
+                      key={href + label}
+                      href={href}
+                      className="nav-item"
+                      aria-current={href === activeHref ? 'page' : undefined}
+                      title={hint}
                     >
-                      <MessageSquare className="w-4 h-4 flex-shrink-0" /> Text Blast
+                      <Icon />
+                      <span className="truncate">{label}</span>
                     </Link>
-                  </div>
-                </>
-              )}
-
-              {(isMunicipalChiefIIS || isMunicipalChiefOperation) && (
-                <>
-                  <Link
-                    href="/municipal/chief"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Chief IIS Dashboard
-                  </Link>
-                </>
-              )}
-
-              {isMunicipalFireMarshal && (
-                <>
-                  <Link
-                    href="/municipal/marshal"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Fire Marshal Dashboard
-                  </Link>
-                  <Link
-                    href="/municipal/marshal/team"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <UserCheck className="w-4 h-4 flex-shrink-0" /> My Investigators
-                  </Link>
-                </>
-              )}
-
-              {/* Admin — same dashboard as Provincial Chief IIS, plus Report Tracking */}
-              {isAdmin && (
-                <>
-                  <Link
-                    href="/provincial"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <LayoutDashboard className="w-4 h-4 flex-shrink-0" /> Dashboard
-                  </Link>
-                  <Link
-                    href="/admin"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <ShieldCheck className="w-4 h-4 flex-shrink-0" /> Report Tracking
-                  </Link>
-                  <Link
-                    href="/admin/users"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <Users className="w-4 h-4 flex-shrink-0" /> User Management
-                  </Link>
-                  <Link
-                    href="/admin/activity"
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <History className="w-4 h-4 flex-shrink-0" /> Activity Log
-                  </Link>
-                </>
-              )}
-
-              {/* Shared archive of reports that cleared final approval by the Provincial Chief IIS */}
-              {showApprovedReports && (
-                <div className="mt-4 pt-4 border-t border-bfp-gold/30">
-                  <Link
-                    href={APPROVED_REPORTS_PATH}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <Archive className="w-4 h-4 flex-shrink-0" /> Reports
-                  </Link>
-                  <p className="mt-1 px-4 text-xs text-white/50">Approved &amp; filed records</p>
-                </div>
-              )}
-
-              {/* Recycle bin for deleted reports — investigators and admins (see TRASH_ROLES) */}
-              {showTrash && (
-                <div className="mt-4 pt-4 border-t border-bfp-gold/30">
-                  <Link
-                    href={TRASH_PATH}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-bfp-navy-light transition-colors text-sm font-medium"
-                  >
-                    <Trash2 className="w-4 h-4 flex-shrink-0" /> Trash
-                  </Link>
-                  <p className="mt-1 px-4 text-xs text-white/50">Recover deleted reports</p>
-                </div>
-              )}
-            </div>
-          </nav>
-
-          {/* User Info & Logout */}
-          <div className="p-4 border-t border-bfp-gold/30">
-            <div className="mb-3 pb-3 border-b border-white/15">
-              <p className="text-xs text-white/60">Logged in as</p>
-              <div className="mt-1 flex items-center gap-2.5">
-                <UserAvatar user={user} size={32} />
-                <div className="min-w-0">
-                  <p className="font-semibold text-sm truncate">{displayName(user)}</p>
-                  <p className="text-xs text-white/50">{user?.municipality?.name || 'Provincial'}</p>
+                  ))}
                 </div>
               </div>
+            ))}
+          </nav>
+
+          {/* User & Logout */}
+          <div className="flex-shrink-0 border-t border-gray-200 p-3 dark:border-gray-800">
+            <div className="flex items-center gap-2.5 rounded-md px-1.5 py-1.5">
+              <UserAvatar user={user} size={32} />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{displayName(user)}</p>
+                <p className="truncate text-xs text-gray-500">{user?.municipality?.name || 'Provincial'}</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-red-600 dark:hover:bg-gray-800"
+                aria-label="Log out"
+                title="Log out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors text-sm font-medium"
-            >
-              <LogOut className="w-4 h-4 flex-shrink-0" /> Logout
-            </button>
           </div>
         </div>
       </aside>

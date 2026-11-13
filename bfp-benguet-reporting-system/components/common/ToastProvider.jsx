@@ -1,68 +1,39 @@
 'use client';
 
-import { createContext, useCallback, useContext, useState } from 'react';
-import { CheckCircle2, XCircle, X } from 'lucide-react';
+import { createContext, useContext, useMemo } from 'react';
+import { Toaster, toast as sonner } from 'sonner';
+import { useTheme } from './ThemeProvider';
 
 const ToastContext = createContext(null);
 
-let nextId = 1;
-
-const TOAST_EXIT_MS = 180;
-
+// Toasts are rendered by Sonner. The `useToast()` API the pages already call
+// (toast.success / toast.error) is unchanged, so no caller needed editing; info/warning/promise
+// are passed through for new code.
 export function ToastProvider({ children }) {
-  const [toasts, setToasts] = useState([]);
+  const { theme } = useTheme();
 
-  const remove = useCallback((id) => {
-    setToasts((current) => current.filter((toast) => toast.id !== id));
-  }, []);
-
-  // Flags the toast as leaving so its exit animation can play, then removes it once that
-  // animation finishes — an immediate splice would just make it vanish with no transition.
-  const dismiss = useCallback((id) => {
-    setToasts((current) => current.map((toast) => (toast.id === id ? { ...toast, leaving: true } : toast)));
-    setTimeout(() => remove(id), TOAST_EXIT_MS);
-  }, [remove]);
-
-  const show = useCallback((message, type = 'success') => {
-    const id = nextId++;
-    setToasts((current) => [...current, { id, message, type, leaving: false }]);
-    setTimeout(() => dismiss(id), 5000);
-  }, [dismiss]);
-
-  const toast = {
-    success: (message) => show(message, 'success'),
-    error: (message) => show(message, 'error'),
-  };
+  const toast = useMemo(
+    () => ({
+      success: (message, options) => sonner.success(message, options),
+      error: (message, options) => sonner.error(message, options),
+      info: (message, options) => sonner.info(message, options),
+      warning: (message, options) => sonner.warning(message, options),
+      promise: (promise, messages) => sonner.promise(promise, messages),
+    }),
+    []
+  );
 
   return (
     <ToastContext.Provider value={toast}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 w-full max-w-sm px-4 sm:px-0">
-        {toasts.map((t) => (
-          <div
-            key={t.id}
-            className={`flex items-start gap-2 rounded-lg border px-4 py-3 shadow-lg text-sm ${t.leaving ? 'toast-out' : 'toast-in'} ${
-              t.type === 'success'
-                ? 'bg-bfp-green/10 border-bfp-green text-bfp-green'
-                : 'bg-red-50 border-red-400 text-red-700'
-            }`}
-          >
-            {t.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            ) : (
-              <XCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            )}
-            <span className="flex-1 font-medium">{t.message}</span>
-            <button
-              onClick={() => dismiss(t.id)}
-              className="flex-shrink-0 opacity-60 hover:opacity-100"
-              aria-label="Dismiss"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        ))}
-      </div>
+      <Toaster
+        theme={theme}
+        position="bottom-right"
+        richColors
+        closeButton
+        duration={5000}
+        toastOptions={{ className: 'text-sm' }}
+      />
     </ToastContext.Provider>
   );
 }

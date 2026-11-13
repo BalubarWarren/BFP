@@ -85,11 +85,11 @@ export default function DutyScheduleModal({ investigator, onClose, onSaved }) {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4" onClick={saving ? undefined : onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={saving ? undefined : onClose}>
       <div className="modal-pop-in max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-3 border-b p-4 sm:p-6">
           <div>
-            <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy">
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-gray-900">
               <CalendarDays className="h-5 w-5" /> Duty Schedule
             </h2>
             <p className="text-sm text-gray-600">{investigator.rank ? `${investigator.rank} ` : ''}{investigator.name}</p>

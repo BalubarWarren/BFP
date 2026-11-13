@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
-  Flame, BarChart3, QrCode, ArrowRight, Search, FileEdit, Clock, CheckCircle2, UserRound,
-  ShieldCheck, Building2, Landmark, ScanLine, MapPin, Bell, Lock, ChevronDown,
+  Flame, BarChart3, QrCode, ArrowRight, Search, FileEdit, Clock, CheckCircle2,
+  ShieldCheck, Building2, Landmark, ScanLine, MapPin, Bell, Lock, ChevronDown, User,
 } from 'lucide-react';
 import BFPCrest from './BFPCrest';
 import InstallAppButton from './InstallAppButton';
@@ -14,7 +14,7 @@ import InstallAppButton from './InstallAppButton';
 // progress tracker and the public QR tracking page show.
 const WORKFLOW = [
   {
-    icon: UserRound,
+    icon: User,
     role: 'Investigator',
     action: 'Files the report',
     detail:

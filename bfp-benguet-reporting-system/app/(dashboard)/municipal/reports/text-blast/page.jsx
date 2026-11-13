@@ -147,7 +147,7 @@ export default function TextBlastPage() {
 
       <form onSubmit={handleSend} className="space-y-6">
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+          <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-gray-900 mb-4">
             <Users className="w-5 h-5" /> Send To
           </h2>
           <div className="space-y-2">
@@ -173,7 +173,7 @@ export default function TextBlastPage() {
 
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy">
+            <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-gray-900">
               <MessageSquare className="w-5 h-5" /> Message
             </h2>
             <div className="flex flex-wrap gap-2">

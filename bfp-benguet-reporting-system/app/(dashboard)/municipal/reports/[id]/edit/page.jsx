@@ -94,7 +94,7 @@ export default function EditReturnedReportPage() {
       {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
 
       <div className="bg-white rounded-xl shadow-md p-6">
-        <h2 className="text-lg font-bold text-bfp-navy mb-4">Address Corrections</h2>
+        <h2 className="text-lg font-semibold tracking-tight text-gray-900 mb-4">Address Corrections</h2>
         <div className="space-y-5">
           <div>
             <label className="form-label">Original Remarks from Reviewer</label>

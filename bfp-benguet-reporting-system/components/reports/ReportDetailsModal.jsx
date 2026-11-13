@@ -90,7 +90,7 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
           : ROLE_LABELS[r.passedToRole] || humanize(r.passedToRole) || '—';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center modal-overlay sm:items-center sm:p-4" onClick={onClose}>
       <div
         className="modal-pop-in flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}
@@ -102,7 +102,7 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
         <div className="flex items-start justify-between gap-4 border-b border-gray-200 p-4 sm:p-6">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wider text-bfp-red">Report Details · #{r.id}</p>
-            <h2 className="mt-0.5 text-xl font-bold text-bfp-navy sm:text-2xl">{humanize(r.reportType)}</h2>
+            <h2 className="mt-0.5 text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">{humanize(r.reportType)}</h2>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600">
               <StatusBadge status={r.status} />
               {incident.referenceNumber && <span className="font-medium">{incident.referenceNumber}</span>}
@@ -129,7 +129,7 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
           {/* Current status */}
           <section className="rounded-lg border border-bfp-navy/15 p-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Current Status</p>
-            <p className="mt-1 text-lg font-bold text-bfp-navy">{currentHolder}</p>
+            <p className="mt-1 text-lg font-semibold tracking-tight text-gray-900">{currentHolder}</p>
             <div className="overflow-x-auto">
               <div className="min-w-[22rem]">
                 <WorkflowTracker report={r} />

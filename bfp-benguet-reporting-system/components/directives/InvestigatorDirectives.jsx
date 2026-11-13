@@ -70,7 +70,7 @@ export default function InvestigatorDirectives() {
   return (
     <section className="bg-white rounded-lg shadow-md p-4 sm:p-6 mb-8 border-l-4 border-bfp-red">
       <div className="flex items-center justify-between gap-3 mb-4">
-        <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy">
+        <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-gray-900">
           <Megaphone className="w-5 h-5 text-bfp-red" /> Orders from Fire Marshal
           {open.length > 0 && (
             <span className="rounded-full bg-bfp-red px-2 py-0.5 text-xs font-bold text-white">{open.length}</span>

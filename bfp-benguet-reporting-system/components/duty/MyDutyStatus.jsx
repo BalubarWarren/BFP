@@ -56,7 +56,7 @@ export default function MyDutyStatus() {
     <section className="mb-6 rounded-lg border-l-4 border-bfp-navy bg-white p-4 shadow-md sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy">
+          <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-gray-900">
             <CalendarDays className="h-5 w-5" /> My Duty Status
           </h2>
           <div className="mt-2 flex flex-wrap items-center gap-2">

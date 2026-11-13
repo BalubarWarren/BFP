@@ -52,10 +52,10 @@ export default function ForwardReportModal({ report, onClose, onForwarded }) {
   if (typeof document === 'undefined') return null;
 
   return createPortal(
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4">
+    <div className="fixed inset-0 modal-overlay z-[60] flex items-center justify-center p-4">
       <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-sm">
         <div className="p-6 border-b">
-          <h3 className="text-lg font-bold text-bfp-navy">Submit Report</h3>
+          <h3 className="text-lg font-semibold tracking-tight text-gray-900">Submit Report</h3>
           <p className="text-sm text-gray-500 mt-1">
             This report will be sent to the <strong>{FORWARD_ROLE_LABELS[forwardRole]}</strong> for review.
           </p>

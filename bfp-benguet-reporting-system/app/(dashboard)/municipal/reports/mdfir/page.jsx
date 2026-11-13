@@ -117,7 +117,7 @@ export default function MinimalDamageFireIncidentReportForm() {
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-          <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+          <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-gray-900 mb-4">
             <ClipboardList className="w-5 h-5" /> Incident Details
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -149,7 +149,7 @@ export default function MinimalDamageFireIncidentReportForm() {
         </div>
 
           <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-bfp-navy mb-4">
+            <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-gray-900 mb-4">
               <Send className="w-5 h-5" /> Submit To
             </h2>
             <div>

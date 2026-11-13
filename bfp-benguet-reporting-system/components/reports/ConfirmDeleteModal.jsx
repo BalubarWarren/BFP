@@ -7,13 +7,13 @@ export default function ConfirmDeleteModal({ title = 'Delete Report', message, l
   useEscapeKey(onCancel, !loading);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" onClick={onCancel}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center modal-overlay p-4" onClick={onCancel}>
       <div
         className="modal-pop-in w-full max-w-sm rounded-lg bg-white p-6 text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <AlertTriangle className="mx-auto mb-4 w-12 h-12 text-bfp-red" />
-        <h2 className="mb-2 text-lg font-bold text-bfp-navy">{title}</h2>
+        <h2 className="mb-2 text-lg font-semibold tracking-tight text-gray-900">{title}</h2>
         <p className="mb-4 text-sm text-gray-600">{message}</p>
 
         {error && (

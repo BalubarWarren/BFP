@@ -152,7 +152,7 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 backdrop-blur-sm sm:items-center sm:p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end justify-center modal-overlay sm:items-center sm:p-4" onClick={onClose}>
       <div
         className="modal-pop-in flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:rounded-2xl"
         onClick={(e) => e.stopPropagation()}

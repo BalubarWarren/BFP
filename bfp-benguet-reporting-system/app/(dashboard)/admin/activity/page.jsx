@@ -136,7 +136,7 @@ export default function ActivityLogPage() {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="flex flex-col gap-4 border-b border-gray-200 p-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 className="text-lg font-bold text-bfp-navy">Recent Activity ({entries.length})</h2>
+            <h2 className="text-lg font-semibold tracking-tight text-gray-900">Recent Activity ({entries.length})</h2>
             <p className="text-sm text-gray-500">Loaded 50 at a time, most recent first.</p>
           </div>
           <div className="w-full md:w-64">
@@ -190,11 +190,11 @@ export default function ActivityLogPage() {
               <table className="w-full border-collapse">
                 <thead className="bg-gray-50">
                   <tr className="border-b border-gray-200">
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">When</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Action</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Actor</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Report</th>
-                    <th className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-gray-500">Details</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">When</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Action</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Actor</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Report</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Details</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">

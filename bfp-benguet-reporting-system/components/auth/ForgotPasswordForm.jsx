@@ -94,7 +94,7 @@ export default function ForgotPasswordForm({ initialEmail = '', onBack }) {
             <ArrowLeft className="w-5 h-5" />
           </button>
         )}
-        <h2 className="text-2xl font-bold text-bfp-navy">
+        <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
           {step === 'done' ? 'Password Reset' : 'Forgot Password'}
         </h2>
       </div>

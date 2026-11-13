@@ -182,7 +182,7 @@ export default function ProvincialReportsPage() {
         <>
           {/* Fire Incident Reports — incoming from municipalities */}
           <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy mb-4"><Flame className="w-5 h-5" /> Fire Incident Reports — For Review</h2>
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-gray-900 mb-4"><Flame className="w-5 h-5" /> Fire Incident Reports — For Review</h2>
             {filteredIncoming.length === 0 ? (
               <p className="text-gray-500">{search ? 'No reports match your search.' : 'No pending reports for review.'}</p>
             ) : (
@@ -231,7 +231,7 @@ export default function ProvincialReportsPage() {
 
           {/* Already reviewed fire incident reports */}
           <section className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-bfp-navy mb-4"><Flame className="w-5 h-5" /> Fire Incident Reports — Already Reviewed</h2>
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-gray-900 mb-4"><Flame className="w-5 h-5" /> Fire Incident Reports — Already Reviewed</h2>
             {filteredReviewed.length === 0 ? (
               <p className="text-gray-500">{search ? 'No reports match your search.' : 'No reviewed reports yet.'}</p>
             ) : (
@@ -277,10 +277,10 @@ export default function ProvincialReportsPage() {
 
       {/* Review Modal */}
       {selectedReport && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 modal-overlay z-50 flex items-center justify-center p-4">
           <div className="modal-pop-in bg-white rounded-lg shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center p-4 sm:p-6 border-b">
-              <h2 className="text-2xl font-bold text-bfp-navy">Report Review</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-gray-900">Report Review</h2>
               <button onClick={closeReview} className="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
             </div>
 

@@ -100,10 +100,10 @@ export default function DashboardLayout({ children }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-bfp-red"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-bfp-navy dark:border-gray-800 dark:border-t-blue-400" />
+          <p className="text-sm text-gray-500">Loading FireTrack</p>
         </div>
       </div>
     );
@@ -112,7 +112,7 @@ export default function DashboardLayout({ children }) {
   return (
     <ToastProvider>
       <SessionManager onUserChange={setUser} />
-      <div className="app-shell flex bg-gray-50">
+      <div className="app-shell flex bg-gray-50 dark:bg-gray-950">
         {/* Sidebar */}
         <Sidebar
           isOpen={isSidebarOpen}
@@ -132,8 +132,11 @@ export default function DashboardLayout({ children }) {
           />
 
           {/* Content Area */}
+          {/* Keyed by path so each page fades in on navigation (opacity only; see .page-enter). */}
           <main className="flex-1 overflow-auto">
-            {children}
+            <div key={pathname} className="page-enter mx-auto w-full max-w-screen-2xl">
+              {children}
+            </div>
           </main>
         </div>
       </div>
