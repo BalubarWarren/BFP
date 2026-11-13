@@ -19,6 +19,10 @@ export default function DeleteAccountModal({ target, onClose, onDeleted, onSessi
   const [step, setStep] = useState('password'); // 'password' | 'confirm'
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  // Browsers' password managers fill a saved password into any password field as soon as it
+  // appears. Browsers don't autofill read-only fields, so it stays read-only until the admin
+  // clicks or tabs into it, and must be typed (or picked from the browser's list) deliberately.
+  const [passwordUnlocked, setPasswordUnlocked] = useState(false);
   const [confirmText, setConfirmText] = useState('');
   const [impact, setImpact] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -110,12 +114,14 @@ export default function DeleteAccountModal({ target, onClose, onDeleted, onSessi
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
+                name="confirm-admin-password"
                 className="form-input pr-10"
-                placeholder="Your password"
+                placeholder="Click here and type your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-                autoFocus
+                autoComplete="new-password"
+                readOnly={!passwordUnlocked}
+                onFocus={() => setPasswordUnlocked(true)}
                 aria-label="Your password"
               />
               <button

@@ -8,6 +8,7 @@ import { useToast } from '../../../../components/common/ToastProvider';
 import { formatDateTime, parseJsonField } from '../../../../lib/utils';
 import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../../components/reports/AttachmentList';
+import CaseChain from '../../../../components/reports/CaseChain';
 import ReportRowActions from '../../../../components/reports/ReportRowActions';
 import ForwardReportModal from '../../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
@@ -130,6 +131,12 @@ export default function MunicipalReportsPage() {
                   </div>
                 </div>
               )}
+
+              <CaseChain
+                reports={reportDetail?.caseReports}
+                currentId={selectedReport.id}
+                referenceNumber={(reportDetail?.incident || selectedReport.incident)?.referenceNumber}
+              />
 
               <div className="rounded-lg bg-gray-50 p-4">
                 <h3 className="mb-3 font-bold text-bfp-navy">Attachments</h3>

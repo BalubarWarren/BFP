@@ -214,6 +214,11 @@ h1, h2, h3 {
     box-shadow: 0 1px 2px 0 rgb(127 29 29 / 0.25), inset 0 1px 0 0 rgb(255 255 255 / 0.1);
   }
 
+  /* Ghost = no surface until hovered; for low-emphasis actions like Cancel / Undo */
+  .btn-ghost {
+    @apply bg-transparent text-gray-700 shadow-none hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white;
+  }
+
   .btn-success {
     @apply bg-bfp-green text-white hover:bg-green-700;
     box-shadow: 0 1px 2px 0 rgb(20 83 45 / 0.25), inset 0 1px 0 0 rgb(255 255 255 / 0.1);

@@ -14,6 +14,32 @@ import { archiveReportVersion } from '../../../../lib/archive';
 import { notifyReportRecipients } from '../../../../lib/report-notifications';
 import { canUserViewReport } from '../../../../lib/report-view-access';
 import { generateQrToken } from '../../../../lib/qr-token';
+import { isStoredAttachmentUrl } from '../../../../lib/storage';
+import { parseJsonField } from '../../../../lib/utils';
+
+// Same cap as POST /api/reports.
+const MAX_ATTACHMENTS = 10;
+
+// Attachment objects from the client are only accepted when they point at our own storage bucket
+// (reviewers open them as links), and are reduced to the known fields.
+const normalizeAttachments = (value, existingUrls = new Set()) => {
+  const list = parseJsonField(value, null);
+  if (
+    !Array.isArray(list) ||
+    !list.length ||
+    list.length > MAX_ATTACHMENTS ||
+    !list.every((attachment) => existingUrls.has(attachment?.url) || isStoredAttachmentUrl(attachment?.url))
+  ) {
+    return null;
+  }
+  return list.map((attachment) => ({
+    name: String(attachment.name || 'attachment').slice(0, 200),
+    type: String(attachment.type || 'application/octet-stream'),
+    size: Number(attachment.size) || 0,
+    url: attachment.url,
+    ...(attachment.kind === 'EMS' && { kind: 'EMS' }),
+  }));
+};
 
 export async function GET(request, { params }) {
   try {
@@ -58,7 +84,20 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    return NextResponse.json({ report });
+    // The other reports filed under the same case (Spot -> Progress -> Final), so every report
+    // view can show how it connects to the rest. Only type/status, never their content.
+    const caseReports = report.incidentId
+      ? await prisma.report.findMany({
+          where: {
+            incidentId: report.incidentId,
+            OR: [{ status: { not: REPORT_STATUS.DRAFT } }, { id: report.id }],
+          },
+          select: { id: true, reportType: true, status: true, submittedAt: true, passedToId: true, passedToRole: true },
+          orderBy: [{ submittedAt: 'asc' }, { id: 'asc' }],
+        })
+      : [];
+
+    return NextResponse.json({ report: { ...report, caseReports } });
   } catch (error) {
     console.error('Error fetching report:', error);
     return NextResponse.json(
@@ -110,7 +149,7 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json();
-    const { content, category, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName, status, passedToRole: requestedPassedToRole } = body;
+    const { content, category, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName, status, passedToRole: requestedPassedToRole, attachments: requestedAttachments } = body;
 
     // The only status transition this endpoint may perform is re-submitting; approvals/returns
     // must go through /approve so reviewedById/reviewedAt/remarks stay accurate.
@@ -125,7 +164,7 @@ export async function PATCH(request, { params }) {
     // Otherwise a report could be edited while a reviewer is looking at it, or after a municipal
     // approval and before forwarding — so the next tier would review content the earlier
     // reviewer never approved.
-    const isEditingFields = [content, category, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName]
+    const isEditingFields = [content, category, respondingUnits, respondingOfficer, reportingOfficerRank, stationCommanderName, requestedAttachments]
       .some((value) => value !== undefined);
     if (isEditingFields && ![REPORT_STATUS.RETURNED, REPORT_STATUS.DRAFT].includes(report.status)) {
       return NextResponse.json(
@@ -134,8 +173,24 @@ export async function PATCH(request, { params }) {
       );
     }
 
+    // A revision may replace the report's files (e.g. a corrected PDF). The previous file list is
+    // kept with the archived version below, and the old files themselves stay in storage.
+    let revisedAttachments = null;
+    if (requestedAttachments !== undefined) {
+      // Files the report already had are accepted as-is; new ones must be in our bucket.
+      const existingUrls = new Set(parseJsonField(report.attachments, []).map((attachment) => attachment?.url));
+      revisedAttachments = normalizeAttachments(requestedAttachments, existingUrls);
+      if (!revisedAttachments) {
+        return NextResponse.json({ error: 'Invalid attachments' }, { status: 400 });
+      }
+      if (!revisedAttachments.some((attachment) => attachment.kind !== 'EMS')) {
+        return NextResponse.json({ error: 'At least one attachment is required.' }, { status: 400 });
+      }
+    }
+
     // Allow submitter to re-submit a returned report and optionally forward to a specific municipal role
     let updateData = {
+      ...(revisedAttachments && { attachments: JSON.stringify(revisedAttachments) }),
       ...(content && { content }),
       ...(category && { category }),
       ...(respondingUnits && { respondingUnits }),

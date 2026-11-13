@@ -16,7 +16,7 @@ const putToSignedUrl = async (signedUrl, file) => {
   if (!res.ok) throw new Error(`Upload of "${file.name}" failed (${res.status})`);
 };
 
-async function uploadDirect(files, headers) {
+export async function uploadDirect(files, headers) {
   const { data } = await axios.post(
     '/api/uploads',
     { files: files.map((file) => ({ name: file.name, type: file.type, size: file.size })) },

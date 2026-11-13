@@ -391,6 +391,28 @@ export async function POST(request) {
       }
     }
 
+    // Progress and Final reports continue a case opened by a Spot report, so they must be linked
+    // to its incident. That link is what ties Spot -> Progress -> Final together everywhere.
+    const isFollowUpReport = ['PROGRESS_INVESTIGATION', 'FINAL_INVESTIGATION'].includes(reportType);
+    if (isFollowUpReport && !parsedIncidentId) {
+      return NextResponse.json(
+        { error: 'Select the case (from its Spot report) this report continues.' },
+        { status: 400 }
+      );
+    }
+    if (isFollowUpReport) {
+      const existingFinal = await prisma.report.findFirst({
+        where: { incidentId: parsedIncidentId, reportType: 'FINAL_INVESTIGATION', status: { not: REPORT_STATUS.DRAFT } },
+        select: { id: true },
+      });
+      if (existingFinal) {
+        return NextResponse.json(
+          { error: 'A Final Investigation Report has already been filed for this case, so it is closed.' },
+          { status: 400 }
+        );
+      }
+    }
+
     // The EMS report is optional and doesn't count — the investigation report itself is required.
     if (!attachments.some((attachment) => attachment.kind !== 'EMS') && !uploadedFiles.length) {
       return NextResponse.json(

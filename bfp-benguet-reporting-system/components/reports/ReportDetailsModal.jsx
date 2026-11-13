@@ -6,6 +6,7 @@ import { X, FileText, Flame, History, Paperclip, QrCode, ExternalLink } from 'lu
 import StatusBadge from '../common/StatusBadge';
 import AttachmentList from './AttachmentList';
 import WorkflowTracker, { ROLE_LABELS } from './WorkflowTracker';
+import CaseChain from './CaseChain';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { formatDateTime, parseJsonField } from '../../lib/utils';
 
@@ -150,6 +151,8 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
               </div>
             )}
           </section>
+
+          <CaseChain reports={r.caseReports} currentId={r.id} referenceNumber={incident.referenceNumber} />
 
           {/* Report information */}
           <Section icon={FileText} title="Report Information">

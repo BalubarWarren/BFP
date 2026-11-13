@@ -54,7 +54,7 @@ export default function FinalInvestigationForm() {
       const res = await axios.get('/api/incidents', { headers: { Authorization: `Bearer ${token}` } });
       setIncidents(res.data.incidents || []);
     } catch {
-      // incidents list is optional
+      // Leaves the case list empty; submitting then asks for a case, and the server explains.
     }
   };
 
@@ -150,9 +150,9 @@ export default function FinalInvestigationForm() {
               <input type="date" name="reportDate" value={formData.reportDate} onChange={handleChange} className="form-input" required />
             </div>
             <div>
-              <label className="form-label">Linked Incident (optional)</label>
-              <select name="incidentId" value={formData.incidentId} onChange={handleChange} className="form-input">
-                <option value="" className="text-gray-400">— None / Not linked —</option>
+              <label className="form-label">Case (from its Spot report) <span className="text-bfp-red">*</span></label>
+              <select name="incidentId" value={formData.incidentId} onChange={handleChange} className="form-input" required>
+                <option value="" className="text-gray-400">Select the case this report continues</option>
                 {incidents.map((inc) => (
                   <option key={inc.id} value={inc.id}>
                     {inc.referenceNumber} — {inc.generalCategory} ({new Date(inc.dateOfIncident).toLocaleDateString()})
