@@ -15,6 +15,7 @@ import { useToast } from '../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../../lib/utils';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import Portal from '../../../components/common/Portal';
+import CasualtyBoard from '../../../components/reports/CasualtyBoard';
 
 // The shared Reports archive: every report that has cleared final approval by the Provincial
 // Chief IIS. Read by the Provincial Chief IIS, the Municipal Fire Marshal and the Municipal
@@ -211,6 +212,8 @@ export default function ApprovedReportsPage() {
           </div>
         ))}
       </div>
+
+      {!sessionExpired && <CasualtyBoard />}
 
       <ReportSearchFilters filters={searchFilters} onChange={setSearchFilters} showStatus={false} />
 

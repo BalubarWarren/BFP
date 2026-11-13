@@ -41,6 +41,8 @@ export default function SpotInvestigationForm() {
     subCategory: '',
     barangay: '',
     address: '',
+    casualtiesInjured: '0',
+    casualtiesFatalities: '0',
     description: '',
   });
 
@@ -107,6 +109,8 @@ export default function SpotInvestigationForm() {
             description: formData.description,
             barangay: formData.barangay.trim(),
             address: formData.address.trim(),
+            casualtiesInjured: Number(formData.casualtiesInjured) || 0,
+            casualtiesFatalities: Number(formData.casualtiesFatalities) || 0,
           }),
           passedToRole: recipientRole,
         },
@@ -191,6 +195,16 @@ export default function SpotInvestigationForm() {
             </div>
           </div>
           <p className="mt-1 text-xs text-gray-500">The place of the fire becomes the report&apos;s title, shared by its Progress and Final reports.</p>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Casualties: Injured <span className="text-bfp-red">*</span></label>
+              <input type="number" name="casualtiesInjured" value={formData.casualtiesInjured} onChange={handleChange} className="form-input" min="0" max="9999" step="1" inputMode="numeric" placeholder="0" required />
+            </div>
+            <div>
+              <label className="form-label">Casualties: Fatalities <span className="text-bfp-red">*</span></label>
+              <input type="number" name="casualtiesFatalities" value={formData.casualtiesFatalities} onChange={handleChange} className="form-input" min="0" max="9999" step="1" inputMode="numeric" placeholder="0" required />
+            </div>
+          </div>
           <div className="mt-4">
             <label className="form-label">Description of Incident</label>
             <div className="form-field-icon-wrap">

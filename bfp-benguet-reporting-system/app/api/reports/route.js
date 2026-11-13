@@ -288,6 +288,13 @@ export async function GET(request) {
   }
 }
 
+// A casualty count from the Spot/Final form: a whole number 0..9999, or null when not given.
+const toCasualtyCount = (value) => {
+  if (value === undefined || value === null || value === '') return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 && n <= 9999 ? n : null;
+};
+
 export async function POST(request) {
   try {
     const user = await getUserFromRequest(request);
@@ -523,6 +530,8 @@ export async function POST(request) {
         description: parsedContent.description || null,
         barangay: typeof parsedContent.barangay === 'string' ? parsedContent.barangay.trim().slice(0, 100) || null : null,
         address: typeof parsedContent.address === 'string' ? parsedContent.address.trim().slice(0, 200) || null : null,
+        casualtiesInjured: toCasualtyCount(parsedContent.casualtiesInjured) ?? 0,
+        casualtiesFatalities: toCasualtyCount(parsedContent.casualtiesFatalities) ?? 0,
         createdById: user.id,
       });
       effectiveIncidentId = incident.id;
@@ -555,6 +564,22 @@ export async function POST(request) {
         passedTo: { select: PUBLIC_USER_SELECT },
       },
     });
+
+    // The Final report may correct the case's casualty counts (blank on the form = keep the Spot
+    // report's numbers). They live on the incident, which feeds the Casualty Monitoring Board.
+    if (reportType === 'FINAL_INVESTIGATION' && effectiveIncidentId) {
+      const finalInjured = toCasualtyCount(parsedContent.casualtiesInjured);
+      const finalFatalities = toCasualtyCount(parsedContent.casualtiesFatalities);
+      if (finalInjured !== null || finalFatalities !== null) {
+        await prisma.incident.update({
+          where: { id: effectiveIncidentId },
+          data: {
+            ...(finalInjured !== null && { casualtiesInjured: finalInjured }),
+            ...(finalFatalities !== null && { casualtiesFatalities: finalFatalities }),
+          },
+        });
+      }
+    }
 
     if (passedToId) {
       await notifyReportRecipients({

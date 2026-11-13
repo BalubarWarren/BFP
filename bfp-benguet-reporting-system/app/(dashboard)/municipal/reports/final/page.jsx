@@ -41,6 +41,8 @@ export default function FinalInvestigationForm() {
     respondingOfficer: '',
     reportingOfficerRank: '',
     stationCommanderName: '',
+    casualtiesInjured: '',
+    casualtiesFatalities: '',
   });
 
   // Started from a Spot report's "Start ... Report" button: the case is fixed to that Spot report.
@@ -105,7 +107,11 @@ export default function FinalInvestigationForm() {
           respondingOfficer: formData.respondingOfficer,
           reportingOfficerRank: formData.reportingOfficerRank,
           stationCommanderName: formData.stationCommanderName,
-          content: JSON.stringify({}),
+          // Blank = keep the casualty counts recorded on the Spot report.
+          content: JSON.stringify({
+            ...(formData.casualtiesInjured !== '' && { casualtiesInjured: Number(formData.casualtiesInjured) || 0 }),
+            ...(formData.casualtiesFatalities !== '' && { casualtiesFatalities: Number(formData.casualtiesFatalities) || 0 }),
+          }),
           passedToRole: recipientRole,
         },
         files: attachments,
@@ -145,6 +151,16 @@ export default function FinalInvestigationForm() {
             <div>
               <label className="form-label">Linked Spot report (case) <span className="text-bfp-red">*</span></label>
               <CaseSelect value={formData.incidentId} onChange={handleChange} reportType="FINAL_INVESTIGATION" locked={caseLocked} />
+            </div>
+          </div>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Final count: Injured</label>
+              <input type="number" name="casualtiesInjured" value={formData.casualtiesInjured} onChange={handleChange} className="form-input" min="0" max="9999" step="1" inputMode="numeric" placeholder="Leave blank to keep the Spot report count" />
+            </div>
+            <div>
+              <label className="form-label">Final count: Fatalities</label>
+              <input type="number" name="casualtiesFatalities" value={formData.casualtiesFatalities} onChange={handleChange} className="form-input" min="0" max="9999" step="1" inputMode="numeric" placeholder="Leave blank to keep the Spot report count" />
             </div>
           </div>
         </div>
