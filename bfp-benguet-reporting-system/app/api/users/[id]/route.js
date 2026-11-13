@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest, hashPassword } from '../../../../lib/auth';
 import { ROLES } from '../../../../lib/constants';
+import { requirePasswordConfirmation } from '../../../../lib/confirm-password';
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
@@ -135,6 +136,12 @@ export async function DELETE(request, { params }) {
     if (!ADMIN_ROLES.includes(user.role)) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
+
+    // Deleting an account also deletes every report it submitted, so the admin must re-enter
+    // their own password (the UI asks for it in step 1, via POST ./delete-check).
+    const { password } = await request.json().catch(() => ({}));
+    const passwordError = await requirePasswordConfirmation(user, password, 'delete-user');
+    if (passwordError) return passwordError;
 
     const targetId = parseInt(params.id);
 

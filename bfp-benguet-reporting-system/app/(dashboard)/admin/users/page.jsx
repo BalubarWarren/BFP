@@ -9,6 +9,7 @@ import PageHeader from '../../../../components/common/PageHeader';
 import RankSelect from '../../../../components/common/RankSelect';
 import { useEscapeKey } from '../../../../hooks/useEscapeKey';
 import { isAuthError } from '../../../../lib/utils';
+import DeleteAccountModal from '../../../../components/admin/DeleteAccountModal';
 
 const ROLE_OPTIONS = [
   { value: 'INVESTIGATOR', label: 'Investigator' },
@@ -58,7 +59,6 @@ export default function UserManagementPage() {
   const [savingEdit, setSavingEdit] = useState(false);
   const [editError, setEditError] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const [deleting, setDeleting] = useState(false);
   const [filterRole, setFilterRole] = useState('');
   const [search, setSearch] = useState('');
 
@@ -148,7 +148,6 @@ export default function UserManagementPage() {
   };
 
   useEscapeKey(closeEdit, !!editingUser && !savingEdit);
-  useEscapeKey(() => setDeleteTarget(null), !!deleteTarget && !deleting);
 
   const handleEditSubmit = async (e) => {
     e.preventDefault();
@@ -202,23 +201,10 @@ export default function UserManagementPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setDeleting(true);
-    try {
-      await axios.delete(`/api/users/${deleteTarget.id}?force=true`, { headers: authHeaders() });
-      toast.success(`${deleteTarget.name}'s account was deleted.`);
-      setDeleteTarget(null);
-      fetchAll();
-    } catch (err) {
-      if (isAuthError(err)) {
-        setSessionExpired(true);
-        return;
-      }
-      toast.error(err.response?.data?.error || 'Failed to delete account.');
-    } finally {
-      setDeleting(false);
-    }
+  const handleDeleted = () => {
+    toast.success(`${deleteTarget.name}'s account was deleted.`);
+    setDeleteTarget(null);
+    fetchAll();
   };
 
   const filteredUsers = users.filter((u) => {
@@ -461,28 +447,14 @@ export default function UserManagementPage() {
         </div>
       )}
 
-      {/* Delete confirmation */}
+      {/* Delete confirmation: password first, then type DELETE */}
       {deleteTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center modal-overlay p-4" onClick={() => setDeleteTarget(null)}>
-          <div className="modal-pop-in w-full max-w-md rounded-lg bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="border-b p-6">
-              <p className="text-sm font-semibold uppercase tracking-wide text-bfp-red">Delete Account</p>
-              <h2 className="text-xl font-semibold tracking-tight text-gray-900">{deleteTarget.name}</h2>
-            </div>
-            <div className="space-y-3 p-6 text-sm text-gray-700">
-              <p>This permanently deletes <strong>{deleteTarget.email}</strong>. This cannot be undone.</p>
-              <p>Any reports they submitted, incidents they created, or comments they left will be permanently deleted along with them — unless one of their incidents still has reports from other users, in which case the delete will be refused.</p>
-            </div>
-            <div className="flex gap-3 p-6 pt-0 flex-wrap">
-              <button type="button" onClick={handleDelete} disabled={deleting} className="btn btn-danger px-6">
-                {deleting ? 'Deleting…' : 'Delete Permanently'}
-              </button>
-              <button type="button" onClick={() => setDeleteTarget(null)} className="btn btn-secondary px-6">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
+        <DeleteAccountModal
+          target={deleteTarget}
+          onClose={() => setDeleteTarget(null)}
+          onDeleted={handleDeleted}
+          onSessionExpired={() => setSessionExpired(true)}
+        />
       )}
     </div>
   );
