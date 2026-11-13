@@ -39,6 +39,8 @@ export default function SpotInvestigationForm() {
     timeOfIncident: '00:00',
     category: '',
     subCategory: '',
+    barangay: '',
+    address: '',
     description: '',
   });
 
@@ -66,6 +68,7 @@ export default function SpotInvestigationForm() {
     e.preventDefault();
     if (!formData.category) { setError('Please select a fire category.'); return; }
     if (!formData.subCategory) { setError('Please select a sub-category.'); return; }
+    if (!formData.barangay.trim()) { setError('Please enter the barangay where the fire happened.'); return; }
     if (!attachments.length) {
       setAttachmentWarningKind('missing');
       setShowAttachmentWarning(true);
@@ -102,6 +105,8 @@ export default function SpotInvestigationForm() {
             dateOfIncident: formData.dateOfIncident,
             timeOfIncident: formData.timeOfIncident,
             description: formData.description,
+            barangay: formData.barangay.trim(),
+            address: formData.address.trim(),
           }),
           passedToRole: recipientRole,
         },
@@ -169,6 +174,23 @@ export default function SpotInvestigationForm() {
               </div>
             )}
           </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Barangay <span className="text-bfp-red">*</span></label>
+              <div className="form-field-icon-wrap">
+                <FieldIcon src="/icons/location.svg" />
+                <input type="text" name="barangay" value={formData.barangay} onChange={handleChange} className="form-input-icon" placeholder="e.g. Poblacion" maxLength={100} required />
+              </div>
+            </div>
+            <div>
+              <label className="form-label">Exact Location</label>
+              <div className="form-field-icon-wrap">
+                <FieldIcon src="/icons/location.svg" />
+                <input type="text" name="address" value={formData.address} onChange={handleChange} className="form-input-icon" placeholder="Street, sitio or landmark" maxLength={200} />
+              </div>
+            </div>
+          </div>
+          <p className="mt-1 text-xs text-gray-500">The place of the fire becomes the report&apos;s title, shared by its Progress and Final reports.</p>
           <div className="mt-4">
             <label className="form-label">Description of Incident</label>
             <div className="form-field-icon-wrap">

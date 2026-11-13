@@ -14,7 +14,7 @@ import CaseChain from '../../../components/reports/CaseChain';
 import { getReportTitle, getReportSubtitle } from '../../../lib/report-title';
 import CaseLinks from '../../../components/reports/CaseLinks';
 import RevisionHistory from '../../../components/reports/RevisionHistory';
-import ReportRowActions, { needsForwarding } from '../../../components/reports/ReportRowActions';
+import ReportRowActions, { needsForwarding, ReportNextStep } from '../../../components/reports/ReportRowActions';
 import ForwardReportModal from '../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 import PageHeader from '../../../components/common/PageHeader';
@@ -255,22 +255,9 @@ export default function MunicipalDashboard() {
   
               </div>
   
-              <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+              <div className="flex flex-wrap items-start justify-end gap-3 p-6 border-t bg-gray-50">
                 <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
-                {selectedReport.status === 'RETURNED' && (
-                  <Link href={`/municipal/reports/${selectedReport.id}/edit`} className="btn btn-danger">
-                    ↩ Revise & Resubmit
-                  </Link>
-                )}
-                {needsForwarding(selectedReport) && (
-                  <button
-                    type="button"
-                    onClick={() => openForward(selectedReport)}
-                    className="btn btn-primary"
-                  >
-                    → Submit Report
-                  </button>
-                )}
+                <ReportNextStep report={selectedReport} allReports={reports} onForward={openForward} />
                 <button onClick={closeView} className="btn btn-secondary">Close</button>
               </div>
             </div>
@@ -431,7 +418,7 @@ export default function MunicipalDashboard() {
                         )}
                       </td>
                       <td className="px-5 py-4 text-sm align-top">
-                        <ReportRowActions report={report} allReports={reports} onView={openView} onForward={openForward} />
+                        <ReportRowActions report={report} allReports={reports} onView={openView} />
                       </td>
                     </tr>
                   ))}

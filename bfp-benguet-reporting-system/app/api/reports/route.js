@@ -521,6 +521,8 @@ export async function POST(request) {
         generalCategory: category,
         subCategory: subCategory || null,
         description: parsedContent.description || null,
+        barangay: typeof parsedContent.barangay === 'string' ? parsedContent.barangay.trim().slice(0, 100) || null : null,
+        address: typeof parsedContent.address === 'string' ? parsedContent.address.trim().slice(0, 200) || null : null,
         createdById: user.id,
       });
       effectiveIncidentId = incident.id;

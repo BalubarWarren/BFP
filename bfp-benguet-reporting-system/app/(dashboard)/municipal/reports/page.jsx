@@ -12,7 +12,7 @@ import CaseChain from '../../../../components/reports/CaseChain';
 import { getReportTitle, getReportSubtitle } from '../../../../lib/report-title';
 import CaseLinks from '../../../../components/reports/CaseLinks';
 import RevisionHistory from '../../../../components/reports/RevisionHistory';
-import ReportRowActions from '../../../../components/reports/ReportRowActions';
+import ReportRowActions, { ReportNextStep } from '../../../../components/reports/ReportRowActions';
 import ForwardReportModal from '../../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
 import PageHeader from '../../../../components/common/PageHeader';
@@ -184,8 +184,9 @@ export default function MunicipalReportsPage() {
   
               </div>
   
-              <div className="flex justify-end gap-3 border-t bg-gray-50 p-6">
+              <div className="flex flex-wrap items-start justify-end gap-3 border-t bg-gray-50 p-6">
                 <ReportQrButton key={selectedReport.id} report={reportDetail || selectedReport} className="btn btn-secondary mr-auto" />
+                <ReportNextStep report={selectedReport} allReports={reports} onForward={setForwardTarget} />
                 <button onClick={closeReport} className="btn btn-secondary">Close</button>
               </div>
             </div>
@@ -298,7 +299,7 @@ export default function MunicipalReportsPage() {
                       )}
                     </td>
                     <td className="px-5 py-4 text-sm align-top">
-                      <ReportRowActions report={report} allReports={reports} onView={openReport} onForward={setForwardTarget} />
+                      <ReportRowActions report={report} allReports={reports} onView={openReport} />
                     </td>
                   </tr>
                 ))}
