@@ -68,7 +68,7 @@ function getNavSections(role) {
   if (role === 'MUNICIPAL_FIRE_MARSHAL') {
     sections.push({
       items: [
-        { href: '/municipal/marshal', label: 'Fire Marshal Dashboard', icon: LayoutDashboard },
+        { href: '/municipal/marshal', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/municipal/marshal/team', label: 'My Investigators', icon: UserCheck },
       ],
     });
