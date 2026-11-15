@@ -185,20 +185,74 @@ async function findPlaceholderTallies(dateWhere = {}) {
   });
 }
 
+const tallyFires = (entry) => CATEGORY_FIELDS.reduce((n, [, field]) => n + (entry[field] || 0), 0);
+
+// Deletes the given sample incidents with their reports (annotations cascade, notifications are
+// unlinked) in one transaction.
+async function deleteSampleIncidents(incidentIds) {
+  if (!incidentIds.length) return 0;
+  const reports = await prisma.report.findMany({ where: { incidentId: { in: incidentIds } }, select: { id: true } });
+  const reportIds = reports.map((r) => r.id);
+  await prisma.$transaction([
+    prisma.auditLog.deleteMany({ where: { reportId: { in: reportIds } } }),
+    prisma.trashItem.deleteMany({ where: { itemType: { in: ['REPORT_VERSION', 'REPORT'] }, originalId: { in: reportIds } } }),
+    prisma.report.deleteMany({ where: { id: { in: reportIds } } }),
+    prisma.incident.deleteMany({ where: { id: { in: incidentIds } } }),
+  ]);
+  return reportIds.length;
+}
+
+// Puts hidden tallies back on the dashboards with their original label.
+async function unhideTallies(ids) {
+  if (!ids.length) return;
+  await prisma.$executeRaw`UPDATE "daily_report_entries" SET "reportingOfficer" = substr("reportingOfficer", ${REPLACED_PREFIX.length + 1}) WHERE "id" IN (${Prisma.join(ids)}) AND "reportingOfficer" LIKE ${`${REPLACED_PREFIX}%`}`;
+  await prisma.dailyReportEntry.updateMany({ where: { id: { in: ids }, reportingOfficer: LEGACY_REPLACED_OFFICER }, data: { reportingOfficer: LEGACY_SEED_OFFICER } });
+}
+
+// The invariant this tool relies on: a tally is hidden only while ALL of its sample cases exist.
+// Sample cases carry their tally's id in the reference number ("...-E<tallyId>-<n>"). A hidden
+// tally with fewer cases than fires (an interrupted removal, an older version of this tool...)
+// would leave a hole in the dashboards, so it's repaired: its leftover cases are deleted and the
+// tally is shown again (and becomes a placeholder that the next generation converts properly).
+// With `dryRun`, only reports how many tallies need repair.
+async function repairHiddenTallies({ dryRun = false } = {}) {
+  const [hidden, sampleIncidents] = await Promise.all([
+    prisma.dailyReportEntry.findMany({ where: { NOT: ACTIVE_DAILY_ENTRY_WHERE } }),
+    prisma.incident.findMany({ where: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } }, select: { id: true, referenceNumber: true } }),
+  ]);
+  const casesByTally = new Map();
+  for (const incident of sampleIncidents) {
+    const match = /-E(\d+)-\d+$/.exec(incident.referenceNumber);
+    if (!match) continue;
+    const tallyId = Number(match[1]);
+    if (!casesByTally.has(tallyId)) casesByTally.set(tallyId, []);
+    casesByTally.get(tallyId).push(incident.id);
+  }
+  const broken = hidden.filter((entry) => (casesByTally.get(entry.id) || []).length < tallyFires(entry));
+  if (dryRun || !broken.length) return broken.length;
+
+  await deleteSampleIncidents(broken.flatMap((entry) => casesByTally.get(entry.id) || []));
+  await unhideTallies(broken.map((entry) => entry.id));
+  return broken.length;
+}
+
 export async function getSampleDataStatus() {
-  const [sampleCases, sampleReports, placeholders, replaced] = await Promise.all([
+  const [sampleCases, sampleReports, placeholders, replaced, needRepair] = await Promise.all([
     prisma.incident.count({ where: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } } }),
     prisma.report.count({ where: { incident: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } } } }),
     findPlaceholderTallies(),
     prisma.dailyReportEntry.count({ where: { NOT: ACTIVE_DAILY_ENTRY_WHERE } }),
+    repairHiddenTallies({ dryRun: true }),
   ]);
   const fires = placeholders.reduce((sum, e) => sum + CATEGORY_FIELDS.reduce((n, [, f]) => n + (e[f] || 0), 0), 0);
-  return { sampleCases, sampleReports, seedRemaining: placeholders.length, firesRemaining: fires, seedReplaced: replaced };
+  return { sampleCases, sampleReports, seedRemaining: placeholders.length, firesRemaining: fires, seedReplaced: replaced, needRepair };
 }
 
 // One generation step. Returns { done, created, label } — call again until done.
 export async function generateSampleStep(adminUser) {
   const now = new Date();
+  // First put back any tally that's hidden without all of its sample cases (see above).
+  await repairHiddenTallies();
   const people = await loadPeople(adminUser);
 
   // The oldest remaining month of placeholder tallies becomes one sample case per counted fire,
@@ -288,23 +342,20 @@ export async function removeSampleBatch() {
   const incidents = await prisma.incident.findMany({
     where: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } },
     select: { id: true },
+    orderBy: { id: 'asc' },
     take: REMOVE_BATCH,
   });
 
   if (!incidents.length) {
-    await prisma.$executeRaw`UPDATE "daily_report_entries" SET "reportingOfficer" = substr("reportingOfficer", ${REPLACED_PREFIX.length + 1}) WHERE "reportingOfficer" LIKE ${`${REPLACED_PREFIX}%`}`;
-    await prisma.dailyReportEntry.updateMany({ where: { reportingOfficer: LEGACY_REPLACED_OFFICER }, data: { reportingOfficer: LEGACY_SEED_OFFICER } });
+    // Nothing sample left: every hidden tally goes back.
+    const hidden = await prisma.dailyReportEntry.findMany({ where: { NOT: ACTIVE_DAILY_ENTRY_WHERE }, select: { id: true } });
+    await unhideTallies(hidden.map((entry) => entry.id));
     return { done: true, removedReports: 0 };
   }
 
-  const incidentIds = incidents.map((i) => i.id);
-  const reports = await prisma.report.findMany({ where: { incidentId: { in: incidentIds } }, select: { id: true } });
-  const reportIds = reports.map((r) => r.id);
-  await prisma.$transaction([
-    prisma.auditLog.deleteMany({ where: { reportId: { in: reportIds } } }),
-    prisma.trashItem.deleteMany({ where: { itemType: { in: ['REPORT_VERSION', 'REPORT'] }, originalId: { in: reportIds } } }),
-    prisma.report.deleteMany({ where: { id: { in: reportIds } } }),
-    prisma.incident.deleteMany({ where: { id: { in: incidentIds } } }),
-  ]);
-  return { done: false, removedReports: reportIds.length };
+  const removedReports = await deleteSampleIncidents(incidents.map((i) => i.id));
+  // Tallies whose cases were (partly) in this batch are shown again right away, so the
+  // dashboards never lose numbers part-way through a removal.
+  await repairHiddenTallies();
+  return { done: false, removedReports };
 }

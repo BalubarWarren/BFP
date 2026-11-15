@@ -83,7 +83,8 @@ export default function SampleDataPanel() {
   };
 
   const hasSamples = status?.sampleCases > 0;
-  const pending = status?.seedRemaining > 0;
+  // Unconverted tallies, or hidden ones missing their sample cases (repaired on the next run).
+  const pending = status?.seedRemaining > 0 || status?.needRepair > 0;
 
   return (
     <section className="rounded-lg border border-amber-300 bg-amber-50 p-4 sm:p-5 dark:border-amber-700/50 dark:bg-amber-950/20">
@@ -100,7 +101,7 @@ export default function SampleDataPanel() {
           </p>
           <p className="mt-2 text-xs text-gray-600">
             {status
-              ? `${status.sampleCases} sample cases (${status.sampleReports} reports) · ${status.firesRemaining} fires in the dashboard numbers still without reports`
+              ? `${status.sampleCases} sample cases (${status.sampleReports} reports) · ${status.firesRemaining} fires in the dashboard numbers still without reports${status.needRepair ? ` · ${status.needRepair} hidden numbers need repair (click Finish creating)` : ''}`
               : 'Loading status…'}
           </p>
           {progress && <p className="mt-1 text-xs font-medium text-amber-800">{progress}</p>}
