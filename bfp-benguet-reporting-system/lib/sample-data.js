@@ -9,9 +9,9 @@
 //   - replaced tallies are only relabelled (REPLACED_PREFIX in front of their reporting officer)
 //     and skipped by the dashboards, never deleted, and get their original label back on removal.
 //
-// Which tallies are placeholders: every daily tally not linked to an existing report. A tally
-// recorded through the app (POST /api/daily-report-entries) must point at one of the
-// investigator's reports; seeded/dummy tallies point at report 0 or at nothing.
+// Which tallies are placeholders: all of them. No screen in the app records daily tallies (the
+// POST /api/daily-report-entries endpoint has no caller), so every tally in the database is
+// seeded/dummy data — whatever its reportingOfficer label or reportId says.
 //
 // Generation runs in steps (one month of seed tallies per call) so each request stays short
 // on Vercel; the admin panel calls it repeatedly until it reports done.
@@ -128,7 +128,9 @@ function buildCase({ rand, ref, municipality, category, date, now, finished, wit
       reportType,
       status: REPORT_STATUS.APPROVED,
       municipalityId: municipality.id,
-      reportDate: submittedAt,
+      // The boards count a Spot report by its report date, so it stays on the day of the fire
+      // (keeping it in the same month as the tally it replaces); follow-ups are dated when filed.
+      reportDate: reportType === 'SPOT_INVESTIGATION' ? date : submittedAt,
       category: reportType === 'SPOT_INVESTIGATION' ? category : null,
       content: JSON.stringify(
         reportType === 'SPOT_INVESTIGATION'
@@ -176,16 +178,11 @@ async function insertCases(cases, alsoInTx) {
 // Daily tallies still standing in for real reports (see the header comment), optionally within
 // a date range. Returned oldest first.
 async function findPlaceholderTallies(dateWhere = {}) {
-  const entries = await prisma.dailyReportEntry.findMany({
+  return prisma.dailyReportEntry.findMany({
     where: { ...ACTIVE_DAILY_ENTRY_WHERE, ...dateWhere },
     include: { municipality: { select: { id: true, name: true, code: true } } },
     orderBy: { reportDate: 'asc' },
   });
-  const linkedIds = [...new Set(entries.map((e) => e.reportId).filter((id) => id > 0))];
-  const existing = linkedIds.length
-    ? new Set((await prisma.report.findMany({ where: { id: { in: linkedIds } }, select: { id: true } })).map((r) => r.id))
-    : new Set();
-  return entries.filter((e) => !existing.has(e.reportId));
 }
 
 export async function getSampleDataStatus() {
