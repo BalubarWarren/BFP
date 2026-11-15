@@ -15,7 +15,6 @@
 //
 // Generation runs in steps (one month of seed tallies per call) so each request stays short
 // on Vercel; the admin panel calls it repeatedly until it reports done.
-import { Prisma } from '@prisma/client';
 import prisma from './prisma';
 import { MUNICIPALITIES, ROLES, REPORT_STATUS, SUB_CATEGORIES } from './constants';
 import { BARANGAYS } from './barangays';
@@ -203,10 +202,41 @@ async function deleteSampleIncidents(incidentIds) {
 }
 
 // Puts hidden tallies back on the dashboards with their original label.
+// Plain Prisma updates, grouped by label (tallies share a handful of labels, e.g. "System Seed"),
+// rather than raw SQL: the raw substr()/|| statements failed on the production database.
 async function unhideTallies(ids) {
   if (!ids.length) return;
-  await prisma.$executeRaw`UPDATE "daily_report_entries" SET "reportingOfficer" = substr("reportingOfficer", ${REPLACED_PREFIX.length + 1}) WHERE "id" IN (${Prisma.join(ids)}) AND "reportingOfficer" LIKE ${`${REPLACED_PREFIX}%`}`;
-  await prisma.dailyReportEntry.updateMany({ where: { id: { in: ids }, reportingOfficer: LEGACY_REPLACED_OFFICER }, data: { reportingOfficer: LEGACY_SEED_OFFICER } });
+  const entries = await prisma.dailyReportEntry.findMany({
+    where: { id: { in: ids }, NOT: ACTIVE_DAILY_ENTRY_WHERE },
+    select: { id: true, reportingOfficer: true },
+  });
+  const byOriginal = new Map();
+  for (const entry of entries) {
+    const original =
+      entry.reportingOfficer === LEGACY_REPLACED_OFFICER
+        ? LEGACY_SEED_OFFICER
+        : entry.reportingOfficer.slice(REPLACED_PREFIX.length);
+    if (!byOriginal.has(original)) byOriginal.set(original, []);
+    byOriginal.get(original).push(entry.id);
+  }
+  await prisma.$transaction(
+    [...byOriginal].map(([original, entryIds]) =>
+      prisma.dailyReportEntry.updateMany({ where: { id: { in: entryIds } }, data: { reportingOfficer: original } })
+    )
+  );
+}
+
+// Hides tallies (inside the generation transaction), keeping their label after REPLACED_PREFIX.
+async function hideTallies(tx, entries) {
+  const byLabel = new Map();
+  for (const entry of entries) {
+    if (!byLabel.has(entry.reportingOfficer)) byLabel.set(entry.reportingOfficer, []);
+    byLabel.get(entry.reportingOfficer).push(entry.id);
+  }
+  for (const [label, entryIds] of byLabel) {
+    // eslint-disable-next-line no-await-in-loop
+    await tx.dailyReportEntry.updateMany({ where: { id: { in: entryIds } }, data: { reportingOfficer: `${REPLACED_PREFIX}${label}` } });
+  }
 }
 
 // The invariant this tool relies on: a tally is hidden only while ALL of its sample cases exist.
@@ -289,10 +319,7 @@ export async function generateSampleStep(adminUser) {
       }
     }
 
-    const ids = entries.map((e) => e.id);
-    const created = await insertCases(cases, (tx) =>
-      tx.$executeRaw`UPDATE "daily_report_entries" SET "reportingOfficer" = ${REPLACED_PREFIX} || "reportingOfficer" WHERE "id" IN (${Prisma.join(ids)})`
-    );
+    const created = await insertCases(cases, (tx) => hideTallies(tx, entries));
     const label = new Date(Date.UTC(y, m, 1)).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
     return { done: false, created, label };
   }

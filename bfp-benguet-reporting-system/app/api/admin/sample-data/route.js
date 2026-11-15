@@ -49,6 +49,11 @@ export async function POST(request) {
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (error) {
     console.error('Sample data action failed:', error);
-    return NextResponse.json({ error: 'Sample data action failed. Please try again.' }, { status: 500 });
+    // Admin-only route, so the underlying reason is included to make failures diagnosable.
+    const detail = String(error?.message || '').split('\n').filter(Boolean).pop()?.slice(0, 300);
+    return NextResponse.json(
+      { error: `Sample data action failed. Please try again.${detail ? ` (Details: ${detail})` : ''}` },
+      { status: 500 }
+    );
   }
 }
