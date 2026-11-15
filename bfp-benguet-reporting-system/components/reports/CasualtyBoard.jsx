@@ -70,6 +70,8 @@ export default function CasualtyBoard() {
   }, [tab, month, monthYear, year]);
 
   const rows = data?.rows || [];
+  // A municipal account sees only its own municipality: show its barangays as the table itself.
+  const singleMunicipality = rows.length === 1;
   const totals = data?.totals || { incidents: 0, injured: 0, fatalities: 0, total: 0 };
   const cards = [
     { label: 'Injured', value: totals.injured, className: 'bg-amber-100 text-amber-800' },
@@ -84,7 +86,7 @@ export default function CasualtyBoard() {
           <HeartPulse className="h-5 w-5 text-bfp-red" /> Casualty Monitoring Board
         </h2>
         <p className="mt-1 text-sm text-gray-500">
-          Injured and fatalities per municipality from approved fire cases. Click a municipality to see its cases.
+          Injured and fatalities per municipality from approved fire cases. Click a municipality to see each of its barangays.
         </p>
       </div>
 
@@ -156,7 +158,7 @@ export default function CasualtyBoard() {
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50 text-left text-xs font-medium text-gray-500">
                 <tr>
-                  <th className="px-4 py-3">Municipality</th>
+                  <th className="px-4 py-3">{singleMunicipality ? `Barangay (${rows[0].municipality})` : 'Municipality / Barangay'}</th>
                   <th className="px-4 py-3 text-right">Fire Cases</th>
                   <th className="px-4 py-3 text-right">Injured</th>
                   <th className="px-4 py-3 text-right">Fatalities</th>
@@ -164,49 +166,29 @@ export default function CasualtyBoard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {rows.map((row) => {
-                  const isOpen = expanded === row.municipalityId;
-                  const canOpen = row.cases.length > 0;
-                  return (
-                    <Fragment key={row.municipalityId}>
-                      <tr className={canOpen ? 'cursor-pointer hover:bg-gray-50' : ''} onClick={() => canOpen && setExpanded(isOpen ? null : row.municipalityId)}>
-                        <td className="px-4 py-3 font-medium text-gray-900">
-                          <span className="inline-flex items-center gap-1">
-                            {canOpen ? (
-                              isOpen ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />
-                            ) : (
-                              <span className="inline-block w-4" />
-                            )}
-                            {row.municipality}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right tabular-nums text-gray-700">{row.incidents}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-gray-700">{row.injured}</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-gray-700">{row.fatalities}</td>
-                        <td className={`px-4 py-3 text-right font-semibold tabular-nums ${row.total ? 'text-bfp-red' : 'text-gray-400'}`}>{row.total}</td>
-                      </tr>
-                      {isOpen && (
-                        <tr className="bg-gray-50/60">
-                          <td colSpan={5} className="px-4 py-3">
-                            <ul className="space-y-1.5 pl-5 text-xs text-gray-600">
-                              {row.cases.map((c) => (
-                                <li key={c.id} className="flex flex-wrap justify-between gap-2">
-                                  <span>
-                                    <span className="font-semibold text-gray-800">{getIncidentPlace(c) || c.referenceNumber}</span>
-                                    {' · '}{c.referenceNumber}{' · '}{new Date(c.dateOfIncident).toLocaleDateString()}
-                                  </span>
-                                  <span className="tabular-nums">
-                                    {c.injured} injured · {c.fatalities} {c.fatalities === 1 ? 'fatality' : 'fatalities'}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          </td>
-                        </tr>
-                      )}
-                    </Fragment>
-                  );
-                })}
+                {singleMunicipality
+                  ? <BarangayRows row={rows[0]} />
+                  : rows.map((row) => {
+                      const isOpen = expanded === row.municipalityId;
+                      return (
+                        <Fragment key={row.municipalityId}>
+                          <tr
+                            className="cursor-pointer hover:bg-gray-50"
+                            onClick={() => setExpanded(isOpen ? null : row.municipalityId)}
+                            aria-expanded={isOpen}
+                          >
+                            <td className="px-4 py-3 font-medium text-gray-900">
+                              <span className="inline-flex items-center gap-1">
+                                {isOpen ? <ChevronDown className="h-4 w-4 text-gray-400" /> : <ChevronRight className="h-4 w-4 text-gray-400" />}
+                                {row.municipality}
+                              </span>
+                            </td>
+                            <CountCells item={row} />
+                          </tr>
+                          {isOpen && <BarangayRows row={row} indent />}
+                        </Fragment>
+                      );
+                    })}
                 {rows.length > 1 && (
                   <tr className="bg-gray-50 font-semibold text-gray-900">
                     <td className="px-4 py-3">Total</td>
@@ -219,8 +201,67 @@ export default function CasualtyBoard() {
               </tbody>
             </table>
           </div>
+
+          {singleMunicipality && rows[0].cases.length > 0 && <CaseList cases={rows[0].cases} className="mt-4" />}
         </>
       )}
     </section>
+  );
+}
+
+function CountCells({ item, muted = false }) {
+  const base = `px-4 py-3 text-right tabular-nums ${muted ? 'text-gray-600' : 'text-gray-700'}`;
+  return (
+    <>
+      <td className={base}>{item.incidents}</td>
+      <td className={base}>{item.injured}</td>
+      <td className={base}>{item.fatalities}</td>
+      <td className={`px-4 py-3 text-right font-semibold tabular-nums ${item.total ? 'text-bfp-red' : 'text-gray-400'}`}>{item.total}</td>
+    </>
+  );
+}
+
+// One row per barangay of a municipality (all of them, zeros included), then the cases with
+// casualties when shown under an expanded municipality.
+function BarangayRows({ row, indent = false }) {
+  return (
+    <>
+      {row.barangays.map((b) => (
+        <tr key={b.name} className={indent ? 'bg-gray-50/60' : ''}>
+          <td className={`py-2.5 pr-4 text-gray-700 ${indent ? 'pl-11' : 'pl-4'} ${b.name === 'Not specified' ? 'italic text-gray-500' : ''}`}>
+            {b.name}
+          </td>
+          <CountCells item={b} muted />
+        </tr>
+      ))}
+      {indent && row.cases.length > 0 && (
+        <tr className="bg-gray-50/60">
+          <td colSpan={5} className="px-4 pb-3 pl-11">
+            <CaseList cases={row.cases} />
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
+function CaseList({ cases, className = '' }) {
+  return (
+    <div className={className}>
+      <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-gray-500">Cases with casualties</p>
+      <ul className="space-y-1.5 text-xs text-gray-600">
+        {cases.map((c) => (
+          <li key={c.id} className="flex flex-wrap justify-between gap-2">
+            <span>
+              <span className="font-semibold text-gray-800">{getIncidentPlace(c) || c.referenceNumber}</span>
+              {' · '}{c.referenceNumber}{' · '}{new Date(c.dateOfIncident).toLocaleDateString()}
+            </span>
+            <span className="tabular-nums">
+              {c.injured} injured · {c.fatalities} {c.fatalities === 1 ? 'fatality' : 'fatalities'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

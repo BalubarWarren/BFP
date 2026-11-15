@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
+import { getBarangays, matchBarangay } from '../../../../lib/barangays';
 import { approvedArchiveWhere, canViewApprovedArchive, MUNICIPAL_REVIEWER_ROLES } from '../../../../lib/report-access';
 
 // Casualty Monitoring Board on the Reports page: injured and fatalities per municipality for a
@@ -63,6 +64,9 @@ export async function GET(request) {
       fatalities: 0,
       total: 0,
       cases: [],
+      // Every barangay of the municipality, zeros included; incidents whose barangay isn't on the
+      // list (older free-text entries, or none given) go under "Not specified".
+      barangays: getBarangays(m.name).map((name) => ({ name, incidents: 0, injured: 0, fatalities: 0, total: 0 })),
     }));
     const byId = new Map(rows.map((row) => [row.municipalityId, row]));
 
@@ -75,6 +79,18 @@ export async function GET(request) {
       row.injured += injured;
       row.fatalities += fatalities;
       row.total += injured + fatalities;
+
+      const barangayName = matchBarangay(row.municipality, incident.barangay) || 'Not specified';
+      let barangayRow = row.barangays.find((b) => b.name === barangayName);
+      if (!barangayRow) {
+        barangayRow = { name: barangayName, incidents: 0, injured: 0, fatalities: 0, total: 0 };
+        row.barangays.push(barangayRow);
+      }
+      barangayRow.incidents += 1;
+      barangayRow.injured += injured;
+      barangayRow.fatalities += fatalities;
+      barangayRow.total += injured + fatalities;
+
       if (injured + fatalities > 0) {
         row.cases.push({
           id: incident.id,

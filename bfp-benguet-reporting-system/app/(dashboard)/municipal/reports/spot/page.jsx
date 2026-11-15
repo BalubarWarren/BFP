@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { Search, ClipboardList, Send, HeartPulse } from 'lucide-react';
 import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
@@ -13,10 +14,29 @@ import { useEffectiveUser } from '../../../../../hooks/useEffectiveUser';
 import BackButton from '../../../../../components/common/BackButton';
 import PageHeader from '../../../../../components/common/PageHeader';
 import { submitReport } from '../../../../../lib/submit-report';
+import { getBarangays } from '../../../../../lib/barangays';
 
 export default function SpotInvestigationForm() {
   const router = useRouter();
-  const { getEffectiveUser } = useEffectiveUser();
+  const { user, getEffectiveUser } = useEffectiveUser();
+  // The investigator's municipality's barangays, for the Barangay dropdown. Empty until loaded
+  // (or if the municipality isn't on the list), in which case the field falls back to free text.
+  const [barangayOptions, setBarangayOptions] = useState([]);
+
+  useEffect(() => {
+    if (!user?.municipalityId) return;
+    let cancelled = false;
+    axios
+      .get('/api/municipalities', { headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` } })
+      .then((res) => {
+        const own = (res.data.municipalities || []).find((m) => m.id === user.municipalityId);
+        if (!cancelled) setBarangayOptions(getBarangays(own?.name));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.municipalityId]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -183,7 +203,16 @@ export default function SpotInvestigationForm() {
               <label className="form-label">Barangay <span className="text-bfp-red">*</span></label>
               <div className="form-field-icon-wrap">
                 <FieldIcon src="/icons/location.svg" />
-                <input type="text" name="barangay" value={formData.barangay} onChange={handleChange} className="form-input-icon" placeholder="e.g. Poblacion" maxLength={100} required />
+                {barangayOptions.length ? (
+                  <select name="barangay" value={formData.barangay} onChange={handleChange} className="form-select-icon" required>
+                    <option value="" className="text-gray-400">— Select barangay —</option>
+                    {barangayOptions.map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input type="text" name="barangay" value={formData.barangay} onChange={handleChange} className="form-input-icon" placeholder="e.g. Poblacion" maxLength={100} required />
+                )}
               </div>
             </div>
             <div>
