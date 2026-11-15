@@ -112,7 +112,7 @@ export default function DashboardLayout({ children }) {
   return (
     <ToastProvider>
       <SessionManager onUserChange={setUser} />
-      <div className="app-shell flex bg-gray-50 dark:bg-gray-950">
+      <div className="app-shell flex overflow-hidden bg-gray-50 dark:bg-gray-950">
         {/* Sidebar */}
         <Sidebar
           isOpen={isSidebarOpen}
@@ -133,7 +133,10 @@ export default function DashboardLayout({ children }) {
 
           {/* Content Area */}
           {/* Keyed by path so each page fades in on navigation (opacity only; see .page-enter). */}
-          <main className="flex-1 overflow-auto">
+          {/* relative: absolutely positioned bits inside pages (e.g. sr-only labels) are placed
+              within this scroll area. Without it they're placed against the whole page, and one
+              deep in a long table stretched the window past the app into blank space. */}
+          <main className="relative flex-1 overflow-auto">
             <div key={pathname} className="page-enter mx-auto w-full max-w-screen-2xl">
               {children}
             </div>
