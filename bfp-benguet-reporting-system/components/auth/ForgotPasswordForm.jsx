@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Eye, EyeOff, ArrowLeft, MailCheck, CheckCircle2 } from 'lucide-react';
+import { usePrivateField } from '../../hooks/usePrivateField';
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -18,6 +19,7 @@ export default function ForgotPasswordForm({ initialEmail = '', onBack }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const privateField = usePrivateField(showPassword);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -160,9 +162,8 @@ export default function ForgotPasswordForm({ initialEmail = '', onBack }) {
             <label className="form-label">New Password</label>
             <div className="relative">
               <input
-                type={showPassword ? 'text' : 'password'}
-                autoComplete="new-password"
-                className="form-input pr-10"
+                {...privateField}
+                className={`form-input pr-10 ${privateField.className}`}
                 placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
@@ -182,9 +183,8 @@ export default function ForgotPasswordForm({ initialEmail = '', onBack }) {
           <div className="form-group">
             <label className="form-label">Confirm New Password</label>
             <input
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="new-password"
-              className="form-input"
+              {...privateField}
+              className={`form-input ${privateField.className}`}
               placeholder="Type the new password again"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}

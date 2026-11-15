@@ -755,3 +755,10 @@ html:not(.dark) .text-gray-400 {
 .dark .badge-pending { @apply bg-amber-950/40 text-amber-300; }
 .dark .badge-returned { @apply bg-red-950/40 text-red-300; }
 .dark .text-red-700.badge, .dark .badge.text-red-700 { @apply text-red-300; }
+
+/* A text input drawn as dots, for password boxes the browser's password manager must ignore
+   (see hooks/usePrivateField.js). Outside @layer on purpose: the class name lives in hooks/,
+   which Tailwind doesn't scan, so a layered rule would be purged. */
+.private-field {
+  -webkit-text-security: disc;
+}

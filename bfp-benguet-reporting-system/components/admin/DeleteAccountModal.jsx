@@ -6,6 +6,7 @@ import axios from 'axios';
 import { Lock, AlertTriangle, Eye, EyeOff, X } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { isAuthError } from '../../lib/utils';
+import { usePrivateField } from '../../hooks/usePrivateField';
 
 const CONFIRM_WORD = 'DELETE';
 
@@ -19,6 +20,7 @@ export default function DeleteAccountModal({ target, onClose, onDeleted, onSessi
   const [step, setStep] = useState('password'); // 'password' | 'confirm'
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const privateField = usePrivateField(showPassword);
   // Browsers' password managers fill a saved password into any password field as soon as it
   // appears. Browsers don't autofill read-only fields, so it stays read-only until the admin
   // clicks or tabs into it, and must be typed (or picked from the browser's list) deliberately.
@@ -113,13 +115,12 @@ export default function DeleteAccountModal({ target, onClose, onDeleted, onSessi
             </div>
             <div className="relative">
               <input
-                type={showPassword ? 'text' : 'password'}
+                {...privateField}
                 name="confirm-admin-password"
-                className="form-input pr-10"
+                className={`form-input pr-10 ${privateField.className}`}
                 placeholder="Click here and type your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                autoComplete="new-password"
                 readOnly={!passwordUnlocked}
                 onFocus={() => setPasswordUnlocked(true)}
                 aria-label="Your password"

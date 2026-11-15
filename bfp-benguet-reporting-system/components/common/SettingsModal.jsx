@@ -7,6 +7,7 @@ import { useTheme } from './ThemeProvider';
 import { useToast } from './ToastProvider';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import Portal from './Portal';
+import { usePrivateField } from '../../hooks/usePrivateField';
 
 const THEME_OPTIONS = [
   { value: 'light', label: 'Light', icon: Sun },
@@ -26,6 +27,7 @@ export default function SettingsModal({ onClose, onLogout }) {
   // The browser's password manager fills a saved password into the first password field as soon
   // as the modal opens. Browsers skip read-only fields, so it unlocks only once clicked/tabbed into.
   const [currentUnlocked, setCurrentUnlocked] = useState(false);
+  const privateField = usePrivateField();
 
   const handlePasswordChange = (e) => {
     const { name, value } = e.target;
@@ -113,12 +115,11 @@ export default function SettingsModal({ onClose, onLogout }) {
                 <div>
                   <label className="form-label">Current Password</label>
                   <input
-                    type="password"
+                    {...privateField}
                     name="currentPassword"
                     value={passwordForm.currentPassword}
                     onChange={handlePasswordChange}
-                    className="form-input"
-                    autoComplete="off"
+                    className={`form-input ${privateField.className}`}
                     readOnly={!currentUnlocked}
                     onFocus={() => setCurrentUnlocked(true)}
                     placeholder="Click here and type your current password"
@@ -129,12 +130,11 @@ export default function SettingsModal({ onClose, onLogout }) {
                   <div>
                     <label className="form-label">New Password</label>
                     <input
-                      type="password"
+                      {...privateField}
                       name="newPassword"
                       value={passwordForm.newPassword}
                       onChange={handlePasswordChange}
-                      autoComplete="new-password"
-                      className="form-input"
+                      className={`form-input ${privateField.className}`}
                       minLength={8}
                       required
                     />
@@ -142,12 +142,11 @@ export default function SettingsModal({ onClose, onLogout }) {
                   <div>
                     <label className="form-label">Confirm New Password</label>
                     <input
-                      type="password"
+                      {...privateField}
                       name="confirmPassword"
                       value={passwordForm.confirmPassword}
                       onChange={handlePasswordChange}
-                      autoComplete="new-password"
-                      className="form-input"
+                      className={`form-input ${privateField.className}`}
                       minLength={8}
                       required
                     />

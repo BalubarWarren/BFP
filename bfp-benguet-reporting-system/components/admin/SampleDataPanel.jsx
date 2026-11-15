@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { FlaskConical, Loader2, Trash2 } from 'lucide-react';
 import { useToast } from '../common/ToastProvider';
+import { usePrivateField } from '../../hooks/usePrivateField';
 
 const authHeaders = () => ({ Authorization: `Bearer ${sessionStorage.getItem('token')}` });
 
@@ -17,6 +18,7 @@ export default function SampleDataPanel() {
   const [confirmingRemove, setConfirmingRemove] = useState(false);
   const [password, setPassword] = useState('');
   const [passwordEditable, setPasswordEditable] = useState(false);
+  const privateField = usePrivateField();
 
   const loadStatus = async () => {
     try {
@@ -113,9 +115,8 @@ export default function SampleDataPanel() {
             <input
               id="sample-remove-password"
               name="confirm-sample-removal"
-              type="password"
-              className="form-input"
-              autoComplete="new-password"
+              {...privateField}
+              className={`form-input ${privateField.className}`}
               readOnly={!passwordEditable}
               onFocus={() => setPasswordEditable(true)}
               value={password}
