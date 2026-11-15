@@ -1,13 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { ROLES } from '../../../../lib/constants';
-import { generateSampleStep, getSampleDataStatus, removeSampleData } from '../../../../lib/sample-data';
+import { generateSampleStep, getSampleDataStatus, removeSampleBatch } from '../../../../lib/sample-data';
 import { requirePasswordConfirmation } from '../../../../lib/confirm-password';
 
 // Admin-only: sample cases/reports for testing (see lib/sample-data.js).
 //   GET                          -> counts
 //   POST { action: 'generate' }  -> one generation step (call until { done: true })
-//   POST { action: 'remove', password } -> delete every sample case, restore the seed tallies
+//   POST { action: 'remove', password } -> delete one batch of sample cases (call until { done: true });
+//                                          the last call restores the placeholder tallies
 export const maxDuration = 60;
 
 const isAdmin = (user) => [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(user?.role);
@@ -43,7 +44,7 @@ export async function POST(request) {
     if (body.action === 'remove') {
       const denied = await requirePasswordConfirmation(user, body.password, 'remove sample data');
       if (denied) return denied;
-      return NextResponse.json(await removeSampleData());
+      return NextResponse.json(await removeSampleBatch());
     }
     return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
   } catch (error) {

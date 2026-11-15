@@ -277,21 +277,34 @@ export async function generateSampleStep(adminUser) {
   return { done: false, created, label: 'This month' };
 }
 
-// Deletes every sample case and its reports (annotations cascade, notifications are unlinked)
-// and puts the placeholder tallies back exactly as they were.
-export async function removeSampleData() {
-  const sampleWhere = { incident: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } } };
-  const reports = await prisma.report.findMany({ where: sampleWhere, select: { id: true } });
+// Removes sample cases a batch at a time (each request has to finish inside Vercel's time limit;
+// one transaction for thousands of reports didn't). Deletes up to REMOVE_BATCH cases with their
+// reports (annotations cascade, notifications are unlinked); once none are left, puts the
+// placeholder tallies back exactly as they were. Returns { done, removedReports } — call again
+// until done.
+const REMOVE_BATCH = 150;
+
+export async function removeSampleBatch() {
+  const incidents = await prisma.incident.findMany({
+    where: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } },
+    select: { id: true },
+    take: REMOVE_BATCH,
+  });
+
+  if (!incidents.length) {
+    await prisma.$executeRaw`UPDATE "daily_report_entries" SET "reportingOfficer" = substr("reportingOfficer", ${REPLACED_PREFIX.length + 1}) WHERE "reportingOfficer" LIKE ${`${REPLACED_PREFIX}%`}`;
+    await prisma.dailyReportEntry.updateMany({ where: { reportingOfficer: LEGACY_REPLACED_OFFICER }, data: { reportingOfficer: LEGACY_SEED_OFFICER } });
+    return { done: true, removedReports: 0 };
+  }
+
+  const incidentIds = incidents.map((i) => i.id);
+  const reports = await prisma.report.findMany({ where: { incidentId: { in: incidentIds } }, select: { id: true } });
   const reportIds = reports.map((r) => r.id);
-  await prisma.$transaction(async (tx) => {
-    if (reportIds.length) {
-      await tx.auditLog.deleteMany({ where: { reportId: { in: reportIds } } });
-      await tx.trashItem.deleteMany({ where: { itemType: { in: ['REPORT_VERSION', 'REPORT'] }, originalId: { in: reportIds } } });
-      await tx.report.deleteMany({ where: { id: { in: reportIds } } });
-    }
-    await tx.incident.deleteMany({ where: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } } });
-    await tx.$executeRaw`UPDATE "daily_report_entries" SET "reportingOfficer" = substr("reportingOfficer", ${REPLACED_PREFIX.length + 1}) WHERE "reportingOfficer" LIKE ${`${REPLACED_PREFIX}%`}`;
-    await tx.dailyReportEntry.updateMany({ where: { reportingOfficer: LEGACY_REPLACED_OFFICER }, data: { reportingOfficer: LEGACY_SEED_OFFICER } });
-  }, { timeout: 60000 });
-  return { removedReports: reportIds.length };
+  await prisma.$transaction([
+    prisma.auditLog.deleteMany({ where: { reportId: { in: reportIds } } }),
+    prisma.trashItem.deleteMany({ where: { itemType: { in: ['REPORT_VERSION', 'REPORT'] }, originalId: { in: reportIds } } }),
+    prisma.report.deleteMany({ where: { id: { in: reportIds } } }),
+    prisma.incident.deleteMany({ where: { id: { in: incidentIds } } }),
+  ]);
+  return { done: false, removedReports: reportIds.length };
 }

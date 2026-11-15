@@ -57,16 +57,27 @@ export default function SampleDataPanel() {
   const remove = async (event) => {
     event.preventDefault();
     setBusy(true);
+    let removed = 0;
     try {
-      const res = await axios.post('/api/admin/sample-data', { action: 'remove', password }, { headers: authHeaders() });
-      toast.success(`Removed ${res.data.removedReports} sample reports. The placeholder numbers are back.`);
+      // A batch of cases per request; keep going until the server says none are left.
+      for (let i = 0; i < 500; i += 1) {
+        const res = await axios.post('/api/admin/sample-data', { action: 'remove', password }, { headers: authHeaders() });
+        removed += res.data.removedReports || 0;
+        if (res.data.done) break;
+        setProgress(`Removed ${removed} sample reports so far…`);
+      }
+      toast.success(`Removed ${removed} sample reports. The placeholder numbers are back.`);
       setConfirmingRemove(false);
       setPassword('');
       setPasswordEditable(false);
     } catch (err) {
-      toast.error(err.response?.data?.error || 'Could not remove sample data.');
+      toast.error(
+        err.response?.data?.error ||
+          `Could not finish removing sample data${removed ? ` (${removed} reports removed so far)` : ''}. Click Remove again to continue.`
+      );
     } finally {
       setBusy(false);
+      setProgress('');
       loadStatus();
     }
   };
@@ -100,7 +111,7 @@ export default function SampleDataPanel() {
             {busy && !confirmingRemove ? <Loader2 className="h-4 w-4 animate-spin" /> : <FlaskConical className="h-4 w-4" />}
             {hasSamples ? (pending ? 'Finish creating' : 'Sample data created') : 'Create sample data'}
           </button>
-          {hasSamples && !confirmingRemove && (
+          {(hasSamples || status?.seedReplaced > 0) && !confirmingRemove && (
             <button type="button" onClick={() => setConfirmingRemove(true)} disabled={busy} className="btn btn-secondary inline-flex items-center gap-1.5">
               <Trash2 className="h-4 w-4" /> Remove sample data
             </button>
