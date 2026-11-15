@@ -6,21 +6,30 @@
 //
 // Everything is reversible:
 //   - sample incidents use a "SAMPLE-" reference number, which is how removal finds them;
-//   - replaced seed tallies are only relabelled (SEED_REPLACED_OFFICER) and skipped by the
-//     dashboards, never deleted, and get their original label back on removal.
+//   - replaced tallies are only relabelled (REPLACED_PREFIX in front of their reporting officer)
+//     and skipped by the dashboards, never deleted, and get their original label back on removal.
+//
+// Which tallies are placeholders: every daily tally not linked to an existing report. A tally
+// recorded through the app (POST /api/daily-report-entries) must point at one of the
+// investigator's reports; seeded/dummy tallies point at report 0 or at nothing.
 //
 // Generation runs in steps (one month of seed tallies per call) so each request stays short
 // on Vercel; the admin panel calls it repeatedly until it reports done.
+import { Prisma } from '@prisma/client';
 import prisma from './prisma';
 import { MUNICIPALITIES, ROLES, REPORT_STATUS, SUB_CATEGORIES } from './constants';
 import { BARANGAYS } from './barangays';
 import { generateQrToken } from './qr-token';
 
 export const SAMPLE_REF_PREFIX = 'SAMPLE-';
-export const SEED_OFFICER = 'System Seed';
-export const SEED_REPLACED_OFFICER = 'System Seed [replaced by sample reports]';
+export const REPLACED_PREFIX = '[sample-replaced] ';
+// Label used by the first version of this tool, still recognised so its runs can be undone.
+const LEGACY_REPLACED_OFFICER = 'System Seed [replaced by sample reports]';
+const LEGACY_SEED_OFFICER = 'System Seed';
 // Dashboards read daily tallies through this filter so replaced ones aren't counted twice.
-export const ACTIVE_DAILY_ENTRY_WHERE = { reportingOfficer: { not: SEED_REPLACED_OFFICER } };
+export const ACTIVE_DAILY_ENTRY_WHERE = {
+  NOT: [{ reportingOfficer: { startsWith: REPLACED_PREFIX } }, { reportingOfficer: LEGACY_REPLACED_OFFICER }],
+};
 
 const CURRENT_PREFIX = `${SAMPLE_REF_PREFIX}CUR-`;
 
@@ -164,99 +173,115 @@ async function insertCases(cases, alsoInTx) {
   return cases.length;
 }
 
+// Daily tallies still standing in for real reports (see the header comment), optionally within
+// a date range. Returned oldest first.
+async function findPlaceholderTallies(dateWhere = {}) {
+  const entries = await prisma.dailyReportEntry.findMany({
+    where: { ...ACTIVE_DAILY_ENTRY_WHERE, ...dateWhere },
+    include: { municipality: { select: { id: true, name: true, code: true } } },
+    orderBy: { reportDate: 'asc' },
+  });
+  const linkedIds = [...new Set(entries.map((e) => e.reportId).filter((id) => id > 0))];
+  const existing = linkedIds.length
+    ? new Set((await prisma.report.findMany({ where: { id: { in: linkedIds } }, select: { id: true } })).map((r) => r.id))
+    : new Set();
+  return entries.filter((e) => !existing.has(e.reportId));
+}
+
 export async function getSampleDataStatus() {
-  const [sampleCases, sampleReports, seedRemaining, seedReplaced] = await Promise.all([
+  const [sampleCases, sampleReports, placeholders, replaced] = await Promise.all([
     prisma.incident.count({ where: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } } }),
     prisma.report.count({ where: { incident: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } } } }),
-    prisma.dailyReportEntry.count({ where: { reportingOfficer: SEED_OFFICER } }),
-    prisma.dailyReportEntry.count({ where: { reportingOfficer: SEED_REPLACED_OFFICER } }),
+    findPlaceholderTallies(),
+    prisma.dailyReportEntry.count({ where: { NOT: ACTIVE_DAILY_ENTRY_WHERE } }),
   ]);
-  return { sampleCases, sampleReports, seedRemaining, seedReplaced };
+  const fires = placeholders.reduce((sum, e) => sum + CATEGORY_FIELDS.reduce((n, [, f]) => n + (e[f] || 0), 0), 0);
+  return { sampleCases, sampleReports, seedRemaining: placeholders.length, firesRemaining: fires, seedReplaced: replaced };
 }
 
 // One generation step. Returns { done, created, label } — call again until done.
 export async function generateSampleStep(adminUser) {
   const now = new Date();
-  const municipalities = await prisma.municipality.findMany({ select: { id: true, name: true, code: true } });
   const people = await loadPeople(adminUser);
 
-  // Step 1: this month's sample cases (the seed has no tallies for the current month), so the
-  // "This Month" boards have something to open. Some cases are still open (no Final yet) so the
-  // "Start Progress/Final Report" flow can be tried too.
-  const hasCurrent = await prisma.incident.findFirst({ where: { referenceNumber: { startsWith: CURRENT_PREFIX } }, select: { id: true } });
-  if (!hasCurrent) {
+  // The oldest remaining month of placeholder tallies becomes one sample case per counted fire,
+  // in the same municipality, month and category, so every board total stays the same.
+  const placeholders = await findPlaceholderTallies();
+  if (placeholders.length) {
+    const month = placeholders[0].reportDate;
+    const y = month.getUTCFullYear();
+    const m = month.getUTCMonth();
+    const entries = placeholders.filter((e) => e.reportDate.getUTCFullYear() === y && e.reportDate.getUTCMonth() === m);
+    const daysInMonth = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const lastDay = y === now.getUTCFullYear() && m === now.getUTCMonth() ? Math.max(1, now.getUTCDate()) : daysInMonth;
+
     const cases = [];
-    const rand = rng(now.getFullYear() * 100 + now.getMonth());
-    for (const municipality of municipalities) {
-      const count = 1 + Math.floor(rand() * 3); // 1..3 per municipality
-      for (let i = 1; i <= count; i += 1) {
-        const day = 1 + Math.floor(rand() * Math.max(1, now.getDate() - 1));
-        const category = pick(rand, ['RESIDENTIAL', 'NON_RESIDENTIAL', 'NON_STRUCTURAL', 'NON_STRUCTURAL', 'TRANSPORT']);
-        cases.push(buildCase({
-          rand,
-          ref: `${CURRENT_PREFIX}${municipalityKey(municipality)}-${i}`,
-          municipality,
-          category,
-          date: new Date(Date.UTC(now.getFullYear(), now.getMonth(), day)),
-          now,
-          finished: false,
-          withProgress: rand() < 0.4,
-          people,
-        }));
+    for (const entry of entries) {
+      const rand = rng(entry.id * 7919);
+      let n = 0;
+      for (const [category, field] of CATEGORY_FIELDS) {
+        for (let k = 0; k < (entry[field] || 0); k += 1) {
+          n += 1;
+          const date = new Date(Date.UTC(y, m, 1 + Math.floor(rand() * lastDay)));
+          cases.push(buildCase({
+            rand,
+            ref: `${SAMPLE_REF_PREFIX}${y}${pad(m + 1)}-${municipalityKey(entry.municipality)}-E${entry.id}-${n}`,
+            municipality: entry.municipality,
+            category,
+            date,
+            now,
+            finished: addDays(date, 30) <= now,
+            withProgress: rand() < 0.35,
+            people,
+          }));
+        }
       }
     }
-    const created = await insertCases(cases);
-    return { done: false, created, label: 'This month' };
+
+    const ids = entries.map((e) => e.id);
+    const created = await insertCases(cases, (tx) =>
+      tx.$executeRaw`UPDATE "daily_report_entries" SET "reportingOfficer" = ${REPLACED_PREFIX} || "reportingOfficer" WHERE "id" IN (${Prisma.join(ids)})`
+    );
+    const label = new Date(Date.UTC(y, m, 1)).toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    return { done: false, created, label };
   }
 
-  // Step 2+: the oldest remaining month of seed tallies becomes one sample case per counted fire.
-  const first = await prisma.dailyReportEntry.findFirst({ where: { reportingOfficer: SEED_OFFICER }, orderBy: { reportDate: 'asc' }, select: { reportDate: true } });
-  if (!first) return { done: true, created: 0, label: '' };
+  // Last step: if the current month had no tallies at all, add a few sample cases for it so the
+  // "This Month" boards have reports to open. Some are still open (no Final yet) so the
+  // "Start Progress/Final Report" flow can be tried too.
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  const [hasCurrent, currentTallies] = await Promise.all([
+    prisma.incident.findFirst({ where: { referenceNumber: { startsWith: CURRENT_PREFIX } }, select: { id: true } }),
+    prisma.dailyReportEntry.count({ where: { reportDate: { gte: monthStart } } }),
+  ]);
+  if (hasCurrent || currentTallies) return { done: true, created: 0, label: '' };
 
-  const month = first.reportDate;
-  const monthStart = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), 1));
-  const monthEnd = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 1));
-  const entries = await prisma.dailyReportEntry.findMany({
-    where: { reportingOfficer: SEED_OFFICER, reportDate: { gte: monthStart, lt: monthEnd } },
-    include: { municipality: { select: { id: true, name: true, code: true } } },
-  });
-
-  const daysInMonth = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth() + 1, 0)).getUTCDate();
+  const municipalities = await prisma.municipality.findMany({ select: { id: true, name: true, code: true } });
   const cases = [];
-  for (const entry of entries) {
-    const rand = rng(entry.id * 7919);
-    let n = 0;
-    for (const [category, field] of CATEGORY_FIELDS) {
-      for (let k = 0; k < (entry[field] || 0); k += 1) {
-        n += 1;
-        const date = new Date(Date.UTC(month.getUTCFullYear(), month.getUTCMonth(), 1 + Math.floor(rand() * daysInMonth)));
-        cases.push(buildCase({
-          rand,
-          ref: `${SAMPLE_REF_PREFIX}${month.getUTCFullYear()}${pad(month.getUTCMonth() + 1)}-${municipalityKey(entry.municipality)}-E${entry.id}-${n}`,
-          municipality: entry.municipality,
-          category,
-          date,
-          now,
-          finished: addDays(date, 30) <= now,
-          withProgress: rand() < 0.35,
-          people,
-        }));
-      }
+  const rand = rng(now.getUTCFullYear() * 100 + now.getUTCMonth());
+  for (const municipality of municipalities) {
+    const count = 1 + Math.floor(rand() * 3); // 1..3 per municipality
+    for (let i = 1; i <= count; i += 1) {
+      const day = 1 + Math.floor(rand() * Math.max(1, now.getUTCDate() - 1));
+      cases.push(buildCase({
+        rand,
+        ref: `${CURRENT_PREFIX}${municipalityKey(municipality)}-${i}`,
+        municipality,
+        category: pick(rand, ['RESIDENTIAL', 'NON_RESIDENTIAL', 'NON_STRUCTURAL', 'NON_STRUCTURAL', 'TRANSPORT']),
+        date: new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), day)),
+        now,
+        finished: false,
+        withProgress: rand() < 0.4,
+        people,
+      }));
     }
   }
-
-  const created = await insertCases(cases, (tx) =>
-    tx.dailyReportEntry.updateMany({
-      where: { id: { in: entries.map((e) => e.id) } },
-      data: { reportingOfficer: SEED_REPLACED_OFFICER },
-    })
-  );
-  const label = monthStart.toLocaleString('en-US', { month: 'long', year: 'numeric', timeZone: 'UTC' });
-  return { done: false, created, label };
+  const created = await insertCases(cases);
+  return { done: false, created, label: 'This month' };
 }
 
 // Deletes every sample case and its reports (annotations cascade, notifications are unlinked)
-// and puts the placeholder seed tallies back.
+// and puts the placeholder tallies back exactly as they were.
 export async function removeSampleData() {
   const sampleWhere = { incident: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } } };
   const reports = await prisma.report.findMany({ where: sampleWhere, select: { id: true } });
@@ -268,7 +293,8 @@ export async function removeSampleData() {
       await tx.report.deleteMany({ where: { id: { in: reportIds } } });
     }
     await tx.incident.deleteMany({ where: { referenceNumber: { startsWith: SAMPLE_REF_PREFIX } } });
-    await tx.dailyReportEntry.updateMany({ where: { reportingOfficer: SEED_REPLACED_OFFICER }, data: { reportingOfficer: SEED_OFFICER } });
+    await tx.$executeRaw`UPDATE "daily_report_entries" SET "reportingOfficer" = substr("reportingOfficer", ${REPLACED_PREFIX.length + 1}) WHERE "reportingOfficer" LIKE ${`${REPLACED_PREFIX}%`}`;
+    await tx.dailyReportEntry.updateMany({ where: { reportingOfficer: LEGACY_REPLACED_OFFICER }, data: { reportingOfficer: LEGACY_SEED_OFFICER } });
   }, { timeout: 60000 });
   return { removedReports: reportIds.length };
 }

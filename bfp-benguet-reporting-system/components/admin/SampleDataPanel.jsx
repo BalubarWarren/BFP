@@ -87,7 +87,7 @@ export default function SampleDataPanel() {
           </p>
           <p className="mt-2 text-xs text-gray-600">
             {status
-              ? `${status.sampleCases} sample cases (${status.sampleReports} reports) · ${status.seedRemaining} placeholder tallies not converted yet`
+              ? `${status.sampleCases} sample cases (${status.sampleReports} reports) · ${status.firesRemaining} fires in the dashboard numbers still without reports`
               : 'Loading status…'}
           </p>
           {progress && <p className="mt-1 text-xs font-medium text-amber-800">{progress}</p>}
