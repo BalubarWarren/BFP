@@ -75,6 +75,8 @@ async function checkCaseFollowUps() {
       status: 'APPROVED',
       passedToId: null,
       incidentId: { not: null },
+      // Sample cases (lib/sample-data.js) are test data: no deadline reminders for them.
+      NOT: { incident: { referenceNumber: { startsWith: 'SAMPLE-' } } },
     },
     select: REPORT_FIELDS,
   });

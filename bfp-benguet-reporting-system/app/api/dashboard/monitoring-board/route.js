@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
+import { ACTIVE_DAILY_ENTRY_WHERE } from '../../../../lib/sample-data';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { DASHBOARD_VIEWER_ROLES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { PROVINCIAL_REVIEWER_ROLES } from '../../../../lib/report-access';
@@ -63,7 +64,8 @@ export async function GET(request) {
     // Spot Investigation / MDFIR reports that have reached the provincial level
     const [dailyEntries, spotReports, allMunicipalities] = await Promise.all([
       prisma.dailyReportEntry.findMany({
-        where: dateFilter,
+        // Seed tallies replaced by sample reports (lib/sample-data.js) would be counted twice.
+        where: { ...dateFilter, ...ACTIVE_DAILY_ENTRY_WHERE },
         select: {
           reportDate: true,
           residentialCount: true,

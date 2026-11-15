@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
+import { ACTIVE_DAILY_ENTRY_WHERE } from '../../../../lib/sample-data';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { DASHBOARD_VIEWER_ROLES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
 import { PROVINCIAL_REVIEWER_ROLES } from '../../../../lib/report-access';
@@ -111,6 +112,8 @@ export async function GET(request) {
         select: { reportDate: true, category: true, content: true, incident: { select: { subCategory: true } } },
       }),
       prisma.dailyReportEntry.findMany({
+        // Seed tallies replaced by sample reports (lib/sample-data.js) would be counted twice.
+        where: ACTIVE_DAILY_ENTRY_WHERE,
         select: {
           reportDate: true,
           residentialCount: true,
