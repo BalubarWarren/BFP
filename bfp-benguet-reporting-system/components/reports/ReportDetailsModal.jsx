@@ -34,7 +34,7 @@ const labelForKey = (key) =>
 
 // Shown in their own blocks (ReportExtras) or internal flags, not in the plain field list.
 const HIDDEN_CONTENT_KEYS = new Set([
-  'lateExplanation', 'submittedLate', 'latitude', 'longitude', 'sample', 'propertyType',
+  'lateExplanation', 'submittedLate', 'latitude', 'longitude', 'sample', 'demo', 'propertyType',
   'establishmentName', 'ownerName', 'occupantName', 'numberOfStoreys', 'rescueOperations', 'causeOfFire',
 ]);
 
