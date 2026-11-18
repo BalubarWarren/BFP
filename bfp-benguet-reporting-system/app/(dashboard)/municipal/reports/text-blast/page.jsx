@@ -143,7 +143,7 @@ export default function TextBlastPage() {
         <PageHeader icon={MessageSquare} eyebrow="Quick Report" title="Text Blast" description="Send a quick text report to the officers you choose. They are notified in the system and by email." border={false} />
       </div>
 
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
+      {error && <div className="alert alert-error mb-4">{error}</div>}
 
       <form onSubmit={handleSend} className="space-y-6">
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">

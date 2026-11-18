@@ -67,7 +67,7 @@ export default function ReportQrModal({ report, onClose }) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="flex items-center gap-2 font-bold text-bfp-navy">
+          <h3 className="flex items-center gap-2 font-semibold tracking-tight text-gray-900">
             <QrCode className="w-5 h-5" /> Report Tracking QR
           </h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none" aria-label="Close">

@@ -241,7 +241,7 @@ export default function UserManagementPage() {
         </h2>
 
         {createError && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4 text-sm">{createError}</div>
+          <div className="alert alert-error mb-4 text-sm">{createError}</div>
         )}
 
         <form onSubmit={handleCreateSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -384,7 +384,7 @@ export default function UserManagementPage() {
   
               <form onSubmit={handleEditSubmit} className="space-y-4 p-6">
                 {editError && (
-                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded text-sm">{editError}</div>
+                  <div className="alert alert-error text-sm">{editError}</div>
                 )}
   
                 <div>

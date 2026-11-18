@@ -102,7 +102,7 @@ export default function AdminDashboard() {
       {sessionExpired && <SessionExpiredBanner />}
 
       {!sessionExpired && error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">{error}</div>
+        <div className="alert alert-error">{error}</div>
       )}
 
       {!sessionExpired && <SampleDataPanel />}
@@ -159,7 +159,7 @@ export default function AdminDashboard() {
       {/* Report Tracking Table */}
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="border-b border-gray-200 px-5 py-4">
-          <h2 className="font-bold text-bfp-navy text-lg">All Reports ({filtered.length})</h2>
+          <h2 className="font-semibold tracking-tight text-gray-900 text-lg">All Reports ({filtered.length})</h2>
           <p className="text-xs text-gray-500 mt-0.5">Click a row for workflow progress, or View Details for the complete report</p>
         </div>
 

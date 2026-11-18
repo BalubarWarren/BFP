@@ -162,8 +162,8 @@ export default function FinalInvestigationForm() {
         <PageHeader icon={CheckCircle2} eyebrow="Investigation Report" title="Final Investigation Report" description="Completed investigation report with cause of fire and final findings." border={false} />
       </div>
 
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
-      {success && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">{success}</div>}
+      {error && <div className="alert alert-error mb-4">{error}</div>}
+      {success && <div className="alert alert-success mb-4">{success}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Report Info */}

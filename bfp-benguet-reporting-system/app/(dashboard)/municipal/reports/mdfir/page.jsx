@@ -112,8 +112,8 @@ export default function MinimalDamageFireIncidentReportForm() {
         <PageHeader icon={FileEdit} eyebrow="Investigation Report" title="MDFIR" description="Minimal Damage Fire Incident Report for documented low-damage fire incidents." border={false} />
       </div>
 
-      {error && <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">{error}</div>}
-      {success && <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">{success}</div>}
+      {error && <div className="alert alert-error mb-4">{error}</div>}
+      {success && <div className="alert alert-success mb-4">{success}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">

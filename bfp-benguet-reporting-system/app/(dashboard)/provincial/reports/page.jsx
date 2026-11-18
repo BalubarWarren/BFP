@@ -187,7 +187,7 @@ export default function ProvincialReportsPage() {
       <ReportSearchFilters filters={searchFilters} onChange={setSearchFilters} className="max-w-4xl" />
 
       {!sessionExpired && error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">{error}</div>
+        <div className="alert alert-error">{error}</div>
       )}
 
       {loading ? (
@@ -329,7 +329,7 @@ export default function ProvincialReportsPage() {
                 <div className="mt-3">
                   {(parseAttachments(reportDetail?.attachments).length || parseAttachments(selectedReport?.attachments).length) > 0 && (
                     <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
+                      <h3 className="font-semibold tracking-tight text-gray-900 mb-3">Attachments</h3>
                       <AttachmentList
                         attachments={
                           parseAttachments(reportDetail?.attachments).length
@@ -354,7 +354,7 @@ export default function ProvincialReportsPage() {
                 {/* Incident info */}
                 {reportDetail?.incident && (
                   <div className="bg-yellow-50 rounded-lg p-4">
-                    <h3 className="font-bold text-bfp-navy mb-2">Incident Details</h3>
+                    <h3 className="font-semibold tracking-tight text-gray-900 mb-2">Incident Details</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       <div><p className="text-gray-500">Reference</p><p className="font-semibold">{reportDetail.incident.referenceNumber}</p></div>
                       <div><p className="text-gray-500">Category</p><p className="font-semibold">{reportDetail.incident.generalCategory}</p></div>

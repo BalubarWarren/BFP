@@ -199,7 +199,7 @@ export default function MarshalTeamPage() {
       {sessionExpired && <SessionExpiredBanner />}
 
       {!sessionExpired && error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">{error}</div>
+        <div className="alert alert-error">{error}</div>
       )}
 
       {loading ? (
@@ -389,14 +389,12 @@ export default function MarshalTeamPage() {
                   </div>
                 )}
   
-                <div className="flex gap-2 flex-wrap">
+                <div className="segmented" role="group" aria-label="Directive type">
                   {['MESSAGE', 'ASSIGNMENT'].map((kind) => (
                     <button
                       key={kind}
                       onClick={() => setForm({ ...form, kind })}
-                      className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                        form.kind === kind ? 'bg-bfp-navy text-white border-bfp-navy' : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-                      }`}
+                      type="button" aria-pressed={form.kind === kind} className="segmented-item"
                     >
                       {kind === 'ASSIGNMENT' ? 'Assign Report' : 'Message'}
                     </button>

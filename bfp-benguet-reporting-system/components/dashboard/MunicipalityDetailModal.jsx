@@ -211,7 +211,7 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
   
             {/* By classification — each opens to the filed reports counted in it */}
             <div ref={classificationRef} className="scroll-mt-4">
-              <h3 className="mb-1 font-bold text-bfp-navy">By Classification</h3>
+              <h3 className="mb-1 font-semibold tracking-tight text-gray-900">By Classification</h3>
               <p className="mb-2 text-xs text-gray-500">Click a classification to see its reports.</p>
               <ul className="space-y-2">
                 {CATEGORY_META.map(({ field, label, icon: Icon, bar, text, chip }) => {
@@ -299,7 +299,7 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
             {/* All filed reports that reached the provincial level */}
             {filedReports.length > 0 && (
               <div ref={filedReportsRef} className="scroll-mt-4">
-                <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
+                <h3 className="mb-2 flex items-center gap-1.5 font-semibold tracking-tight text-gray-900">
                   <FileSearch className="h-4 w-4" /> Filed Investigation Reports ({filedReports.length})
                 </h3>
                 <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200">
@@ -324,7 +324,7 @@ export default function MunicipalityDetailModal({ row, rank, municipalityCount, 
             {/* Incident records */}
             <div ref={incidentsRef} className="scroll-mt-4">
               <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <h3 className="flex items-center gap-1.5 font-bold text-bfp-navy">
+                <h3 className="flex items-center gap-1.5 font-semibold tracking-tight text-gray-900">
                   <Flame className="h-4 w-4" /> Incident Records ({incidents === null ? '…' : shownIncidents.length})
                 </h3>
                 {periodIncidents.length > 0 && (

@@ -77,9 +77,8 @@ export default function DutyScheduleModal({ investigator, onClose, onSaved }) {
     <button
       type="button"
       onClick={() => setPattern(value)}
-      className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-        pattern === value ? 'border-bfp-navy bg-bfp-navy text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-      }`}
+      aria-pressed={pattern === value}
+      className="segmented-item"
     >
       {label}
     </button>
@@ -102,7 +101,7 @@ export default function DutyScheduleModal({ investigator, onClose, onSaved }) {
           </div>
   
           <div className="space-y-5 p-4 sm:p-6">
-            <div className="flex flex-wrap gap-2">
+            <div className="segmented" role="group" aria-label="Schedule type">
               {typeButton('WEEKLY', 'Fixed days')}
               {typeButton('ROTATION', 'Rotating shift')}
               {typeButton('NONE', 'No schedule')}

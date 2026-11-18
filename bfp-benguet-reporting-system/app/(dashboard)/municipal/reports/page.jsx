@@ -148,7 +148,7 @@ export default function MunicipalReportsPage() {
   
                 {(reportDetail?.incident || selectedReport.incident) && (
                   <div className="rounded-lg bg-yellow-50 p-4">
-                    <h3 className="mb-3 font-bold text-bfp-navy">Incident Details</h3>
+                    <h3 className="mb-3 font-semibold tracking-tight text-gray-900">Incident Details</h3>
                     <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
                       <div><p className="text-gray-500">Reference</p><p className="font-semibold">{(reportDetail?.incident || selectedReport.incident).referenceNumber}</p></div>
                       <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.incident || selectedReport.incident).generalCategory}</p></div>
@@ -170,7 +170,7 @@ export default function MunicipalReportsPage() {
                 <ReportExtras report={reportDetail || selectedReport} />
   
                 <div className="rounded-lg bg-gray-50 p-4">
-                  <h3 className="mb-3 font-bold text-bfp-navy">Attachments</h3>
+                  <h3 className="mb-3 font-semibold tracking-tight text-gray-900">Attachments</h3>
                   {parseJsonField(reportDetail?.attachments || selectedReport.attachments, []).length ? (
                     <AttachmentList
                       attachments={reportDetail?.attachments || selectedReport.attachments}

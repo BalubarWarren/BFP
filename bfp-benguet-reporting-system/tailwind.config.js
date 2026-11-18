@@ -39,6 +39,11 @@ module.exports = {
         xl: '0 0 0 1px var(--hairline), 0 16px 40px -12px rgb(15 23 42 / 0.18)',
         '2xl': '0 0 0 1px var(--hairline), 0 24px 64px -16px rgb(15 23 42 / 0.28)',
       },
+      // Panels and cards (`rounded-lg` throughout the app) get a softer 10px corner, between the
+      // 6px of buttons/inputs (`rounded-md`) and the 12px of .card/modals (`rounded-xl`).
+      borderRadius: {
+        lg: '0.625rem',
+      },
       backgroundImage: {
         'hazard-stripe': 'repeating-linear-gradient(45deg, #D4AF37 0 10px, #1A2B4A 10px 20px)',
       },

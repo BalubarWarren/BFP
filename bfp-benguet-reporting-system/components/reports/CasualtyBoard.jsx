@@ -90,7 +90,7 @@ export default function CasualtyBoard() {
         </p>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="segmented mb-4" role="group" aria-label="Board period">
         {[
           { key: 'current', label: 'This Month' },
           { key: 'monthly', label: 'By Month' },
@@ -100,9 +100,8 @@ export default function CasualtyBoard() {
             key={t.key}
             type="button"
             onClick={() => setTab(t.key)}
-            className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-              tab === t.key ? 'border-bfp-navy bg-bfp-navy text-white' : 'border-bfp-navy bg-white text-bfp-navy hover:bg-gray-50'
-            }`}
+            aria-pressed={tab === t.key}
+            className="segmented-item"
           >
             {t.label}
           </button>

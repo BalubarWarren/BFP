@@ -214,7 +214,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
       <ReportSearchFilters filters={searchFilters} onChange={setSearchFilters} className="max-w-4xl" />
 
       {!sessionExpired && error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg">
+        <div className="alert alert-error">
           {error}
         </div>
       )}
@@ -226,24 +226,16 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
         </div>
       ) : (
         <>
-          <div className="flex gap-2 mb-6 flex-wrap">
+          <div className="segmented mb-6" role="group" aria-label="Report lists">
             <button
               onClick={() => setActiveTab('incoming')}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                activeTab === 'incoming'
-                  ? 'bg-bfp-navy text-white border-bfp-navy'
-                  : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-              }`}
+              type="button" aria-pressed={activeTab === 'incoming'} className="segmented-item"
             >
               Incoming Reports{incomingReports.length > 0 ? ` (${incomingReports.length})` : ''}
             </button>
             <button
               onClick={() => setActiveTab('reviewed')}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                activeTab === 'reviewed'
-                  ? 'bg-bfp-navy text-white border-bfp-navy'
-                  : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-              }`}
+              type="button" aria-pressed={activeTab === 'reviewed'} className="segmented-item"
             >
               Reports Reviewed
             </button>
@@ -354,7 +346,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
   
                     {((reportDetail && parseAttachments(reportDetail.attachments)) || parseAttachments(selectedReport?.attachments)).length > 0 && (
                       <div className="bg-gray-50 rounded-lg p-4">
-                        <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
+                        <h3 className="font-semibold tracking-tight text-gray-900 mb-3">Attachments</h3>
                         <AttachmentList
                           attachments={
                             parseAttachments(reportDetail?.attachments).length

@@ -216,7 +216,7 @@ export default function MunicipalDashboard() {
   
                 {/* Attachments */}
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="font-bold text-bfp-navy mb-3">Attachments</h3>
+                  <h3 className="font-semibold tracking-tight text-gray-900 mb-3">Attachments</h3>
                   {parseAttachments(reportDetail?.attachments || selectedReport.attachments).length > 0 ? (
                     <AttachmentList
                       attachments={reportDetail?.attachments || selectedReport.attachments}
@@ -241,7 +241,7 @@ export default function MunicipalDashboard() {
                 {/* APPROVED — still needs forwarding to the next level */}
                 {needsForwarding(selectedReport) && (
                   <div className="bg-bfp-navy/5 border-l-4 border-bfp-navy p-4 rounded">
-                    <p className="flex items-center gap-1.5 text-sm font-bold text-bfp-navy mb-1">
+                    <p className="flex items-center gap-1.5 text-sm font-semibold tracking-tight text-gray-900 mb-1">
                       <CheckCircle2 className="w-4 h-4 flex-shrink-0" /> Approved by {getApprovalInfo(selectedReport).approvedBy}
                     </p>
                     <p className="text-sm text-bfp-navy">

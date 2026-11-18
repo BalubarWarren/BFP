@@ -211,7 +211,7 @@ function BenguetFireMap({ monitoringBoard, periodLabel, onPrint, onExport, onSel
           {/* Hover tooltip */}
           {hovered && (
             <div className="absolute top-6 left-2 bg-white border border-gray-200 rounded-lg shadow-lg p-3 text-sm pointer-events-none" style={{ minWidth: 130 }}>
-              <p className="font-bold text-bfp-navy">{hovered.name}</p>
+              <p className="font-semibold tracking-tight text-gray-900">{hovered.name}</p>
               <p className="text-gray-600 mt-0.5">Incidents: <span className="font-bold text-bfp-red">{dataMap[hovered.code] || 0}</span></p>
               {maxVal > 0 && (dataMap[hovered.code] || 0) > 0 && (
                 <p className="text-gray-600">Rank: <span className="font-bold">#{rankMap[hovered.code]}</span> of 13</p>
@@ -724,7 +724,7 @@ export default function ProvincialDashboard() {
       )}
 
       {!sessionExpired && error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-4">
+        <div className="alert alert-error mb-4">
           {error}
         </div>
       )}
@@ -752,7 +752,7 @@ export default function ProvincialDashboard() {
         </div>
 
         {/* Sub-tabs */}
-        <div className="flex gap-2 mb-4 flex-wrap">
+        <div className="segmented mb-4" role="group" aria-label="Board period">
           {[
             { key: 'current', label: 'This Month' },
             { key: 'monthly', label: 'By Month' },
@@ -761,12 +761,10 @@ export default function ProvincialDashboard() {
           ].map((tab) => (
             <button
               key={tab.key}
+              type="button"
+              aria-pressed={boardTab === tab.key}
               onClick={() => { setBoardTab(tab.key); if (tab.key !== 'current') setHistData(null); }}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                boardTab === tab.key
-                  ? 'bg-bfp-navy text-white border-bfp-navy'
-                  : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-              }`}
+              className="segmented-item"
             >
               {tab.label}
             </button>
@@ -1109,7 +1107,7 @@ export default function ProvincialDashboard() {
   
                   {/* By Municipality */}
                   <div>
-                    <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
+                    <h3 className="mb-2 flex items-center gap-1.5 font-semibold tracking-tight text-gray-900">
                       <MapPin className="h-4 w-4" /> By Municipality
                     </h3>
                     {municipalityRows.length === 0 ? (
@@ -1142,7 +1140,7 @@ export default function ProvincialDashboard() {
   
                   {/* Filed Spot Investigation Reports */}
                   <div>
-                    <h3 className="mb-2 flex items-center gap-1.5 font-bold text-bfp-navy">
+                    <h3 className="mb-2 flex items-center gap-1.5 font-semibold tracking-tight text-gray-900">
                       <FileSearch className="h-4 w-4" /> Filed Spot Investigation Reports ({reports.length})
                     </h3>
                     {reports.length === 0 ? (
@@ -1315,26 +1313,20 @@ export default function ProvincialDashboard() {
             <p className="text-sm text-gray-500 mt-1">Compare selected years or months to identify the highest fire incident period.</p>
           </div>
           <div className="flex gap-2 items-center flex-wrap">
+            <div className="segmented" role="group" aria-label="Comparison mode">
             <button
               onClick={() => setTrendMode('years')}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                trendMode === 'years'
-                  ? 'bg-bfp-navy text-white border-bfp-navy'
-                  : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-              }`}
+              type="button" aria-pressed={trendMode === 'years'} className="segmented-item"
             >
               Compare Years
             </button>
             <button
               onClick={() => setTrendMode('months')}
-              className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                trendMode === 'months'
-                  ? 'bg-bfp-navy text-white border-bfp-navy'
-                  : 'bg-white text-bfp-navy border-bfp-navy hover:bg-gray-50'
-              }`}
+              type="button" aria-pressed={trendMode === 'months'} className="segmented-item"
             >
               Compare Months
             </button>
+            </div>
             <SectionMenu onPrint={() => handlePrint('section-comparison')} onExport={handleExportComparison} />
           </div>
         </div>

@@ -60,7 +60,7 @@ function Field({ label, value, wide = false }) {
 function Section({ icon: Icon, title, children, tone = 'bg-gray-50' }) {
   return (
     <section className={`rounded-lg p-4 ${tone}`}>
-      <h3 className="mb-3 flex items-center gap-2 font-bold text-bfp-navy">
+      <h3 className="mb-3 flex items-center gap-2 font-semibold tracking-tight text-gray-900">
         <Icon className="h-4 w-4" /> {title}
       </h3>
       {children}
