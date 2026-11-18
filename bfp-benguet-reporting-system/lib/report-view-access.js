@@ -1,14 +1,18 @@
 import prisma from './prisma';
 import { ROLES, NOTIFICATION_TYPES } from './constants';
 import { isReportRecipient, canViewReportViaArchive } from './report-access';
+import { isReportCollaborator } from './report-requests';
 
 const ADMIN_ROLES = [ROLES.SUPER_ADMIN, ROLES.ADMIN];
 
 // Who may open a single report — shared by GET /api/reports/[id] and POST
 // /api/reports/[id]/qr so the QR code is available to exactly the people who can see the report.
 export async function canUserViewReport(report, user) {
-  // Investigators can only view their own reports
-  if (user.role === ROLES.INVESTIGATOR) return report.submittedById === user.id;
+  // Investigators can only view their own reports, plus ones they co-edit by approved Letter of
+  // Order (lib/report-requests.js).
+  if (user.role === ROLES.INVESTIGATOR) {
+    return report.submittedById === user.id || isReportCollaborator(report.id, user.id);
+  }
 
   // Reviewers and other users may only view a report if they are the explicit recipient
   // or the original submitter. Super admins may view all.

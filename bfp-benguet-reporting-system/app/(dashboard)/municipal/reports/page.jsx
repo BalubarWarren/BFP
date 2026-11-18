@@ -11,6 +11,8 @@ import AttachmentList from '../../../../components/reports/AttachmentList';
 import CaseChain from '../../../../components/reports/CaseChain';
 import { getReportTitle, getReportSubtitle } from '../../../../lib/report-title';
 import CaseLinks from '../../../../components/reports/CaseLinks';
+import ReportRequestsPanel from '../../../../components/reports/ReportRequestsPanel';
+import SharedReportBadge from '../../../../components/reports/SharedReportBadge';
 import RevisionHistory from '../../../../components/reports/RevisionHistory';
 import ReportRowActions, { ReportNextStep } from '../../../../components/reports/ReportRowActions';
 import ForwardReportModal from '../../../../components/reports/ForwardReportModal';
@@ -158,6 +160,8 @@ export default function MunicipalReportsPage() {
                   currentId={selectedReport.id}
                   referenceNumber={(reportDetail?.incident || selectedReport.incident)?.referenceNumber}
                 />
+
+                <ReportRequestsPanel key={selectedReport.id} report={reportDetail || selectedReport} />
   
                 <RevisionHistory report={reportDetail} />
   
@@ -280,6 +284,7 @@ export default function MunicipalReportsPage() {
                     <td className="px-5 py-4">
                       <p className="font-semibold text-gray-900">{getReportTitle(report)}</p>
                       <p className="text-xs text-gray-500">{getReportSubtitle(report)} · #{report.id}</p>
+                      <SharedReportBadge report={report} />
                     </td>
                     <td className="px-5 py-4 text-sm text-gray-700">
                       <p className="whitespace-nowrap">{report.incident?.referenceNumber || '-'}</p>

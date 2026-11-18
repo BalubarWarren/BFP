@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import ReviewerDashboard from '../../../../components/dashboard/ReviewerDashboard';
+import ReportRequestsInbox from '../../../../components/reports/ReportRequestsInbox';
 
 export default function MunicipalChiefDashboardPage() {
   const [currentUser, setCurrentUser] = useState(null);
@@ -26,6 +27,8 @@ export default function MunicipalChiefDashboardPage() {
       description="Review assigned reports. If corrections are needed, return the report to the investigator. If the report is complete, approve it — it will be returned to the investigator who will then submit it to the Municipal Fire Marshal. Once the Provincial Chief IIS gives final approval, the report is filed in the shared Reports archive."
       incomingSectionTitle={`Reports Submitted to ${roleTitle}`}
       nextStepLabel="Municipal Fire Marshal"
-    />
+    >
+      {currentUser?.role === 'MUNICIPAL_CHIEF_IIS' && <ReportRequestsInbox />}
+    </ReviewerDashboard>
   );
 }

@@ -27,6 +27,10 @@ export function getNotificationTarget(notification, role) {
       return role === ROLES.MUNICIPAL_FIRE_MARSHAL ? { href: '/municipal/marshal/team' } : null;
     case NOTIFICATION_TYPES.ACCESS_REQUEST:
       return [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(role) ? { href: '/admin/users' } : null;
+    // A reopen / co-investigator request waiting for the Chief IIS's decision.
+    case NOTIFICATION_TYPES.REPORT_REQUEST:
+      if (role === ROLES.MUNICIPAL_CHIEF_IIS) return { href: '/municipal/chief#report-requests' };
+      break;
     default:
       break;
   }

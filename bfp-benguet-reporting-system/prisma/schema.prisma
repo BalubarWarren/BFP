@@ -68,6 +68,9 @@ model User {
   directivesSent     Directive[]    @relation("DirectiveSender")
   directivesReceived Directive[]    @relation("DirectiveRecipient")
   passwordResetCodes PasswordResetCode[]
+  reportRequestsMade     ReportRequest[] @relation("ReportRequestRequester")
+  reportRequestsTargeted ReportRequest[] @relation("ReportRequestTarget")
+  reportRequestsDecided  ReportRequest[] @relation("ReportRequestDecider")
 
   // Matches how /api/reports resolves the recipient for a role within a municipality
   @@index([role, municipalityId])
@@ -157,6 +160,7 @@ model Report {
 
   notifications Notification[]
   annotations   Annotation[]
+  requests      ReportRequest[]
 
   @@index([submittedById])
   @@index([passedToId])
@@ -345,4 +349,42 @@ model DutySchedule {
   updatedAt DateTime @updatedAt
 
   @@map("duty_schedules")
+}
+
+// Requests an investigator makes about one of their reports that the Municipal Chief IIS of the
+// report's municipality must approve (see lib/report-requests.js):
+//   REOPEN        reopen a Final Investigation Report that already has final approval, so it can
+//                 be corrected and go through review again;
+//   COLLABORATOR  let another investigator of the municipality edit the report too, backed by a
+//                 Letter of Order (documentUrl). Approved = access; REVOKED ends it.
+model ReportRequest {
+  id     Int    @id @default(autoincrement())
+  type   String // "REOPEN" | "COLLABORATOR"
+  status String @default("PENDING") // "PENDING", "APPROVED", "DECLINED", "REVOKED", "CANCELLED"
+
+  reportId       Int
+  report         Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  municipalityId Int
+
+  requestedById Int
+  requestedBy   User  @relation("ReportRequestRequester", fields: [requestedById], references: [id], onDelete: Cascade)
+  targetUserId  Int?
+  targetUser    User? @relation("ReportRequestTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+
+  reason       String?
+  documentUrl  String?
+  documentName String?
+
+  decidedById  Int?
+  decidedBy    User?     @relation("ReportRequestDecider", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt    DateTime?
+  decisionNote String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([reportId])
+  @@index([municipalityId, status])
+  @@index([targetUserId, status])
+  @@map("report_requests")
 }

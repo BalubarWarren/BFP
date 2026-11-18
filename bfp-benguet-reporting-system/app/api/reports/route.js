@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
+import { getCollaboratingReportIds } from '../../../lib/report-requests';
 import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../lib/auth';
 import { ROLES, REPORT_STATUS, REPORT_TYPES, NOTIFICATION_TYPES } from '../../../lib/constants';
 import { createIncidentWithReference } from '../../../lib/incident-reference';
@@ -136,8 +137,14 @@ export async function GET(request) {
       }
       whereCondition = approvedArchiveWhere(user);
     } else if (user.role === ROLES.INVESTIGATOR) {
-      // RBAC: Investigators can only see their own reports
-      whereCondition.submittedById = user.id;
+      // RBAC: Investigators see their own reports, plus the ones they co-edit by approved Letter
+      // of Order (lib/report-requests.js).
+      const collaboratingIds = await getCollaboratingReportIds(user.id);
+      if (collaboratingIds.length) {
+        whereCondition.OR = [{ submittedById: user.id }, { id: { in: collaboratingIds } }];
+      } else {
+        whereCondition.submittedById = user.id;
+      }
     } else if (ADMIN_ROLES.includes(user.role)) {
       // Admins see ALL reports — no where filter (view=all returns everything)
       whereCondition = {};

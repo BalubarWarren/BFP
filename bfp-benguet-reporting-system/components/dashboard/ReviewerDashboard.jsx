@@ -24,7 +24,7 @@ import { fetchReportForModal } from '../../lib/notification-target';
 // Shared by the Municipal Chief IIS/Operation and Municipal Fire Marshal dashboards, which were
 // ~95% byte-identical (same incoming/reviewed tabs, same review modal, same approve/return
 // actions) and only differed in titles/labels and who the next reviewer is.
-export default function ReviewerDashboard({ title, description, incomingSectionTitle, nextStepLabel, eyebrow = 'Municipal Reviewer' }) {
+export default function ReviewerDashboard({ title, description, incomingSectionTitle, nextStepLabel, eyebrow = 'Municipal Reviewer', children }) {
   const toast = useToast();
   const [incomingReports, setIncomingReports] = useState([]);
   const [outgoingReports, setOutgoingReports] = useState([]);
@@ -205,6 +205,9 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
       <PageHeader icon={ClipboardCheck} eyebrow={eyebrow} title={title} description={description} />
 
       {sessionExpired && <SessionExpiredBanner />}
+
+      {/* Page-specific sections (e.g. the Chief IIS's request inbox). */}
+      {!sessionExpired && children}
 
       <ReportSearchFilters filters={searchFilters} onChange={setSearchFilters} className="max-w-4xl" />
 

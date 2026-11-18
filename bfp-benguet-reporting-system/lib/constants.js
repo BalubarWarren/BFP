@@ -318,6 +318,10 @@ export const NOTIFICATION_TYPES = {
   ACCESS_REQUEST: 'ACCESS_REQUEST',
   // To the Fire Marshal: an investigator marked themselves on leave/unavailable/called in.
   DUTY_STATUS_CHANGED: 'DUTY_STATUS_CHANGED',
+  // To the Municipal Chief IIS: an investigator asks to reopen a finalized Final report, or to
+  // add a co-investigator (lib/report-requests.js). And back to the investigator(s): the decision.
+  REPORT_REQUEST: 'REPORT_REQUEST',
+  REPORT_REQUEST_DECIDED: 'REPORT_REQUEST_DECIDED',
 };
 
 // Window event a page fires after an action that creates notifications for the current user, so

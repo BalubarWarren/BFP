@@ -16,6 +16,7 @@ import { canUserViewReport } from '../../../../lib/report-view-access';
 import { generateQrToken } from '../../../../lib/qr-token';
 import { isStoredAttachmentUrl } from '../../../../lib/storage';
 import { parseJsonField } from '../../../../lib/utils';
+import { canEditAsInvestigator, listRequestsForReport } from '../../../../lib/report-requests';
 
 // Same cap as POST /api/reports.
 const MAX_ATTACHMENTS = 10;
@@ -100,7 +101,10 @@ export async function GET(request, { params }) {
     // Earlier versions of this report (it was returned and revised), kept in the Report Archive.
     const archivedVersions = await listReportVersions(report.id);
 
-    return NextResponse.json({ report: { ...report, caseReports, archivedVersions } });
+    // Reopen / co-investigator requests (lib/report-requests.js); empty before the migration.
+    const requests = await listRequestsForReport(report.id);
+
+    return NextResponse.json({ report: { ...report, caseReports, archivedVersions, requests } });
   } catch (error) {
     console.error('Error fetching report:', error);
     return NextResponse.json(
@@ -132,9 +136,10 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // This endpoint only supports the submitter editing/resubmitting/forwarding their own
-    // report (reviewers act through /approve instead) — reject anyone else outright.
-    if (report.submittedById !== user.id) {
+    // This endpoint only supports the submitter (or an approved co-investigator, see
+    // lib/report-requests.js) editing/resubmitting/forwarding the report (reviewers act through
+    // /approve instead) — reject anyone else outright.
+    if (!(await canEditAsInvestigator(report, user))) {
       return NextResponse.json(
         { error: 'Forbidden' },
         { status: 403 }
