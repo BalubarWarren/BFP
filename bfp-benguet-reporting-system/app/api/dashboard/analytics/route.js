@@ -150,8 +150,10 @@ export async function GET(request) {
       currentMonthByCategory,
       trendIncidentDates,
     ] = await Promise.all([
-      prisma.incident.count({ where: { createdAt: { gte: currentMonth, lte: now } } }),
-      prisma.incident.count({ where: { createdAt: { gte: currentYear, lte: now } } }),
+      // By the date of the fire, not when the record was saved — records entered later (or in
+      // bulk) otherwise all counted as "this month".
+      prisma.incident.count({ where: { dateOfIncident: { gte: currentMonth, lte: now } } }),
+      prisma.incident.count({ where: { dateOfIncident: { gte: currentYear, lte: now } } }),
       prisma.incident.groupBy({
         by: ['municipalityId'],
         _count: true,

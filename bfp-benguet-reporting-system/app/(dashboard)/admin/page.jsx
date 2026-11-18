@@ -14,7 +14,6 @@ import { EMPTY_REPORT_FILTERS, matchesReportFilters } from '../../../lib/report-
 import { useToast } from '../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError } from '../../../lib/utils';
 import ReportQrButton from '../../../components/reports/ReportQrButton';
-import SampleDataPanel from '../../../components/admin/SampleDataPanel';
 
 export default function AdminDashboard() {
   const toast = useToast();
@@ -104,8 +103,6 @@ export default function AdminDashboard() {
       {!sessionExpired && error && (
         <div className="alert alert-error">{error}</div>
       )}
-
-      {!sessionExpired && <SampleDataPanel />}
 
       {/* KPI cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:grid-cols-4">
