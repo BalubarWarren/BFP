@@ -18,6 +18,8 @@ import { clearSession } from '../../lib/session';
 import { getNotificationTarget, fetchReportForModal } from '../../lib/notification-target';
 import { useToast } from './ToastProvider';
 import ReportDetailsModal from '../reports/ReportDetailsModal';
+import DirectivesMenu, { OPEN_DIRECTIVES_EVENT } from '../directives/DirectivesMenu';
+import { ROLES } from '../../lib/constants';
 
 export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
   const [notifications, setNotifications] = useState([]);
@@ -100,6 +102,10 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
     const target = getNotificationTarget(notif, user?.role);
     if (!target) return;
     setShowNotifications(false);
+    if (target.directives) {
+      window.dispatchEvent(new Event(OPEN_DIRECTIVES_EVENT));
+      return;
+    }
     if (target.href) {
       router.push(target.href);
       return;
@@ -246,6 +252,9 @@ export default function Header({ user, onToggleSidebar, isSidebarCollapsed }) {
               </div>
             )}
           </div>
+
+          {/* Orders from the Fire Marshal (investigators only) */}
+          {user?.role === ROLES.INVESTIGATOR && <DirectivesMenu />}
 
           {/* Settings */}
           <button

@@ -24,7 +24,6 @@ import TableSkeleton from '../../../components/common/TableSkeleton';
 import PageHeader from '../../../components/common/PageHeader';
 import ReportSearchFilters from '../../../components/reports/ReportSearchFilters';
 import { EMPTY_REPORT_FILTERS, matchesReportFilters, hasActiveFilters } from '../../../lib/report-search';
-import InvestigatorDirectives from '../../../components/directives/InvestigatorDirectives';
 import MyDutyStatus from '../../../components/duty/MyDutyStatus';
 import { useEscapeKey } from '../../../hooks/useEscapeKey';
 import ReportQrButton from '../../../components/reports/ReportQrButton';
@@ -167,8 +166,6 @@ export default function MunicipalDashboard() {
       )}
 
       {!sessionExpired && <MyDutyStatus />}
-
-      {!sessionExpired && <InvestigatorDirectives />}
 
       {/* Report View Modal */}
       {selectedReport && (

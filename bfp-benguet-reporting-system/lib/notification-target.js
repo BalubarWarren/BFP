@@ -4,6 +4,7 @@ import { NOTIFICATION_TYPES, ROLES } from './constants';
 // Where clicking a notification takes the user. Returns one of:
 //   { href }      navigate there (pages read `?open=<reportId>` and open that report)
 //   { reportId }  open the report's read-only details where the user already is
+//   { directives } open the investigator's Orders from Fire Marshal menu in the header
 //   null          nothing specific to open
 //
 // Every href here must be a route isRouteAllowedForRole (lib/constants.js) allows for the role.
@@ -20,7 +21,8 @@ export function getNotificationTarget(notification, role) {
   switch (type) {
     case NOTIFICATION_TYPES.DIRECTIVE_RECEIVED:
     case NOTIFICATION_TYPES.DIRECTIVE_UPDATED:
-      if (role === ROLES.INVESTIGATOR) return { href: '/municipal#directives' };
+      // Opens the header's "Orders from Fire Marshal" message menu (components/directives/DirectivesMenu.jsx).
+      if (role === ROLES.INVESTIGATOR) return { directives: true };
       if (role === ROLES.MUNICIPAL_FIRE_MARSHAL) return { href: '/municipal/marshal/team' };
       return null;
     case NOTIFICATION_TYPES.DUTY_STATUS_CHANGED:
