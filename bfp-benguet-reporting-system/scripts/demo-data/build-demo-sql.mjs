@@ -99,7 +99,7 @@ const seed = `-- ===============================================================
 --   SAMPLE- cases, then rebuilds everything.
 -- * Turns every dashboard tally into closed, on-time cases with Spot/Progress/Final reports.
 -- * For every municipality that has an Investigator, a Municipal Chief IIS and a Municipal Fire
---   Marshal account, adds one case for each workflow scenario (drafts, every review stage,
+--   Marshal account, adds one case for each workflow scenario (every review stage,
 --   returns with PDF comments, revisions, late submissions with explanations, overdue follow-ups,
 --   reopen request, co-investigator, assignments) with matching notifications and audit trail.
 -- * Never touches reports that are not demonstration data.
@@ -510,10 +510,6 @@ BEGIN
       skipped := skipped || m.name || ' ';
       CONTINUE;
     END IF;
-
-    -- S1 Draft Spot report, not yet submitted.
-    inc := pg_temp.mk_case(m.id, pg_temp.ph(1, 10, 20), pg_temp.cat(), inv);
-    SELECT rid INTO r FROM pg_temp.mk_report(inc, 'SPOT_INVESTIGATION', 'DRAFT', inv, chief, marshal, prov, pg_temp.ph(1, 15, 5), d1, '{}', NULL, true);
 
     -- S2 Spot report just submitted on time, waiting for the Municipal Chief IIS.
     inc := pg_temp.mk_case(m.id, pg_temp.ph(1, 6, 40), pg_temp.cat(), inv);
