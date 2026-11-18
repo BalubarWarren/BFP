@@ -1,21 +1,17 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
-import { ROLES, DIRECTIVE_STATUS, NOTIFICATION_TYPES } from '../../../../lib/constants';
+import { ROLES, DIRECTIVE_STATUS, DIRECTIVE_KINDS, NOTIFICATION_TYPES, ASSIGNMENT_LABELS } from '../../../../lib/constants';
 import { DIRECTIVE_SELECT } from '../../../../lib/directives';
 
 const MAX_RESPONSE_LENGTH = 2000;
+const OPEN_STATUSES = [DIRECTIVE_STATUS.PENDING, DIRECTIVE_STATUS.ACKNOWLEDGED];
 
-// The investigator moves a directive forward (PENDING -> ACKNOWLEDGED -> COMPLETED), optionally
-// with a reply; the Fire Marshal can only cancel one that hasn't been completed yet.
-const RECIPIENT_TRANSITIONS = {
-  [DIRECTIVE_STATUS.ACKNOWLEDGED]: [DIRECTIVE_STATUS.PENDING],
-  [DIRECTIVE_STATUS.COMPLETED]: [DIRECTIVE_STATUS.PENDING, DIRECTIVE_STATUS.ACKNOWLEDGED],
-};
-const SENDER_TRANSITIONS = {
-  [DIRECTIVE_STATUS.CANCELLED]: [DIRECTIVE_STATUS.PENDING, DIRECTIVE_STATUS.ACKNOWLEDGED],
-};
-
+// The investigator who received a directive can:
+//   REPLY  send a reply to the Fire Marshal (an unread directive becomes ACKNOWLEDGED: received)
+//   START  open the assigned report form (the assignment becomes ACKNOWLEDGED: read)
+// An assignment becomes COMPLETED on its own when the investigator submits that report (see
+// completeAssignment in app/api/reports/route.js). The Fire Marshal can only cancel an open directive.
 export async function PATCH(request, { params }) {
   try {
     const user = await getUserFromRequest(request);
@@ -39,44 +35,80 @@ export async function PATCH(request, { params }) {
     }
 
     const body = await request.json();
-    const status = body.status;
-    const transitions = isRecipient ? RECIPIENT_TRANSITIONS : SENDER_TRANSITIONS;
-    if (!transitions[status]) {
-      return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+    const what = directive.kind === DIRECTIVE_KINDS.ASSIGNMENT ? 'report assignment' : 'message';
+
+    // Fire Marshal: withdraw an open directive.
+    if (!isRecipient) {
+      if (body.status !== DIRECTIVE_STATUS.CANCELLED) {
+        return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
+      }
+      const result = await prisma.directive.updateMany({
+        where: { id, status: { in: OPEN_STATUSES } },
+        data: { status: DIRECTIVE_STATUS.CANCELLED },
+      });
+      if (result.count === 0) {
+        return NextResponse.json({ error: `This directive is already ${directive.status.toLowerCase()}` }, { status: 409 });
+      }
+      await prisma.notification.create({
+        data: {
+          userId: directive.recipientId,
+          message: `Fire Marshal ${user.name} cancelled the ${what} sent to you: ${directive.message}`,
+          type: NOTIFICATION_TYPES.DIRECTIVE_UPDATED,
+        },
+      });
+      const updated = await prisma.directive.findUnique({ where: { id }, select: DIRECTIVE_SELECT });
+      return NextResponse.json({ directive: updated });
     }
 
-    const response = isRecipient ? String(body.response || '').trim() : '';
-    if (response.length > MAX_RESPONSE_LENGTH) {
-      return NextResponse.json({ error: `Reply must be at most ${MAX_RESPONSE_LENGTH} characters` }, { status: 400 });
+    if (directive.status === DIRECTIVE_STATUS.CANCELLED) {
+      return NextResponse.json({ error: 'The Fire Marshal cancelled this directive.' }, { status: 409 });
     }
 
-    // Conditional on the current status so two tabs (or a cancel racing a completion) can't both win.
-    const result = await prisma.directive.updateMany({
-      where: { id, status: { in: transitions[status] } },
-      data: {
-        status,
-        ...(isRecipient && { respondedAt: new Date() }),
-        ...(response && { response }),
-      },
+    const action = body.action;
+    let notice;
+
+    if (action === 'REPLY') {
+      const reply = String(body.response || '').trim();
+      if (!reply) {
+        return NextResponse.json({ error: 'Type a reply first.' }, { status: 400 });
+      }
+      // Every reply is kept, one per line.
+      const response = directive.response ? `${directive.response}\n${reply}` : reply;
+      if (response.length > MAX_RESPONSE_LENGTH) {
+        return NextResponse.json({ error: `Replies must be at most ${MAX_RESPONSE_LENGTH} characters in total` }, { status: 400 });
+      }
+      await prisma.directive.update({
+        where: { id },
+        data: {
+          response,
+          respondedAt: new Date(),
+          ...(directive.status === DIRECTIVE_STATUS.PENDING && { status: DIRECTIVE_STATUS.ACKNOWLEDGED }),
+        },
+      });
+      notice = `${user.name} replied to your ${what}: ${reply}`;
+    } else if (action === 'START') {
+      if (directive.kind !== DIRECTIVE_KINDS.ASSIGNMENT) {
+        return NextResponse.json({ error: 'Only a report assignment can be started.' }, { status: 400 });
+      }
+      // Already opened before: nothing new to tell the Fire Marshal.
+      if (directive.status !== DIRECTIVE_STATUS.PENDING) {
+        return NextResponse.json({ directive });
+      }
+      await prisma.directive.updateMany({
+        where: { id, status: DIRECTIVE_STATUS.PENDING },
+        data: { status: DIRECTIVE_STATUS.ACKNOWLEDGED, respondedAt: new Date() },
+      });
+      const label = ASSIGNMENT_LABELS[directive.reportType] || 'assigned';
+      notice = `${user.name} started the ${label} report you assigned.`;
+    } else {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
+    }
+
+    await prisma.notification.create({
+      data: { userId: directive.senderId, message: notice, type: NOTIFICATION_TYPES.DIRECTIVE_UPDATED },
     });
-    if (result.count === 0) {
-      return NextResponse.json({ error: `This directive is already ${directive.status.toLowerCase()}` }, { status: 409 });
-    }
 
     const updated = await prisma.directive.findUnique({ where: { id }, select: DIRECTIVE_SELECT });
-
-    // Let the other side know: the marshal hears back when the investigator acts, the investigator
-    // when an order is withdrawn.
-    const notifyUserId = isRecipient ? directive.senderId : directive.recipientId;
-    const verb = { ACKNOWLEDGED: 'acknowledged', COMPLETED: 'completed', CANCELLED: 'cancelled' }[status];
-    const what = directive.kind === 'ASSIGNMENT' ? 'report assignment' : 'message';
-    const message = isRecipient
-      ? `${user.name} ${verb} your ${what}${response ? `: ${response}` : '.'}`
-      : `Fire Marshal ${user.name} cancelled the ${what} sent to you: ${directive.message}`;
-    await prisma.notification.create({
-      data: { userId: notifyUserId, message, type: NOTIFICATION_TYPES.DIRECTIVE_UPDATED },
-    });
-
     return NextResponse.json({ directive: updated });
   } catch (error) {
     console.error('Error updating directive:', error);

@@ -336,7 +336,7 @@ export default function MarshalTeamPage() {
                           {isOverdue(directive) && <span className="block text-xs">Overdue</span>}
                         </td>
                         <td><DirectiveStatusBadge status={directive.status} /></td>
-                        <td className="text-sm text-gray-600">{directive.response || '-'}</td>
+                        <td className="whitespace-pre-line text-sm text-gray-600">{directive.response || '-'}</td>
                         <td>
                           {['PENDING', 'ACKNOWLEDGED'].includes(directive.status) && (
                             <button onClick={() => handleCancel(directive)} className="text-sm text-bfp-red hover:underline">Cancel</button>

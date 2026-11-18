@@ -541,16 +541,19 @@ BEGIN
     inc := pg_temp.mk_case(m.id, pg_temp.ph(5, 16, 0), pg_temp.cat(), inv);
     SELECT rid INTO r FROM pg_temp.mk_report(inc, 'SPOT_INVESTIGATION', 'AT_PROVINCIAL', inv, chief, marshal, prov, pg_temp.ph(5, 21, 0), interval '18 hours', '{}', NULL, true);
 
-    -- S10 Spot report finalized recently; Progress report not yet due. The Fire Marshal has assigned it.
+    -- S10 Spot report finalized recently; Progress report not yet due.
     inc := pg_temp.mk_case(m.id, pg_temp.ph(4, 10, 0), pg_temp.cat(), inv);
     SELECT rid, done_at INTO r, t FROM pg_temp.mk_report(inc, 'SPOT_INVESTIGATION', 'FINAL', inv, chief, marshal, prov, pg_temp.ph(4, 15, 0), interval '14 hours', '{}', NULL, true);
-    SELECT "referenceNumber" INTO ref FROM incidents WHERE id = inc;
+
+    -- A new fire the Fire Marshal has just assigned for a Spot investigation (not started yet).
+    ref := pg_temp.pick(pg_temp.barangays(m.name));
     INSERT INTO directives (kind, status, "municipalityId", "senderId", "recipientId", "reportType", message, "dueAt", "createdAt", "updatedAt")
-    VALUES ('ASSIGNMENT', 'PENDING', m.id, marshal, inv, 'PROGRESS_INVESTIGATION',
-            'Prepare and submit the Progress Investigation Report for ' || ref || '.', t + interval '7 days', t + interval '2 hours', t + interval '2 hours')
+    VALUES ('ASSIGNMENT', 'PENDING', m.id, marshal, inv, 'SPOT_INVESTIGATION',
+            'Conduct the spot investigation of the residential fire reported this morning at Brgy. ' || ref || ', ' || m.name || '. Coordinate with the responding crew and the barangay officials.',
+            now() + interval '20 hours', now() - interval '4 hours', now() - interval '4 hours')
     RETURNING id INTO r2;
     PERFORM pg_temp.track('directives', r2);
-    PERFORM pg_temp.notify(inv, NULL, 'DIRECTIVE_RECEIVED', 'New assignment from your Fire Marshal: prepare the Progress Investigation Report for ' || ref || '.', t + interval '2 hours');
+    PERFORM pg_temp.notify(inv, NULL, 'DIRECTIVE_RECEIVED', 'New assignment from your Fire Marshal: Spot Investigation report for the fire at Brgy. ' || ref || '.', now() - interval '4 hours');
 
     -- S11 Spot report finalized long ago and NO follow-up filed: next report overdue (red flag).
     inc := pg_temp.mk_case(m.id, pg_temp.ph(26, 9, 0), pg_temp.cat(), inv);
@@ -580,11 +583,12 @@ BEGIN
     SELECT rid, done_at INTO r, t FROM pg_temp.mk_report(inc, 'PROGRESS_INVESTIGATION', 'FINAL', inv, chief, marshal, prov, t + interval '4 days', d1, '{}', NULL, true);
     SELECT rid, done_at INTO r2, t2 FROM pg_temp.mk_report(inc, 'FINAL_INVESTIGATION', 'FINAL', inv, chief, marshal, prov, t + interval '28 days', d1,
       jsonb_build_object('causeOfFire', pg_temp.cause()), NULL, true);
-    SELECT "referenceNumber" INTO ref FROM incidents WHERE id = inc;
+    SELECT barangay INTO ref FROM incidents WHERE id = inc;
+    -- ...which started as the Fire Marshal's Spot investigation assignment, completed by the Spot report.
     INSERT INTO directives (kind, status, "municipalityId", "senderId", "recipientId", "reportType", message, "dueAt", response, "respondedAt", "createdAt", "updatedAt")
-    VALUES ('ASSIGNMENT', 'COMPLETED', m.id, marshal, inv, 'FINAL_INVESTIGATION',
-            'Complete the Final Investigation Report for ' || ref || '.', t + interval '45 days',
-            'Final Investigation Report submitted for review.', t + interval '28 days', t + interval '1 day', t + interval '28 days')
+    VALUES ('ASSIGNMENT', 'COMPLETED', m.id, marshal, inv, 'SPOT_INVESTIGATION',
+            'Conduct the spot investigation of the fire at Brgy. ' || ref || ', ' || m.name || '.', pg_temp.ph(119, 10, 0),
+            'Noted, sir. Proceeding to the scene.', pg_temp.ph(120, 15, 0), pg_temp.ph(120, 10, 40), pg_temp.ph(120, 15, 0))
     RETURNING id INTO r2;
     PERFORM pg_temp.track('directives', r2);
 

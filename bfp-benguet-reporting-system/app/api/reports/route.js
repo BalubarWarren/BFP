@@ -3,7 +3,7 @@ import prisma from '../../../lib/prisma';
 import { getSubmissionTimeliness, getFollowUpDelay, getSubmissionDeadline, LATE_EXPLANATION_MIN_LENGTH } from '../../../lib/report-timeliness';
 import { getCollaboratingReportIds } from '../../../lib/report-requests';
 import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../lib/auth';
-import { ROLES, REPORT_STATUS, REPORT_TYPES, NOTIFICATION_TYPES, MAX_REPORT_ATTACHMENTS, attachmentKindFields, isMainAttachment } from '../../../lib/constants';
+import { ROLES, REPORT_STATUS, REPORT_TYPES, NOTIFICATION_TYPES, MAX_REPORT_ATTACHMENTS, attachmentKindFields, isMainAttachment, ASSIGNABLE_REPORT_TYPES, DIRECTIVE_KINDS, DIRECTIVE_STATUS } from '../../../lib/constants';
 import { createIncidentWithReference } from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
 import { saveAttachments, isStoredAttachmentUrl } from '../../../lib/storage';
@@ -328,6 +328,39 @@ const toCasualtyCount = (value) => {
   const n = Number(value);
   return Number.isInteger(n) && n >= 0 && n <= 9999 ? n : null;
 };
+
+// Submitting a report the Fire Marshal assigned completes that assignment (the oldest open one of
+// the same report type) and tells the Fire Marshal. Never fails the submission itself.
+async function completeAssignment(user, reportType, reportId) {
+  if (!ASSIGNABLE_REPORT_TYPES[reportType]) return;
+  try {
+    const assignment = await prisma.directive.findFirst({
+      where: {
+        recipientId: user.id,
+        kind: DIRECTIVE_KINDS.ASSIGNMENT,
+        reportType,
+        status: { in: [DIRECTIVE_STATUS.PENDING, DIRECTIVE_STATUS.ACKNOWLEDGED] },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, senderId: true },
+    });
+    if (!assignment) return;
+    await prisma.directive.update({
+      where: { id: assignment.id },
+      data: { status: DIRECTIVE_STATUS.COMPLETED, respondedAt: new Date() },
+    });
+    await prisma.notification.create({
+      data: {
+        userId: assignment.senderId,
+        reportId,
+        message: `${user.name} submitted the ${ASSIGNABLE_REPORT_TYPES[reportType].label} report you assigned.`,
+        type: NOTIFICATION_TYPES.DIRECTIVE_UPDATED,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to complete the assignment:', error);
+  }
+}
 
 export async function POST(request) {
   try {
@@ -688,6 +721,10 @@ export async function POST(request) {
             })),
           });
         }
+    }
+
+    if (user.role === ROLES.INVESTIGATOR) {
+      await completeAssignment(user, reportType, report.id);
     }
 
     return NextResponse.json(

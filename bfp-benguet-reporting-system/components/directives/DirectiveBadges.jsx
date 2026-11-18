@@ -1,6 +1,6 @@
 'use client';
 
-import { ASSIGNABLE_REPORT_TYPES } from '../../lib/constants';
+import { ASSIGNMENT_LABELS } from '../../lib/constants';
 
 const STATUS_STYLES = {
   PENDING: 'bg-bfp-amber/15 text-amber-800',
@@ -20,7 +20,7 @@ export function DirectiveStatusBadge({ status }) {
 // "Assignment · Spot Investigation" or just "Message".
 export function directiveTitle(directive) {
   if (directive.kind === 'ASSIGNMENT') {
-    return `Assignment · ${ASSIGNABLE_REPORT_TYPES[directive.reportType]?.label || directive.reportType}`;
+    return `Assignment · ${ASSIGNMENT_LABELS[directive.reportType] || directive.reportType}`;
   }
   return 'Message';
 }

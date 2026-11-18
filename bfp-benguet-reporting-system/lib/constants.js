@@ -345,12 +345,19 @@ export const DIRECTIVE_STATUS = {
   CANCELLED: 'CANCELLED',
 };
 
-// The report forms an investigator can be assigned, mapped to the form that starts each one.
+// The report forms a Fire Marshal can assign, mapped to the form that starts each one. Only the
+// reports that open a case: the Progress and Final reports follow from the Spot report.
 export const ASSIGNABLE_REPORT_TYPES = {
-  MDFIR: { label: 'MDFIR', path: '/municipal/reports/mdfir' },
   SPOT_INVESTIGATION: { label: 'Spot Investigation', path: '/municipal/reports/spot' },
-  PROGRESS_INVESTIGATION: { label: 'Progress Investigation', path: '/municipal/reports/progress' },
-  FINAL_INVESTIGATION: { label: 'Final Investigation', path: '/municipal/reports/final' },
+  MDFIR: { label: 'MDFIR', path: '/municipal/reports/mdfir' },
+};
+
+// Labels for every report type an assignment may name (older assignments included).
+export const ASSIGNMENT_LABELS = {
+  SPOT_INVESTIGATION: 'Spot Investigation',
+  MDFIR: 'MDFIR',
+  PROGRESS_INVESTIGATION: 'Progress Investigation',
+  FINAL_INVESTIGATION: 'Final Investigation',
 };
 
 // An investigator counts as "online" if their dashboard checked in within this window. The header
