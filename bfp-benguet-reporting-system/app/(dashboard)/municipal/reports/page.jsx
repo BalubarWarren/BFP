@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FileText } from 'lucide-react';
 import StatusBadge from '../../../../components/common/StatusBadge';
+import TimelinessBadge from '../../../../components/reports/TimelinessBadge';
+import ReportExtras from '../../../../components/reports/ReportExtras';
 import { useToast } from '../../../../components/common/ToastProvider';
 import { formatDateTime, parseJsonField } from '../../../../lib/utils';
 import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
@@ -132,7 +134,7 @@ export default function MunicipalReportsPage() {
   
               <div className="space-y-5 p-6">
                 <div className="grid grid-cols-1 gap-4 rounded-lg bg-gray-50 p-4 text-sm md:grid-cols-2">
-                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
+                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /><TimelinessBadge report={selectedReport} className="mt-1" /></div>
                   <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
                   <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
                   <div><p className="text-gray-500">Submitted To</p><p className="font-semibold">{(reportDetail?.passedToRole || selectedReport.passedToRole || 'Filed').replace(/_/g, ' ')}</p></div>
@@ -164,6 +166,8 @@ export default function MunicipalReportsPage() {
                 <ReportRequestsPanel key={selectedReport.id} report={reportDetail || selectedReport} />
   
                 <RevisionHistory report={reportDetail} />
+  
+                <ReportExtras report={reportDetail || selectedReport} />
   
                 <div className="rounded-lg bg-gray-50 p-4">
                   <h3 className="mb-3 font-bold text-bfp-navy">Attachments</h3>
@@ -296,6 +300,7 @@ export default function MunicipalReportsPage() {
                     </td>
                     <td className="px-5 py-4 align-top">
                       <StatusBadge status={report.status} />
+                      <TimelinessBadge report={report} className="mt-1" />
                       <ReportProgressBar progress={getReportProgress(report)} compact />
                       {report.status === 'RETURNED' && report.remarks && (
                         <p className="mt-1 w-40 truncate text-xs text-gray-500" title={report.remarks}>

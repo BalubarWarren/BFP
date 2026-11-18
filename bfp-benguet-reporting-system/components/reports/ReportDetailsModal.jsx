@@ -11,6 +11,8 @@ import RevisionHistory from './RevisionHistory';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { formatDateTime, parseJsonField } from '../../lib/utils';
 import Portal from '../common/Portal';
+import ReportExtras from './ReportExtras';
+import TimelinessBadge from './TimelinessBadge';
 
 const humanize = (value) =>
   String(value || '')
@@ -19,8 +21,22 @@ const humanize = (value) =>
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 
 // camelCase content keys (dateOfIncident) → "Date Of Incident"
+const CONTENT_LABELS = {
+  ownerName: 'Owner',
+  occupantName: 'Occupant',
+  establishmentName: 'Establishment / Property',
+  numberOfStoreys: 'Number of Storeys',
+  casualtiesInjured: 'Injured',
+  casualtiesFatalities: 'Fatalities',
+};
 const labelForKey = (key) =>
-  key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
+  CONTENT_LABELS[key] || key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
+
+// Shown in their own blocks (ReportExtras) or internal flags, not in the plain field list.
+const HIDDEN_CONTENT_KEYS = new Set([
+  'lateExplanation', 'submittedLate', 'latitude', 'longitude', 'sample', 'propertyType',
+  'establishmentName', 'ownerName', 'occupantName', 'numberOfStoreys', 'rescueOperations', 'causeOfFire',
+]);
 
 const AUDIT_LABELS = {
   APPROVE_REPORT: 'Approved',
@@ -82,7 +98,8 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
   const incident = r.incident || {};
   const content = parseJsonField(r.content, {});
   const contentEntries = Object.entries(content).filter(
-    ([, value]) => value !== null && value !== undefined && value !== '' && typeof value !== 'object'
+    ([key, value]) =>
+      !HIDDEN_CONTENT_KEYS.has(key) && value !== null && value !== undefined && value !== '' && typeof value !== 'object'
   );
   const attachments = parseJsonField(r.attachments, []);
   const currentHolder =
@@ -111,6 +128,7 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
               <h2 className="mt-0.5 text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">{humanize(r.reportType)}</h2>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600">
                 <StatusBadge status={r.status} />
+                <TimelinessBadge report={r} />
                 {incident.referenceNumber && <span className="font-medium">{incident.referenceNumber}</span>}
                 <span>· {r.municipality?.name}</span>
               </div>
@@ -158,6 +176,8 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
             <CaseChain reports={r.caseReports} currentId={r.id} referenceNumber={incident.referenceNumber} />
   
             {!report.isArchived && <RevisionHistory report={detail} />}
+
+            <ReportExtras report={r} />
   
             {/* Report information */}
             <Section icon={FileText} title="Report Information">

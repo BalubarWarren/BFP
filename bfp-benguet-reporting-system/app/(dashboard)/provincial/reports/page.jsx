@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { Flame, ClipboardCheck } from 'lucide-react';
 import StatusBadge from '../../../../components/common/StatusBadge';
+import TimelinessBadge from '../../../../components/reports/TimelinessBadge';
+import ReportExtras from '../../../../components/reports/ReportExtras';
 import SessionExpiredBanner from '../../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../../../lib/utils';
@@ -229,7 +231,7 @@ export default function ProvincialReportsPage() {
                         <td>{report.incident?.referenceNumber || '-'}</td>
                         <td>{new Date(report.reportDate).toLocaleDateString()}</td>
                         <td>{report.submittedBy?.name}</td>
-                        <td><StatusBadge status={report.status} /></td>
+                        <td><StatusBadge status={report.status} /><TimelinessBadge report={report} className="mt-1" /></td>
                         <td className="text-sm text-gray-500">{formatDateTime(report.submittedAt)}</td>
                         <td>
                           <div className="flex flex-wrap items-center gap-2">
@@ -276,7 +278,7 @@ export default function ProvincialReportsPage() {
                         <td className="font-semibold">{report.municipality?.name}</td>
                         <td>{report.reportType}</td>
                         <td>{report.incident?.referenceNumber || '-'}</td>
-                        <td><StatusBadge status={report.status} /></td>
+                        <td><StatusBadge status={report.status} /><TimelinessBadge report={report} className="mt-1" /></td>
                         <td>{report.status === 'RETURNED' ? (report.submittedBy?.name || '-') : '-'}</td>
                         <td className="text-sm text-gray-500">{report.reviewedAt ? formatDateTime(report.reviewedAt) : '-'}</td>
                         <td className="text-sm text-gray-600 max-w-xs truncate">{report.remarks || '-'}</td>
@@ -312,7 +314,7 @@ export default function ProvincialReportsPage() {
                   <div><p className="text-gray-500">Municipality</p><p className="font-semibold">{reportDetail?.municipality?.name || selectedReport.municipality?.name}</p></div>
                   <div><p className="text-gray-500">Report Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
                   <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
-                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
+                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /><TimelinessBadge report={selectedReport} className="mt-1" /></div>
                   <div><p className="text-gray-500">Submitted By</p><p className="font-semibold">{selectedReport.submittedBy?.name}</p></div>
                   <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
                   {reportDetail?.respondingOfficer && (
@@ -340,6 +342,8 @@ export default function ProvincialReportsPage() {
                     </div>
                   )}
                 </div>
+  
+                <ReportExtras report={reportDetail || selectedReport} />
   
                 <CaseChain
                   reports={reportDetail?.caseReports}

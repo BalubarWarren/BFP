@@ -83,7 +83,8 @@ const SECURITY_HEADERS = [
   // ZAP flagged as missing it).
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+  // geolocation=(self): the Spot report's "Use my current location" (GPS) button.
+  { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
   // Isolates our window from any cross-origin page that opens it or that it opens.
   // "-allow-popups" rather than "same-origin": Continue with Google opens a Google popup that
   // must still be able to hand the token back to this window (Google's documented setting).

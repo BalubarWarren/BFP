@@ -4,6 +4,8 @@ import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { ClipboardCheck } from 'lucide-react';
 import StatusBadge from '../common/StatusBadge';
+import TimelinessBadge from '../reports/TimelinessBadge';
+import ReportExtras from '../reports/ReportExtras';
 import SessionExpiredBanner from '../common/SessionExpiredBanner';
 import { useToast } from '../common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../lib/utils';
@@ -314,7 +316,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                           <td className="font-semibold">{report.reportType}</td>
                           <td>{report.incident?.referenceNumber || '-'}</td>
                           <td>{report.municipality?.name}</td>
-                          <td><StatusBadge status={report.status} /></td>
+                          <td><StatusBadge status={report.status} /><TimelinessBadge report={report} className="mt-1" /></td>
                           <td>{['RETURNED', 'APPROVED'].includes(report.status) ? (report.submittedBy?.name || '-') : '-'}</td>
                           <td>{report.reviewedAt ? formatDateTime(report.reviewedAt) : '-'}</td>
                           <td className="text-sm text-gray-600">{report.remarks || '-'}</td>
@@ -343,7 +345,7 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                       <div><p className="text-gray-500">Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
                       <div><p className="text-gray-500">Submitted By</p><p className="font-semibold">{selectedReport.submittedBy?.name}</p></div>
                       <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
-                      <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
+                      <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /><TimelinessBadge report={selectedReport} className="mt-1" /></div>
                       <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
                       {(reportDetail?.category || selectedReport.category) && (
                         <div><p className="text-gray-500">Category</p><p className="font-semibold">{(reportDetail?.category || selectedReport.category).replace(/_/g, ' ')}</p></div>
@@ -373,6 +375,8 @@ export default function ReviewerDashboard({ title, description, incomingSectionT
                     />
 
                     <RevisionHistory report={reportDetail} />
+
+                    <ReportExtras report={reportDetail || selectedReport} />
   
                     {reportDetail?.remarks && (
                       <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded">

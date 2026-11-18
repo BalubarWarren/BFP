@@ -41,6 +41,12 @@ const CATEGORY_FIELDS = [
 
 const PLACES = ['Purok 1', 'Purok 2', 'Purok 3', 'Purok 4', 'Sitio Proper', 'Sitio Upper', 'Sitio Lower', 'near the barangay hall', 'near the public market', 'along the national road', 'near the elementary school', 'beside the chapel', 'near the basketball court', 'along the provincial road'];
 const CAUSES = ['faulty electrical wiring', 'unattended cooking', 'an LPG leak', 'burning of rubbish that spread', 'a lighted cigarette', 'an overloaded extension cord', 'a vehicle engine malfunction', 'kaingin (slash-and-burn) that spread', 'children playing with matches', 'an unattended candle'];
+const SAMPLE_PROPERTY_TYPE = {
+  RESIDENTIAL: 'Single-family house',
+  NON_RESIDENTIAL: 'Commercial establishment',
+  NON_STRUCTURAL: 'Grassland / Forest',
+  TRANSPORT: 'Vehicle',
+};
 const FIRST_NAMES = ['Juan', 'Maria', 'Jose', 'Ana', 'Pedro', 'Rosa', 'Mark', 'Grace', 'Ramon', 'Liza', 'Carlo', 'Joy'];
 const LAST_NAMES = ['Dela Cruz', 'Bautista', 'Kiwas', 'Bayang', 'Tamang', 'Calpito', 'Dumalo', 'Lumbaya', 'Pacio', 'Sacla', 'Ayochok', 'Dangwa'];
 
@@ -93,6 +99,7 @@ function buildCase({ rand, ref, municipality, category, date, now, finished, wit
   const officer = `${pick(rand, FIRST_NAMES)} ${pick(rand, LAST_NAMES)}`;
   const submitter = people.submitterFor(municipality.id);
   const damage = Math.round((5 + rand() * 495) * 1000);
+  const rescues = injured + fatalities > 0 ? Math.floor(rand() * 3) : 0;
 
   const incident = {
     referenceNumber: ref,
@@ -133,7 +140,24 @@ function buildCase({ rand, ref, municipality, category, date, now, finished, wit
       category: reportType === 'SPOT_INVESTIGATION' ? category : null,
       content: JSON.stringify(
         reportType === 'SPOT_INVESTIGATION'
-          ? { sample: true, dateOfIncident: date.toISOString().slice(0, 10), timeOfIncident: incident.timeOfIncident, description: incident.description, barangay, address, casualtiesInjured: injured, casualtiesFatalities: fatalities }
+          ? {
+              sample: true,
+              dateOfIncident: date.toISOString().slice(0, 10),
+              timeOfIncident: incident.timeOfIncident,
+              description: incident.description,
+              barangay,
+              address,
+              casualtiesInjured: injured,
+              casualtiesFatalities: fatalities,
+              rescueOperations: rescues,
+              propertyType: SAMPLE_PROPERTY_TYPE[category],
+              establishmentName: category === 'NON_RESIDENTIAL' ? `${pick(rand, LAST_NAMES)} ${subCategory}` : '',
+              ownerName: `${pick(rand, FIRST_NAMES)} ${pick(rand, LAST_NAMES)}`,
+              occupantName: '',
+              numberOfStoreys: category === 'RESIDENTIAL' || category === 'NON_RESIDENTIAL' ? 1 + Math.floor(rand() * 3) : null,
+            }
+          : reportType === 'FINAL_INVESTIGATION'
+          ? { sample: true, causeOfFire: incident.causeOfFire }
           : { sample: true }
       ),
       respondingUnits: `${municipality.name} FS Engine ${1 + Math.floor(rand() * 2)}`,

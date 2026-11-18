@@ -18,7 +18,7 @@ const caseLabel = (c) => {
 // final approval and that have no Final report yet are offered, so the new report is always tied
 // to its Spot report. Opened from the Spot report's "Start Progress/Final Report" button (the
 // incident is preselected), the case is locked and shown as a card instead of a dropdown.
-export default function CaseSelect({ value, onChange, reportType, locked = false }) {
+export default function CaseSelect({ value, onChange, reportType, locked = false, onCaseChange }) {
   const [cases, setCases] = useState(null);
   const [loadError, setLoadError] = useState('');
 
@@ -42,11 +42,18 @@ export default function CaseSelect({ value, onChange, reportType, locked = false
     };
   }, [reportType]);
 
+  const selected = (cases || []).find((c) => String(c.incidentId) === String(value));
+
+  // Tells the form which case is chosen (its Spot/Progress reports decide the deadline).
+  const selectedId = selected?.incidentId ?? null;
+  useEffect(() => {
+    onCaseChange?.(selected || null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedId, cases]);
+
   if (cases === null) {
     return <p className="text-sm text-gray-500">Loading your cases…</p>;
   }
-
-  const selected = cases.find((c) => String(c.incidentId) === String(value));
 
   if (locked && selected) {
     return (

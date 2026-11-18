@@ -8,7 +8,9 @@ import StatusBadge from '../../../components/common/StatusBadge';
 import {
   MoreVertical, Printer, Download, X, Home, Building2, TreePine, Truck,
   LayoutGrid, MapPin, Inbox, FileSearch, CalendarDays, CalendarRange, Flame, HeartPulse,
+  FileBarChart, LifeBuoy, Loader2,
 } from 'lucide-react';
+import { downloadFireIncidentSummaryReport } from '../../../lib/summary-report';
 import PageHeader from '../../../components/common/PageHeader';
 import StatCard from '../../../components/common/StatCard';
 import MunicipalityDetailModal from '../../../components/dashboard/MunicipalityDetailModal';
@@ -323,6 +325,9 @@ export default function ProvincialDashboard() {
   const [histMonthNum, setHistMonthNum] = useState(_now.getMonth() === 0 ? 12 : _now.getMonth());
   const [histMonthYear, setHistMonthYear] = useState(_now.getMonth() === 0 ? _now.getFullYear() - 1 : _now.getFullYear());
   const [histYearNum, setHistYearNum] = useState(_now.getFullYear() - 1);
+  // Semi-Annual: 1 = January–June, 2 = July–December. Defaults to the latest finished half.
+  const [histHalf, setHistHalf] = useState(_now.getMonth() >= 6 ? 1 : 2);
+  const [histHalfYear, setHistHalfYear] = useState(_now.getMonth() >= 6 ? _now.getFullYear() : _now.getFullYear() - 1);
   const [histData, setHistData] = useState(null);
   const [histTotals, setHistTotals] = useState({});
   const [histLabel, setHistLabel] = useState('');
@@ -402,7 +407,7 @@ export default function ProvincialDashboard() {
   useEffect(() => {
     if (boardTab === 'current') return;
     fetchHistoricalData();
-  }, [boardTab, histMonthNum, histMonthYear, histYearNum]);
+  }, [boardTab, histMonthNum, histMonthYear, histYearNum, histHalf, histHalfYear]);
 
   useEffect(() => {
     const availableYears = charts.comparison?.availableYears || [];
@@ -493,6 +498,11 @@ export default function ProvincialDashboard() {
         startDate = `${yr}-${String(mo).padStart(2, '0')}-01`;
         endDate   = `${yr}-${String(mo).padStart(2, '0')}-${lastDay}`;
         label = new Date(yr, mo - 1, 1).toLocaleString('default', { month: 'long' }) + ' ' + yr;
+      } else if (boardTab === 'semiannual') {
+        const yr = Number(histHalfYear);
+        startDate = histHalf === 1 ? `${yr}-01-01` : `${yr}-07-01`;
+        endDate = histHalf === 1 ? `${yr}-06-30` : `${yr}-12-31`;
+        label = `${histHalf === 1 ? '1st Half (January–June)' : '2nd Half (July–December)'} ${yr}`;
       } else {
         const yr = Number(histYearNum);
         startDate = `${yr}-01-01`;
@@ -586,6 +596,55 @@ export default function ProvincialDashboard() {
     exportBoardPdf(rows, rowTotals, periodLabel);
   };
 
+  // The date range the board is showing, for the Fire Incident Summary Report's casualty data.
+  const getBoardRange = () => {
+    const pad = (n) => String(n).padStart(2, '0');
+    const lastDay = (y, m) => new Date(y, m, 0).getDate();
+    if (boardShowsCurrent) {
+      const y = now.getFullYear();
+      const m = now.getMonth() + 1;
+      return { startDate: `${y}-${pad(m)}-01`, endDate: `${y}-${pad(m)}-${lastDay(y, m)}` };
+    }
+    if (boardTab === 'monthly') {
+      return {
+        startDate: `${histMonthYear}-${pad(histMonthNum)}-01`,
+        endDate: `${histMonthYear}-${pad(histMonthNum)}-${lastDay(histMonthYear, histMonthNum)}`,
+      };
+    }
+    if (boardTab === 'semiannual') {
+      return histHalf === 1
+        ? { startDate: `${histHalfYear}-01-01`, endDate: `${histHalfYear}-06-30` }
+        : { startDate: `${histHalfYear}-07-01`, endDate: `${histHalfYear}-12-31` };
+    }
+    return { startDate: `${histYearNum}-01-01`, endDate: `${histYearNum}-12-31` };
+  };
+
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const handleSummaryReport = async () => {
+    setSummaryLoading(true);
+    try {
+      const params = new URLSearchParams(getBoardRange());
+      let casualty = null;
+      try {
+        const res = await axios.get(`/api/dashboard/casualty-board?${params}`, {
+          headers: { Authorization: `Bearer ${sessionStorage.getItem('token')}` },
+        });
+        casualty = res.data;
+      } catch {
+        casualty = null; // the report still lists the incident counts
+      }
+      await downloadFireIncidentSummaryReport({
+        periodLabel: boardPeriodLabel,
+        boardRows,
+        boardTotals: boardShowsCurrent ? totals : histTotals,
+        subCategoryTotals: boardShowsCurrent ? subCategoryTotals : histSubCategoryTotals,
+        casualty,
+      });
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
   const handleExportFireMap = () => {
     exportBoardPdf(boardRows, boardShowsCurrent ? totals : histTotals, boardPeriodLabel);
   };
@@ -677,7 +736,19 @@ export default function ProvincialDashboard() {
             <h2 className="text-xl font-semibold tracking-tight text-gray-900">Fire Incident Monitoring Board</h2>
             <p className="text-sm text-gray-500 mb-4">Live totals for the current month, or browse a past month or year. Click a municipality to see its incidents and statistics.</p>
           </div>
-          <SectionMenu onPrint={() => handlePrint('section-monitoring-board')} onExport={handleExportMonitoringBoard} />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSummaryReport}
+              disabled={summaryLoading}
+              className="btn btn-primary inline-flex items-center gap-1.5 text-sm"
+              title="Download the Fire Incident Summary Report (PDF) for the period shown"
+            >
+              {summaryLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileBarChart className="h-4 w-4" />}
+              <span className="hidden sm:inline">Summary Report</span>
+            </button>
+            <SectionMenu onPrint={() => handlePrint('section-monitoring-board')} onExport={handleExportMonitoringBoard} />
+          </div>
         </div>
 
         {/* Sub-tabs */}
@@ -685,6 +756,7 @@ export default function ProvincialDashboard() {
           {[
             { key: 'current', label: 'This Month' },
             { key: 'monthly', label: 'By Month' },
+            { key: 'semiannual', label: 'Semi-Annual' },
             { key: 'yearly', label: 'By Year' },
           ].map((tab) => (
             <button
@@ -725,6 +797,24 @@ export default function ProvincialDashboard() {
                     value={histMonthYear}
                     onChange={(e) => setHistMonthYear(Number(e.target.value))}
                   >
+                    {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4].map((yr) => (
+                      <option key={yr} value={yr}>{yr}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            ) : boardTab === 'semiannual' ? (
+              <>
+                <div>
+                  <label className="form-label text-xs">Half</label>
+                  <select className="form-input py-1.5 text-sm" value={histHalf} onChange={(e) => setHistHalf(Number(e.target.value))}>
+                    <option value={1}>1st Half (January–June)</option>
+                    <option value={2}>2nd Half (July–December)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label text-xs">Year</label>
+                  <select className="form-input py-1.5 text-sm" value={histHalfYear} onChange={(e) => setHistHalfYear(Number(e.target.value))}>
                     {[currentYear, currentYear - 1, currentYear - 2, currentYear - 3, currentYear - 4].map((yr) => (
                       <option key={yr} value={yr}>{yr}</option>
                     ))}
@@ -1129,7 +1219,7 @@ export default function ProvincialDashboard() {
       })()}
 
       {/* ── 2. KPI Cards ── */}
-      <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <StatCard icon={CalendarDays} accent="red" label="Incidents this month" value={kpis?.thisMonth || 0} />
         <StatCard icon={CalendarRange} accent="navy" label="Incidents this year" value={kpis?.thisYear || 0} />
         <StatCard
@@ -1140,7 +1230,30 @@ export default function ProvincialDashboard() {
           valueClassName="text-xl mt-3"
         />
         <StatCard icon={HeartPulse} accent="green" label="With casualties" value={kpis?.incidentsWithCasualties || 0} />
+        <StatCard icon={LifeBuoy} accent="navy" label="Rescue operations this year" value={kpis?.rescueOperationsThisYear || 0} />
       </div>
+
+      {/* Causes of fire (from the Final Investigation Reports) */}
+      {(charts.causesOfFire || []).length > 0 && (
+        <div className="mb-6 rounded-lg bg-white p-4 shadow-md sm:p-6">
+          <h2 className="text-xl font-semibold tracking-tight text-gray-900">Causes of Fire</h2>
+          <p className="mb-4 mt-1 text-sm text-gray-500">As found by the Final Investigation Reports, most common first.</p>
+          <ul className="space-y-2.5">
+            {charts.causesOfFire.map((item) => {
+              const max = charts.causesOfFire[0].count || 1;
+              return (
+                <li key={item.cause} className="grid grid-cols-[minmax(0,14rem)_1fr_3rem] items-center gap-3 text-sm">
+                  <span className="truncate text-gray-700" title={item.cause}>{item.cause}</span>
+                  <span className="h-2.5 overflow-hidden rounded-full bg-gray-100">
+                    <span className="block h-full rounded-full bg-bfp-red" style={{ width: `${Math.max(4, (item.count / max) * 100)}%` }} />
+                  </span>
+                  <span className="text-right font-semibold tabular-nums text-gray-900">{item.count}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {/* ── 2b. Municipality Fire Rate SVG Map ── */}
       <BenguetFireMap
@@ -1172,6 +1285,9 @@ export default function ProvincialDashboard() {
         } else if (boardTab === 'monthly') {
           periodStart = new Date(histMonthYear, histMonthNum - 1, 1);
           periodEnd = new Date(histMonthYear, histMonthNum, 0, 23, 59, 59, 999);
+        } else if (boardTab === 'semiannual') {
+          periodStart = new Date(histHalfYear, histHalf === 1 ? 0 : 6, 1);
+          periodEnd = new Date(histHalfYear, histHalf === 1 ? 6 : 12, 0, 23, 59, 59, 999);
         } else {
           periodStart = new Date(histYearNum, 0, 1);
           periodEnd = new Date(histYearNum, 11, 31, 23, 59, 59, 999);

@@ -2,7 +2,20 @@ import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { getBarangays, matchBarangay } from '../../../../lib/barangays';
-import { approvedArchiveWhere, canViewApprovedArchive, MUNICIPAL_REVIEWER_ROLES } from '../../../../lib/report-access';
+import { approvedArchiveWhere, canViewApprovedArchive, MUNICIPAL_REVIEWER_ROLES, FINALLY_APPROVED_WHERE } from '../../../../lib/report-access';
+import { ROLES } from '../../../../lib/constants';
+import { parseJsonField } from '../../../../lib/utils';
+
+// Rescue operations of a case: the Final report's count when it corrected one, else the Spot's.
+const rescueOperationsOf = (incident) => {
+  const countOn = (type) => {
+    const report = incident.reports.find((r) => r.reportType === type);
+    const value = report ? parseJsonField(report.content, {}).rescueOperations : undefined;
+    const n = Number(value);
+    return value === undefined || value === null || value === '' || !Number.isFinite(n) || n < 0 ? null : n;
+  };
+  return countOn('FINAL_INVESTIGATION') ?? countOn('SPOT_INVESTIGATION') ?? 0;
+};
 
 // Casualty Monitoring Board on the Reports page: injured and fatalities per municipality for a
 // period (default: the current month), counted by incident date. A case counts once its Spot
@@ -13,7 +26,9 @@ export async function GET(request) {
   try {
     const user = await getUserFromRequest(request);
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    if (!canViewApprovedArchive(user)) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    // Admins too: the provincial dashboard's Fire Incident Summary Report reads this endpoint.
+    const isAdmin = [ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(user.role);
+    if (!canViewApprovedArchive(user) && !isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('startDate');
@@ -34,7 +49,9 @@ export async function GET(request) {
       prisma.incident.findMany({
         where: {
           dateOfIncident: { gte: start, lte: end },
-          reports: { some: { ...approvedArchiveWhere(user), reportType: 'SPOT_INVESTIGATION' } },
+          reports: {
+            some: { ...(isAdmin ? FINALLY_APPROVED_WHERE : approvedArchiveWhere(user)), reportType: 'SPOT_INVESTIGATION' },
+          },
         },
         select: {
           id: true,
@@ -45,6 +62,12 @@ export async function GET(request) {
           casualtiesInjured: true,
           casualtiesFatalities: true,
           municipalityId: true,
+          causeOfFire: true,
+          // Rescue operations are recorded on the Spot report (corrected by the Final report).
+          reports: {
+            where: { reportType: { in: ['SPOT_INVESTIGATION', 'FINAL_INVESTIGATION'] }, status: { not: 'DRAFT' } },
+            select: { reportType: true, content: true },
+          },
         },
         orderBy: { dateOfIncident: 'desc' },
       }),
@@ -63,12 +86,14 @@ export async function GET(request) {
       injured: 0,
       fatalities: 0,
       total: 0,
+      rescueOperations: 0,
       cases: [],
       // Every barangay of the municipality, zeros included; incidents whose barangay isn't on the
       // list (older free-text entries, or none given) go under "Not specified".
       barangays: getBarangays(m.name).map((name) => ({ name, incidents: 0, injured: 0, fatalities: 0, total: 0 })),
     }));
     const byId = new Map(rows.map((row) => [row.municipalityId, row]));
+    const causeCounts = new Map();
 
     for (const incident of incidents) {
       const row = byId.get(incident.municipalityId);
@@ -79,6 +104,8 @@ export async function GET(request) {
       row.injured += injured;
       row.fatalities += fatalities;
       row.total += injured + fatalities;
+      row.rescueOperations += rescueOperationsOf(incident);
+      if (incident.causeOfFire) causeCounts.set(incident.causeOfFire, (causeCounts.get(incident.causeOfFire) || 0) + 1);
 
       const barangayName = matchBarangay(row.municipality, incident.barangay) || 'Not specified';
       let barangayRow = row.barangays.find((b) => b.name === barangayName);
@@ -104,17 +131,21 @@ export async function GET(request) {
       }
     }
 
+    const causes = [...causeCounts].map(([cause, count]) => ({ cause, count })).sort((a, b) => b.count - a.count);
+
     const totals = rows.reduce(
       (sum, row) => ({
         incidents: sum.incidents + row.incidents,
         injured: sum.injured + row.injured,
         fatalities: sum.fatalities + row.fatalities,
         total: sum.total + row.total,
+        rescueOperations: sum.rescueOperations + row.rescueOperations,
       }),
-      { incidents: 0, injured: 0, fatalities: 0, total: 0 }
+      { incidents: 0, injured: 0, fatalities: 0, total: 0, rescueOperations: 0 }
     );
 
-    return NextResponse.json({ rows, totals, asOf: new Date() });
+    // The per-incident report rows were only needed for the rescue counts.
+    return NextResponse.json({ rows, totals, causes, asOf: new Date() });
   } catch (error) {
     console.error('Error fetching casualty board:', error);
     return NextResponse.json({ error: 'Failed to fetch casualty board' }, { status: 500 });

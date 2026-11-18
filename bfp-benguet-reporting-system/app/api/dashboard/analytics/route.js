@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
+import { parseJsonField } from '../../../../lib/utils';
 import { ACTIVE_DAILY_ENTRY_WHERE } from '../../../../lib/sample-data';
 import { getUserFromRequest } from '../../../../lib/auth';
 import { DASHBOARD_VIEWER_ROLES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
@@ -207,6 +208,24 @@ export async function GET(request) {
 
     const mostCommonCategory = categoryStats.length > 0 ? categoryStats[0].generalCategory : 'N/A';
 
+    // Causes of fire found by the Final Investigation Reports (Incident.causeOfFire), most common
+    // first, and this year's rescue operations recorded on Spot reports at the provincial level.
+    const causeStats = await prisma.incident.groupBy({
+      by: ['causeOfFire'],
+      where: { causeOfFire: { not: null } },
+      _count: true,
+    });
+    const causesOfFire = causeStats
+      .filter((stat) => stat.causeOfFire && stat.causeOfFire.trim())
+      .map((stat) => ({ cause: stat.causeOfFire, count: stat._count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 10);
+    const rescueOperationsThisYear = categorizedReportRows.reduce((sum, row) => {
+      if (row.reportDate < currentYear) return sum;
+      const value = Number(parseJsonField(row.content, {})?.rescueOperations);
+      return sum + (Number.isFinite(value) && value > 0 ? value : 0);
+    }, 0);
+
     const incidentsByCategoryData = incidentsByCategory.map((stat) => ({
       category: stat.generalCategory,
       count: stat._count,
@@ -270,10 +289,12 @@ export async function GET(request) {
         mostActiveMunicipality,
         mostCommonCategory,
         incidentsWithCasualties,
+        rescueOperationsThisYear,
       },
       charts: {
         incidentsPerMunicipality: incidentsPerMunData,
         incidentsByCategory: incidentsByCategoryData,
+        causesOfFire,
         monthlyTrend,
         yearlyTrend,
         currentMonthByCategory: currentMonthByCategory.map((s) => ({

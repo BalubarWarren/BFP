@@ -22,6 +22,8 @@ const isPdf = (attachment) =>
 // EMS (Emergency Medical Services) reports are stored in the same attachments array, tagged
 // kind: 'EMS' by the Spot/Progress/Final forms (see lib/submit-report.js), and listed separately.
 const isEmsAttachment = (attachment) => attachment?.kind === 'EMS';
+// Supporting documents (lab results, certificates, sketches...) carry their type as docType.
+const isSupportingAttachment = (attachment) => attachment?.kind === 'SUPPORTING';
 
 export default function AttachmentList({ attachments, reportId, canAnnotate = false, className = '' }) {
   const [openAttachment, setOpenAttachment] = useState(null);
@@ -29,8 +31,9 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
 
   if (!files.length) return null;
 
-  const mainFiles = files.filter((attachment) => !isEmsAttachment(attachment));
+  const mainFiles = files.filter((attachment) => !isEmsAttachment(attachment) && !isSupportingAttachment(attachment));
   const emsFiles = files.filter(isEmsAttachment);
+  const supportingFiles = files.filter(isSupportingAttachment);
 
   return (
     <>
@@ -40,6 +43,12 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
           <div>
             <p className="mb-1 text-xs font-bold uppercase tracking-wide text-bfp-red">EMS Report</p>
             {renderFiles(emsFiles)}
+          </div>
+        )}
+        {supportingFiles.length > 0 && (
+          <div>
+            <p className="mb-1 text-xs font-bold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Supporting Documents</p>
+            {renderFiles(supportingFiles, true)}
           </div>
         )}
       </div>
@@ -56,7 +65,7 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
     </>
   );
 
-  function renderFiles(list) {
+  function renderFiles(list, showDocType = false) {
     return (
       <ul className="space-y-2 text-sm">
         {list.map((attachment) => (
@@ -69,7 +78,7 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
                 className="btn btn-secondary inline-flex max-w-[12rem] items-center gap-1.5 px-2.5 py-1.5 text-xs"
               >
                 <FileText className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">{attachment.name}</span>
+                <span className="truncate">{showDocType && attachment.docType ? `${attachment.docType}: ` : ''}{attachment.name}</span>
               </button>
             ) : (
               <a
@@ -80,7 +89,7 @@ export default function AttachmentList({ attachments, reportId, canAnnotate = fa
                 className="btn btn-secondary inline-flex max-w-[12rem] items-center gap-1.5 px-2.5 py-1.5 text-xs no-underline"
               >
                 <File className="w-3.5 h-3.5 flex-shrink-0" />
-                <span className="truncate">{attachment.name}</span>
+                <span className="truncate">{showDocType && attachment.docType ? `${attachment.docType}: ` : ''}{attachment.name}</span>
               </a>
             )}
           </li>

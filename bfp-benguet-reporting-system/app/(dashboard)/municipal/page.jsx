@@ -5,6 +5,8 @@ import axios from 'axios';
 import Link from 'next/link';
 import { FileEdit, Search, CheckCircle2, FileText, Building2, ArrowRight, Info } from 'lucide-react';
 import StatusBadge from '../../../components/common/StatusBadge';
+import TimelinessBadge from '../../../components/reports/TimelinessBadge';
+import ReportExtras from '../../../components/reports/ReportExtras';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
 import { useToast } from '../../../components/common/ToastProvider';
 import { formatDateTime, isAuthError, parseJsonField } from '../../../lib/utils';
@@ -182,7 +184,7 @@ export default function MunicipalDashboard() {
                 {/* Meta */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 rounded-lg p-4 text-sm">
                   <div><p className="text-gray-500">Type</p><p className="font-semibold">{selectedReport.reportType}</p></div>
-                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /></div>
+                  <div><p className="text-gray-500">Status</p><StatusBadge status={selectedReport.status} /><TimelinessBadge report={selectedReport} className="mt-1" /></div>
                   <div><p className="text-gray-500">Report Date</p><p className="font-semibold">{new Date(selectedReport.reportDate).toLocaleDateString()}</p></div>
                   <div><p className="text-gray-500">Submitted At</p><p className="font-semibold">{formatDateTime(selectedReport.submittedAt)}</p></div>
                   {(reportDetail?.category || selectedReport.category) && (
@@ -209,6 +211,8 @@ export default function MunicipalDashboard() {
                 <ReportRequestsPanel key={selectedReport.id} report={reportDetail || selectedReport} />
   
                 <RevisionHistory report={reportDetail} />
+  
+                <ReportExtras report={reportDetail || selectedReport} />
   
                 {/* Attachments */}
                 <div className="bg-gray-50 rounded-lg p-4">
@@ -415,6 +419,7 @@ export default function MunicipalDashboard() {
                       </td>
                       <td className="px-5 py-4 align-top">
                         <StatusBadge status={report.status} />
+                        <TimelinessBadge report={report} className="mt-1" />
                         <ReportProgressBar progress={getReportProgress(report)} compact />
                         {report.status === 'RETURNED' && report.remarks && (
                           <p className="mt-1 w-40 truncate text-xs text-gray-500" title={report.remarks}>

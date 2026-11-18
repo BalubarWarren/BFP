@@ -27,7 +27,7 @@ const roleLabel = (role) => ROLE_LABELS[role] || role?.replace(/_/g, ' ') || 'th
 const humanize = (value) => String(value || '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 const isPdf = (file) => file.type === 'application/pdf' || file.name?.toLowerCase().endsWith('.pdf');
 const ACCEPT = '.jpg,.jpeg,.png,.webp,.gif,.heic,.pdf,image/jpeg,image/png,image/webp,image/gif,image/heic,application/pdf';
-const MAX_ATTACHMENTS = 10;
+const MAX_ATTACHMENTS = 20;
 const authHeaders = () => ({ Authorization: `Bearer ${sessionStorage.getItem('token')}` });
 
 // Revising a returned report: read the reviewer's remarks and the comments they left on each file,
@@ -85,7 +85,7 @@ export default function ReviseReturnedReportPage() {
   const newFiles = items.flatMap((item) => (item.added ? [item.added] : item.replacement && !item.removed ? [item.replacement] : []));
   const filesChanged = items.some((item) => item.added || item.replacement || item.removed);
   const keptCount = items.filter((item) => !item.removed).length;
-  const hasMainFile = items.some((item) => !item.removed && (item.added ? item.kind !== 'EMS' : item.original.kind !== 'EMS'));
+  const hasMainFile = items.some((item) => !item.removed && (item.added ? item.kind === 'MAIN' : !item.original.kind));
   const invalidFile = newFiles.find((file) => getFileIssue(file));
   const replacedCount = items.filter((item) => item.replacement && !item.removed).length;
   const removedCount = items.filter((item) => item.removed && !item.added).length;
@@ -124,7 +124,7 @@ export default function ReviseReturnedReportPage() {
         attachments = items.flatMap((item) => {
           if (item.added) return [{ ...uploaded[next++], ...(item.kind === 'EMS' && { kind: 'EMS' }) }];
           if (item.removed) return [];
-          if (item.replacement) return [{ ...uploaded[next++], ...(item.original.kind === 'EMS' && { kind: 'EMS' }) }];
+          if (item.replacement) return [{ ...uploaded[next++], ...(item.original.kind && { kind: item.original.kind }), ...(item.original.docType && { docType: item.original.docType }) }];
           return [item.original];
         });
       }
@@ -239,6 +239,7 @@ export default function ReviseReturnedReportPage() {
                       {isPdf(original) ? <FileText className="h-4 w-4 flex-shrink-0" /> : <FileIcon className="h-4 w-4 flex-shrink-0" />}
                       <span className="truncate">{original.name}</span>
                       {original.kind === 'EMS' && <span className="badge bg-red-50 text-red-700 no-underline">EMS</span>}
+                      {original.kind === 'SUPPORTING' && <span className="badge bg-indigo-50 text-indigo-700 no-underline">{original.docType || 'Supporting'}</span>}
                     </p>
                     {replacement && !removed && (
                       <p className={`mt-1 flex items-center gap-1.5 text-xs ${issue ? 'text-red-600' : 'text-emerald-700'}`}>

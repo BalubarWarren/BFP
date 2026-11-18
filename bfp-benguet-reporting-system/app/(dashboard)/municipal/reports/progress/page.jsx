@@ -12,6 +12,9 @@ import BackButton from '../../../../../components/common/BackButton';
 import PageHeader from '../../../../../components/common/PageHeader';
 import { submitReport } from '../../../../../lib/submit-report';
 import CaseSelect from '../../../../../components/reports/CaseSelect';
+import SupportingDocsInput from '../../../../../components/reports/SupportingDocsInput';
+import LateExplanationField from '../../../../../components/reports/LateExplanationField';
+import { getSubmissionDeadline } from '../../../../../lib/report-timeliness';
 
 export default function ProgressInvestigationForm() {
   const router = useRouter();
@@ -32,6 +35,14 @@ export default function ProgressInvestigationForm() {
   const emsInputRef = useRef(null);
   const attachmentInputRef = useRef(null);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
+  const [supportingDocs, setSupportingDocs] = useState([]);
+  const [lateExplanation, setLateExplanation] = useState('');
+  // The chosen case (its Spot/Progress reports), which sets this report's deadline.
+  const [selectedCase, setSelectedCase] = useState(null);
+  const deadline = selectedCase
+    ? getSubmissionDeadline('PROGRESS_INVESTIGATION', { caseReports: [selectedCase.spot, ...(selectedCase.progressReports || [])] })
+    : null;
+  const isLate = !!(deadline && new Date() > deadline);
 
   const [formData, setFormData] = useState({
     reportDate: new Date().toISOString().split('T')[0],
@@ -77,6 +88,11 @@ export default function ProgressInvestigationForm() {
       return;
     }
 
+    if (hasInvalidAttachments(supportingDocs.map((doc) => doc.file))) {
+      setError('One or more supporting documents are too large or an unsupported type. Remove or replace them before submitting.');
+      return;
+    }
+
     if (hasInvalidAttachments(emsFiles)) {
       setError('One or more EMS report files are too large or an unsupported type. Remove or replace them before submitting.');
       setEmsHighlight(true);
@@ -95,11 +111,12 @@ export default function ProgressInvestigationForm() {
           municipalityId: String(effectiveUser.municipalityId),
           incidentId: formData.incidentId || undefined,
           reportDate: formData.reportDate,
-          content: JSON.stringify({}),
+          content: JSON.stringify({ ...(isLate && { lateExplanation: lateExplanation.trim() }) }),
           passedToRole: recipientRole,
         },
         files: attachments,
         emsFiles,
+        supportingDocs,
       });
       setSubmittedReport(response.data.report);
       setSuccess('Progress Investigation Report submitted successfully.');
@@ -134,7 +151,7 @@ export default function ProgressInvestigationForm() {
             </div>
             <div>
               <label className="form-label">Linked Spot report (case) <span className="text-bfp-red">*</span></label>
-              <CaseSelect value={formData.incidentId} onChange={handleChange} reportType="PROGRESS_INVESTIGATION" locked={caseLocked} />
+              <CaseSelect value={formData.incidentId} onChange={handleChange} reportType="PROGRESS_INVESTIGATION" locked={caseLocked} onCaseChange={setSelectedCase} />
             </div>
           </div>
         </div>
@@ -169,6 +186,10 @@ export default function ProgressInvestigationForm() {
           label="Attach EMS Report"
           description="Attach the Emergency Medical Services report if EMS responded to this incident. Leave this blank if it isn't needed."
         />
+
+        <SupportingDocsInput docs={supportingDocs} onChange={setSupportingDocs} />
+
+        {isLate && <LateExplanationField deadline={deadline} value={lateExplanation} onChange={setLateExplanation} />}
 
         <div className="flex gap-3 flex-wrap">
           <button type="submit" disabled={loading} className="btn btn-primary px-8">

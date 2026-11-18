@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../lib/prisma';
+import { getSubmissionTimeliness, getFollowUpDelay, getSubmissionDeadline, LATE_EXPLANATION_MIN_LENGTH } from '../../../lib/report-timeliness';
 import { getCollaboratingReportIds } from '../../../lib/report-requests';
 import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../lib/auth';
-import { ROLES, REPORT_STATUS, REPORT_TYPES, NOTIFICATION_TYPES } from '../../../lib/constants';
+import { ROLES, REPORT_STATUS, REPORT_TYPES, NOTIFICATION_TYPES, MAX_REPORT_ATTACHMENTS, attachmentKindFields, isMainAttachment } from '../../../lib/constants';
 import { createIncidentWithReference } from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
 import { saveAttachments, isStoredAttachmentUrl } from '../../../lib/storage';
@@ -18,7 +19,7 @@ import {
 // Safety cap on list results — orderBy is already createdAt desc, so this returns the most
 // recent reports rather than silently truncating in an unpredictable order.
 const MAX_LIST_RESULTS = 200;
-const MAX_ATTACHMENTS = 10;
+const MAX_ATTACHMENTS = MAX_REPORT_ATTACHMENTS;
 
 const INVESTIGATION_REPORT_TYPES = [
   'MDFIR',
@@ -267,6 +268,7 @@ export async function GET(request) {
             subCategory: true,
             status: true,
             dateOfIncident: true,
+            timeOfIncident: true,
             barangay: true,
             address: true,
           },
@@ -283,8 +285,33 @@ export async function GET(request) {
       { reportType, status, view }
     );
 
+    // Red/green timeliness for every listed report (lib/report-timeliness.js): was it submitted
+    // within its deadline, and — for a finalized Spot/Progress report — is the case's next
+    // report overdue. One query for the cases' other reports.
+    const incidentIds = [...new Set(reports.map((r) => r.incidentId).filter(Boolean))];
+    const caseRows = incidentIds.length
+      ? await prisma.report.findMany({
+          where: { incidentId: { in: incidentIds } },
+          select: { id: true, incidentId: true, reportType: true, status: true, passedToId: true, reviewedAt: true, submittedAt: true },
+        })
+      : [];
+    const caseByIncident = new Map();
+    for (const row of caseRows) {
+      if (!caseByIncident.has(row.incidentId)) caseByIncident.set(row.incidentId, []);
+      caseByIncident.get(row.incidentId).push(row);
+    }
+    const now = new Date();
+    const withTimeliness = reports.map((report) => {
+      const caseReports = (caseByIncident.get(report.incidentId) || []).filter((r) => r.id !== report.id);
+      return {
+        ...report,
+        timeliness: getSubmissionTimeliness(report, { incident: report.incident, caseReports }),
+        followUpDelay: getFollowUpDelay(report, caseReports, now),
+      };
+    });
+
     return NextResponse.json({
-      reports: [...demoReports, ...reports],
+      reports: [...demoReports, ...withTimeliness],
     });
   } catch (error) {
     console.error('Error fetching reports:', error);
@@ -354,6 +381,9 @@ export async function POST(request) {
     // Optional EMS (Emergency Medical Services) report files — kept in the same attachments array,
     // tagged kind: 'EMS' (see components/reports/AttachmentList.jsx).
     const uploadedEmsFiles = isMultipart ? realFiles(formData.getAll('emsAttachments')) : [];
+    // Supporting documents (lab results, certificates...), each with its docType in the same order.
+    const uploadedSupportingFiles = isMultipart ? realFiles(formData.getAll('supportingAttachments')) : [];
+    const supportingDocTypes = isMultipart ? formData.getAll('supportingDocTypes').map(String) : [];
     let attachments = [];
     if (!isMultipart) {
       attachments = parseJsonField(body.attachments, []);
@@ -373,7 +403,7 @@ export async function POST(request) {
         type: String(attachment.type || 'application/octet-stream'),
         size: Number(attachment.size) || 0,
         url: attachment.url,
-        ...(attachment.kind === 'EMS' && { kind: 'EMS' }),
+        ...attachmentKindFields(attachment),
       }));
     }
 
@@ -465,8 +495,43 @@ export async function POST(request) {
       }
     }
 
+    // Submitted after its deadline (lib/report-timeliness.js): the investigator must explain the
+    // delay — the Explanation Report the BFP requires — which travels with the report to every
+    // reviewer (content.lateExplanation).
+    if (['SPOT_INVESTIGATION', 'PROGRESS_INVESTIGATION', 'FINAL_INVESTIGATION'].includes(reportType)) {
+      const deadline = getSubmissionDeadline(reportType, {
+        incident: {
+          dateOfIncident: parsedContent.dateOfIncident || reportDate,
+          timeOfIncident: parsedContent.timeOfIncident || null,
+        },
+        caseReports: isFollowUpReport
+          ? await prisma.report.findMany({
+              where: { incidentId: parsedIncidentId },
+              select: { reportType: true, status: true, passedToId: true, reviewedAt: true },
+            })
+          : [],
+      });
+      const explanation = typeof parsedContent.lateExplanation === 'string' ? parsedContent.lateExplanation.trim().slice(0, 4000) : '';
+      if (deadline && new Date() > deadline) {
+        if (explanation.length < LATE_EXPLANATION_MIN_LENGTH) {
+          return NextResponse.json(
+            {
+              error: `This report is past its deadline (${deadline.toLocaleString('en-PH', { timeZone: 'Asia/Manila' })}). Write an explanation for the late submission before submitting.`,
+              code: 'LATE_EXPLANATION_REQUIRED',
+              deadline,
+            },
+            { status: 400 }
+          );
+        }
+        parsedContent.lateExplanation = explanation;
+        parsedContent.submittedLate = true;
+      } else {
+        delete parsedContent.lateExplanation;
+      }
+    }
+
     // The EMS report is optional and doesn't count — the investigation report itself is required.
-    if (!attachments.some((attachment) => attachment.kind !== 'EMS') && !uploadedFiles.length) {
+    if (!attachments.some(isMainAttachment) && !uploadedFiles.length) {
       return NextResponse.json(
         { error: 'At least one attachment is required.' },
         { status: 400 }
@@ -510,14 +575,22 @@ export async function POST(request) {
 
     if (isMultipart) {
       try {
-        if (uploadedFiles.length + uploadedEmsFiles.length > MAX_ATTACHMENTS) {
+        if (uploadedFiles.length + uploadedEmsFiles.length + uploadedSupportingFiles.length > MAX_ATTACHMENTS) {
           return NextResponse.json({ error: `You can attach at most ${MAX_ATTACHMENTS} files.` }, { status: 400 });
         }
-        const [mainSaved, emsSaved] = await Promise.all([
+        const [mainSaved, emsSaved, supportingSaved] = await Promise.all([
           saveAttachments(uploadedFiles, 'reports'),
           saveAttachments(uploadedEmsFiles, 'reports'),
+          saveAttachments(uploadedSupportingFiles, 'reports'),
         ]);
-        attachments = [...mainSaved, ...emsSaved.map((attachment) => ({ ...attachment, kind: 'EMS' }))];
+        attachments = [
+          ...mainSaved,
+          ...emsSaved.map((attachment) => ({ ...attachment, kind: 'EMS' })),
+          ...supportingSaved.map((attachment, index) => ({
+            ...attachment,
+            ...attachmentKindFields({ kind: 'SUPPORTING', docType: supportingDocTypes[index] }),
+          })),
+        ];
       } catch (uploadError) {
         return NextResponse.json({ error: uploadError.message }, { status: 400 });
       }
@@ -577,12 +650,15 @@ export async function POST(request) {
     if (reportType === 'FINAL_INVESTIGATION' && effectiveIncidentId) {
       const finalInjured = toCasualtyCount(parsedContent.casualtiesInjured);
       const finalFatalities = toCasualtyCount(parsedContent.casualtiesFatalities);
-      if (finalInjured !== null || finalFatalities !== null) {
+      // The cause of fire found by the investigation (dashboard "Causes of Fire").
+      const causeOfFire = typeof parsedContent.causeOfFire === 'string' ? parsedContent.causeOfFire.trim().slice(0, 200) : '';
+      if (finalInjured !== null || finalFatalities !== null || causeOfFire) {
         await prisma.incident.update({
           where: { id: effectiveIncidentId },
           data: {
             ...(finalInjured !== null && { casualtiesInjured: finalInjured }),
             ...(finalFatalities !== null && { casualtiesFatalities: finalFatalities }),
+            ...(causeOfFire && { causeOfFire }),
           },
         });
       }

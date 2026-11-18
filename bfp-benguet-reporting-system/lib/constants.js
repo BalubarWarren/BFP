@@ -496,3 +496,39 @@ export const BFP_RANK_GROUPS = [
 ];
 
 export const BFP_RANKS = BFP_RANK_GROUPS.flatMap((group) => group.ranks.map((rank) => rank.value));
+
+// Supporting documents an investigator can attach to a Spot/Progress/Final report next to the
+// report itself (attachments tagged kind: 'SUPPORTING' with one of these as docType).
+export const SUPPORTING_DOC_TYPES = [
+  'Fire Incident Certificate',
+  'Specimen / Laboratory Result',
+  'Chemical Analysis',
+  'Electrical Analysis',
+  'Fire Debris Analysis',
+  'Gas or Fuel Analysis',
+  'Explosive Residue Examination',
+  'Sketch / Diagram',
+  'Photograph',
+  'Explanation Report',
+  'Other Supporting Document',
+];
+
+// Attachments are one JSON list per report: the report file(s) themselves have no kind; EMS
+// reports are kind 'EMS'; supporting documents kind 'SUPPORTING' (+ docType).
+export const isMainAttachment = (attachment) => !attachment?.kind;
+
+// Max files on one report (report files + EMS + supporting documents).
+export const MAX_REPORT_ATTACHMENTS = 20;
+
+// Reduces a client-supplied attachment's kind/docType to the known values.
+export const attachmentKindFields = (attachment) => {
+  if (attachment?.kind === 'EMS') return { kind: 'EMS' };
+  if (attachment?.kind === 'SUPPORTING') {
+    return {
+      kind: 'SUPPORTING',
+      docType: SUPPORTING_DOC_TYPES.includes(attachment.docType) ? attachment.docType : 'Other Supporting Document',
+    };
+  }
+  return {};
+};
+

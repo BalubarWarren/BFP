@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../../lib/auth';
-import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS } from '../../../../lib/constants';
+import { NOTIFICATION_TYPES, ROLES, REPORT_STATUS, MAX_REPORT_ATTACHMENTS, attachmentKindFields, isMainAttachment } from '../../../../lib/constants';
 import { getDemoReportById, isDemoReportId } from '../../../../lib/demo-reports';
 import {
   MUNICIPAL_REVIEWER_ROLES,
@@ -19,7 +19,7 @@ import { parseJsonField } from '../../../../lib/utils';
 import { canEditAsInvestigator, listRequestsForReport } from '../../../../lib/report-requests';
 
 // Same cap as POST /api/reports.
-const MAX_ATTACHMENTS = 10;
+const MAX_ATTACHMENTS = MAX_REPORT_ATTACHMENTS;
 
 // Attachment objects from the client are only accepted when they point at our own storage bucket
 // (reviewers open them as links), and are reduced to the known fields.
@@ -38,7 +38,7 @@ const normalizeAttachments = (value, existingUrls = new Set()) => {
     type: String(attachment.type || 'application/octet-stream'),
     size: Number(attachment.size) || 0,
     url: attachment.url,
-    ...(attachment.kind === 'EMS' && { kind: 'EMS' }),
+    ...attachmentKindFields(attachment),
   }));
 };
 
@@ -191,7 +191,7 @@ export async function PATCH(request, { params }) {
       if (!revisedAttachments) {
         return NextResponse.json({ error: 'Invalid attachments' }, { status: 400 });
       }
-      if (!revisedAttachments.some((attachment) => attachment.kind !== 'EMS')) {
+      if (!revisedAttachments.some(isMainAttachment)) {
         return NextResponse.json({ error: 'At least one attachment is required.' }, { status: 400 });
       }
     }

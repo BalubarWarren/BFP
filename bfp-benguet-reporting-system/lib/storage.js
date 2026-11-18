@@ -67,7 +67,7 @@ function assertValidAttachments(files) {
   }
 }
 
-const MAX_FILES_PER_REPORT = 10;
+const MAX_FILES_PER_REPORT = 20;
 
 const storedNameFor = (folder, fileName) =>
   `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}-${sanitizeFileName(fileName)}`;

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { MapPin, User, Calendar, Tag, ChevronUp, ChevronDown, ClipboardList, Eye } from 'lucide-react';
 import StatusBadge from '../../../components/common/StatusBadge';
+import TimelinessBadge from '../../../components/reports/TimelinessBadge';
 import SessionExpiredBanner from '../../../components/common/SessionExpiredBanner';
 import PageHeader from '../../../components/common/PageHeader';
 import WorkflowTracker, { ROLE_LABELS } from '../../../components/reports/WorkflowTracker';
@@ -190,6 +191,7 @@ export default function AdminDashboard() {
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold text-gray-900">{fmtType(report.reportType)}</span>
                       <StatusBadge status={report.status} />
+                      <TimelinessBadge report={report} className="mt-1" />
                       {report.isDemo && (
                         <span className="text-[10px] px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded font-semibold">DEMO</span>
                       )}

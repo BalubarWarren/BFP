@@ -13,6 +13,10 @@ import PageHeader from '../../../../../components/common/PageHeader';
 import RankSelect from '../../../../../components/common/RankSelect';
 import { submitReport } from '../../../../../lib/submit-report';
 import CaseSelect from '../../../../../components/reports/CaseSelect';
+import SupportingDocsInput from '../../../../../components/reports/SupportingDocsInput';
+import LateExplanationField from '../../../../../components/reports/LateExplanationField';
+import { getSubmissionDeadline } from '../../../../../lib/report-timeliness';
+import { CAUSES_OF_FIRE } from '../../../../../lib/incident-details';
 
 export default function FinalInvestigationForm() {
   const router = useRouter();
@@ -33,6 +37,14 @@ export default function FinalInvestigationForm() {
   const emsInputRef = useRef(null);
   const attachmentInputRef = useRef(null);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
+  const [supportingDocs, setSupportingDocs] = useState([]);
+  const [lateExplanation, setLateExplanation] = useState('');
+  // The chosen case (its Spot/Progress reports), which sets this report's deadline.
+  const [selectedCase, setSelectedCase] = useState(null);
+  const deadline = selectedCase
+    ? getSubmissionDeadline('FINAL_INVESTIGATION', { caseReports: [selectedCase.spot, ...(selectedCase.progressReports || [])] })
+    : null;
+  const isLate = !!(deadline && new Date() > deadline);
 
   const [formData, setFormData] = useState({
     reportDate: new Date().toISOString().split('T')[0],
@@ -43,6 +55,9 @@ export default function FinalInvestigationForm() {
     stationCommanderName: '',
     casualtiesInjured: '',
     casualtiesFatalities: '',
+    rescueOperations: '',
+    causeOfFire: '',
+    causeOfFireOther: '',
   });
 
   // Started from a Spot report's "Start ... Report" button: the case is fixed to that Spot report.
@@ -72,6 +87,10 @@ export default function FinalInvestigationForm() {
       return;
     }
     if (!formData.respondingOfficer) { setError('Please enter the reporting officer name.'); return; }
+    if (!formData.causeOfFire || (formData.causeOfFire === 'Other' && !formData.causeOfFireOther.trim())) {
+      setError('Please state the cause of fire.');
+      return;
+    }
     if (!attachments.length) {
       setAttachmentWarningKind('missing');
       setShowAttachmentWarning(true);
@@ -82,6 +101,11 @@ export default function FinalInvestigationForm() {
       setAttachmentWarningKind('invalid');
       setShowAttachmentWarning(true);
       setAttachmentHighlight(true);
+      return;
+    }
+
+    if (hasInvalidAttachments(supportingDocs.map((doc) => doc.file))) {
+      setError('One or more supporting documents are too large or an unsupported type. Remove or replace them before submitting.');
       return;
     }
 
@@ -111,11 +135,15 @@ export default function FinalInvestigationForm() {
           content: JSON.stringify({
             ...(formData.casualtiesInjured !== '' && { casualtiesInjured: Number(formData.casualtiesInjured) || 0 }),
             ...(formData.casualtiesFatalities !== '' && { casualtiesFatalities: Number(formData.casualtiesFatalities) || 0 }),
+            ...(formData.rescueOperations !== '' && { rescueOperations: Number(formData.rescueOperations) || 0 }),
+            causeOfFire: formData.causeOfFire === 'Other' ? formData.causeOfFireOther.trim() : formData.causeOfFire,
+            ...(isLate && { lateExplanation: lateExplanation.trim() }),
           }),
           passedToRole: recipientRole,
         },
         files: attachments,
         emsFiles,
+        supportingDocs,
       });
       setSubmittedReport(response.data.report);
       setSuccess('Final Investigation Report submitted successfully.');
@@ -150,10 +178,28 @@ export default function FinalInvestigationForm() {
             </div>
             <div>
               <label className="form-label">Linked Spot report (case) <span className="text-bfp-red">*</span></label>
-              <CaseSelect value={formData.incidentId} onChange={handleChange} reportType="FINAL_INVESTIGATION" locked={caseLocked} />
+              <CaseSelect value={formData.incidentId} onChange={handleChange} reportType="FINAL_INVESTIGATION" locked={caseLocked} onCaseChange={setSelectedCase} />
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="form-label">Cause of Fire <span className="text-bfp-red">*</span></label>
+              <select name="causeOfFire" value={formData.causeOfFire} onChange={handleChange} className="form-input" required>
+                <option value="">— Select —</option>
+                {CAUSES_OF_FIRE.map((cause) => (
+                  <option key={cause} value={cause}>{cause}</option>
+                ))}
+                <option value="Other">Other (specify)</option>
+              </select>
+            </div>
+            {formData.causeOfFire === 'Other' && (
+              <div>
+                <label className="form-label">Specify the cause <span className="text-bfp-red">*</span></label>
+                <input type="text" name="causeOfFireOther" value={formData.causeOfFireOther} onChange={handleChange} className="form-input" maxLength={200} required />
+              </div>
+            )}
+          </div>
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="form-label">Final count: Injured</label>
               <input type="number" name="casualtiesInjured" value={formData.casualtiesInjured} onChange={handleChange} className="form-input" min="0" max="9999" step="1" inputMode="numeric" placeholder="Leave blank to keep the Spot report count" />
@@ -161,6 +207,10 @@ export default function FinalInvestigationForm() {
             <div>
               <label className="form-label">Final count: Fatalities</label>
               <input type="number" name="casualtiesFatalities" value={formData.casualtiesFatalities} onChange={handleChange} className="form-input" min="0" max="9999" step="1" inputMode="numeric" placeholder="Leave blank to keep the Spot report count" />
+            </div>
+            <div>
+              <label className="form-label">Final count: Rescue Operations</label>
+              <input type="number" name="rescueOperations" value={formData.rescueOperations} onChange={handleChange} className="form-input" min="0" max="9999" step="1" inputMode="numeric" placeholder="Leave blank to keep" />
             </div>
           </div>
         </div>
@@ -220,6 +270,10 @@ export default function FinalInvestigationForm() {
           label="Attach EMS Report"
           description="Attach the Emergency Medical Services report if EMS responded to this incident. Leave this blank if it isn't needed."
         />
+
+        <SupportingDocsInput docs={supportingDocs} onChange={setSupportingDocs} />
+
+        {isLate && <LateExplanationField deadline={deadline} value={lateExplanation} onChange={setLateExplanation} />}
 
         <div className="flex gap-3 flex-wrap">
           <button type="submit" disabled={loading} className="btn btn-primary px-8">
