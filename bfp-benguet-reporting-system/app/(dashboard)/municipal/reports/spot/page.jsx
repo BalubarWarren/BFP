@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { Search, ClipboardList, Send, HeartPulse, Building2, LocateFixed, Loader2 } from 'lucide-react';
+import { Search, ClipboardList, Send, HeartPulse, Building2 } from 'lucide-react';
 import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
 import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
@@ -57,7 +57,6 @@ export default function SpotInvestigationForm() {
   const attachmentInputRef = useRef(null);
   const [recipientRole, setRecipientRole] = useState('MUNICIPAL_CHIEF_IIS');
   const [supportingDocs, setSupportingDocs] = useState([]);
-  const [locating, setLocating] = useState(false);
 
   const [formData, setFormData] = useState({
     reportDate: new Date().toISOString().split('T')[0],
@@ -75,8 +74,6 @@ export default function SpotInvestigationForm() {
     ownerName: '',
     occupantName: '',
     numberOfStoreys: '',
-    latitude: '',
-    longitude: '',
     lateExplanation: '',
     description: '',
   });
@@ -87,34 +84,6 @@ export default function SpotInvestigationForm() {
     incident: { dateOfIncident: formData.dateOfIncident, timeOfIncident: formData.timeOfIncident || '00:00' },
   });
   const isLate = !!(formData.timeOfIncident && deadline && new Date() > deadline);
-
-  // GPS: the device's current position (the investigator is normally at the scene).
-  const useCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setError('This device or browser cannot share its location. Enter the coordinates by hand.');
-      return;
-    }
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setFormData((prev) => ({
-          ...prev,
-          latitude: position.coords.latitude.toFixed(6),
-          longitude: position.coords.longitude.toFixed(6),
-        }));
-        setLocating(false);
-      },
-      (geoError) => {
-        setLocating(false);
-        setError(
-          geoError.code === 1
-            ? 'Location permission was denied. Allow location access for this site, or enter the coordinates by hand.'
-            : 'Could not get the current location. Try again outdoors, or enter the coordinates by hand.'
-        );
-      },
-      { enableHighAccuracy: true, timeout: 15000 }
-    );
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -142,10 +111,6 @@ export default function SpotInvestigationForm() {
     if (!formData.subCategory) { setError('Please select a sub-category.'); return; }
     if (!formData.barangay.trim()) { setError('Please enter the barangay where the fire happened.'); return; }
     if (!formData.timeOfIncident) { setError('Please enter the time of the fire.'); return; }
-    if ((formData.latitude && !formData.longitude) || (!formData.latitude && formData.longitude)) {
-      setError('Enter both latitude and longitude, or leave both blank.');
-      return;
-    }
     if (hasInvalidAttachments(supportingDocs.map((doc) => doc.file))) {
       setError('One or more supporting documents are too large or an unsupported type. Remove or replace them before submitting.');
       return;
@@ -196,10 +161,6 @@ export default function SpotInvestigationForm() {
             ownerName: formData.ownerName.trim(),
             occupantName: formData.occupantName.trim(),
             numberOfStoreys: formData.numberOfStoreys ? Number(formData.numberOfStoreys) : null,
-            ...(formData.latitude && formData.longitude && {
-              latitude: Number(formData.latitude),
-              longitude: Number(formData.longitude),
-            }),
             ...(isLate && { lateExplanation: formData.lateExplanation.trim() }),
           }),
           passedToRole: recipientRole,
@@ -319,37 +280,6 @@ export default function SpotInvestigationForm() {
               <label className="form-label">Rescue Operations</label>
               <input type="number" name="rescueOperations" value={formData.rescueOperations} onChange={handleChange} className="form-input" min="0" max="9999" step="1" inputMode="numeric" placeholder="0" />
             </div>
-          </div>
-
-          {/* GPS */}
-          <div className="mt-4 rounded-md border border-gray-200 p-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-sm font-medium text-gray-900">GPS Location <span className="font-normal text-gray-500">(optional)</span></p>
-              <button type="button" onClick={useCurrentLocation} disabled={locating} className="btn btn-secondary inline-flex items-center gap-1.5 text-sm">
-                {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-                {locating ? 'Getting location…' : 'Use my current location'}
-              </button>
-            </div>
-            <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="form-label text-xs">Latitude</label>
-                <input type="number" name="latitude" value={formData.latitude} onChange={handleChange} className="form-input" step="0.000001" min="-90" max="90" placeholder="e.g. 16.4560" />
-              </div>
-              <div>
-                <label className="form-label text-xs">Longitude</label>
-                <input type="number" name="longitude" value={formData.longitude} onChange={handleChange} className="form-input" step="0.000001" min="-180" max="180" placeholder="e.g. 120.5880" />
-              </div>
-            </div>
-            {formData.latitude && formData.longitude && (
-              <a
-                href={`https://www.google.com/maps?q=${formData.latitude},${formData.longitude}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-2 inline-block text-xs font-medium text-bfp-navy hover:underline dark:text-blue-400"
-              >
-                Check this point on the map
-              </a>
-            )}
           </div>
           <div className="mt-4">
             <label className="form-label">Description of Incident</label>

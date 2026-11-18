@@ -155,25 +155,6 @@ CREATE OR REPLACE FUNCTION pg_temp.subcats(p_cat text) RETURNS text[] LANGUAGE s
   END;
 $fn$;
 
-CREATE OR REPLACE FUNCTION pg_temp.centre(p_mun text) RETURNS float8[] LANGUAGE sql IMMUTABLE AS $fn$
-  SELECT CASE
-    WHEN lower(p_mun) = lower('Atok') THEN ARRAY[16.58, 120.7]::float8[]
-    WHEN lower(p_mun) = lower('Bakun') THEN ARRAY[16.8, 120.66]::float8[]
-    WHEN lower(p_mun) = lower('Bokod') THEN ARRAY[16.49, 120.83]::float8[]
-    WHEN lower(p_mun) = lower('Buguias') THEN ARRAY[16.72, 120.82]::float8[]
-    WHEN lower(p_mun) = lower('Itogon') THEN ARRAY[16.367, 120.677]::float8[]
-    WHEN lower(p_mun) = lower('Kabayan') THEN ARRAY[16.62, 120.85]::float8[]
-    WHEN lower(p_mun) = lower('Kapangan') THEN ARRAY[16.58, 120.6]::float8[]
-    WHEN lower(p_mun) = lower('Kibungan') THEN ARRAY[16.69, 120.65]::float8[]
-    WHEN lower(p_mun) = lower('La Trinidad') THEN ARRAY[16.455, 120.587]::float8[]
-    WHEN lower(p_mun) = lower('Mankayan') THEN ARRAY[16.86, 120.79]::float8[]
-    WHEN lower(p_mun) = lower('Sablan') THEN ARRAY[16.497, 120.488]::float8[]
-    WHEN lower(p_mun) = lower('Tuba') THEN ARRAY[16.32, 120.56]::float8[]
-    WHEN lower(p_mun) = lower('Tublay') THEN ARRAY[16.476, 120.63]::float8[]
-    ELSE ARRAY[16.45, 120.6]::float8[]
-  END;
-$fn$;
-
 -- A moment in Philippine time, p_days before today, at p_hour:p_min.
 CREATE OR REPLACE FUNCTION pg_temp.ph(p_days int, p_hour int, p_min int DEFAULT 0) RETURNS timestamptz LANGUAGE sql AS $fn$
   SELECT (date_trunc('day', now() AT TIME ZONE 'Asia/Manila') - p_days * interval '1 day'
@@ -308,7 +289,6 @@ DECLARE
   base_url text;
   files jsonb;
   content jsonb := jsonb_build_object('demo', true);
-  centre float8[];
   type_label text := replace(p_type, '_', ' ');
 BEGIN
   SELECT * INTO inc FROM incidents WHERE id = p_inc;
@@ -335,7 +315,6 @@ BEGIN
   END IF;
 
   IF p_type = 'SPOT_INVESTIGATION' THEN
-    centre := pg_temp.centre(mun_name);
     content := content || jsonb_build_object(
       'dateOfIncident', to_char(inc."dateOfIncident", 'YYYY-MM-DD'),
       'timeOfIncident', inc."timeOfIncident",
@@ -356,10 +335,6 @@ BEGIN
       'occupantName', '',
       'numberOfStoreys', CASE WHEN inc."generalCategory" IN ('RESIDENTIAL','NON_RESIDENTIAL') THEN pg_temp.rnd(1, 3) ELSE NULL END
     );
-    IF random() < 0.6 THEN
-      content := content || jsonb_build_object('latitude', round((centre[1] + (random() - 0.5) * 0.04)::numeric, 6),
-                                               'longitude', round((centre[2] + (random() - 0.5) * 0.04)::numeric, 6));
-    END IF;
   END IF;
   content := content || p_extra;
 

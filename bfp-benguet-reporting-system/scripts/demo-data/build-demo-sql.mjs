@@ -23,22 +23,11 @@ const { REPLACED_PREFIX } = await loadModule('lib/sample-data.js');
 const q = (s) => `'${String(s).replace(/'/g, "''")}'`;
 const arr = (list) => `ARRAY[${list.map(q).join(', ')}]::text[]`;
 
-// Approximate town centres (for GPS on some Spot reports).
-const CENTRES = {
-  Atok: [16.58, 120.7], Bakun: [16.8, 120.66], Bokod: [16.49, 120.83], Buguias: [16.72, 120.82],
-  Itogon: [16.367, 120.677], Kabayan: [16.62, 120.85], Kapangan: [16.58, 120.6], Kibungan: [16.69, 120.65],
-  'La Trinidad': [16.455, 120.587], Mankayan: [16.86, 120.79], Sablan: [16.497, 120.488], Tuba: [16.32, 120.56],
-  Tublay: [16.476, 120.63],
-};
-
 const barangayCase = Object.entries(BARANGAYS)
   .map(([name, list]) => `    WHEN lower(p_mun) = lower(${q(name)}) THEN ${arr(list)}`)
   .join('\n');
 const subCase = Object.entries(SUB_CATEGORIES)
   .map(([cat, list]) => `    WHEN ${q(cat)} THEN ${arr(list)}`)
-  .join('\n');
-const centreCase = Object.entries(CENTRES)
-  .map(([name, [lat, lng]]) => `    WHEN lower(p_mun) = lower(${q(name)}) THEN ARRAY[${lat}, ${lng}]::float8[]`)
   .join('\n');
 const causes = arr(CAUSES_OF_FIRE.filter((c) => c !== 'Undetermined'));
 
@@ -186,13 +175,6 @@ ${subCase}
   END;
 $fn$;
 
-CREATE OR REPLACE FUNCTION pg_temp.centre(p_mun text) RETURNS float8[] LANGUAGE sql IMMUTABLE AS $fn$
-  SELECT CASE
-${centreCase}
-    ELSE ARRAY[16.45, 120.6]::float8[]
-  END;
-$fn$;
-
 -- A moment in Philippine time, p_days before today, at p_hour:p_min.
 CREATE OR REPLACE FUNCTION pg_temp.ph(p_days int, p_hour int, p_min int DEFAULT 0) RETURNS timestamptz LANGUAGE sql AS $fn$
   SELECT (date_trunc('day', now() AT TIME ZONE 'Asia/Manila') - p_days * interval '1 day'
@@ -327,7 +309,6 @@ DECLARE
   base_url text;
   files jsonb;
   content jsonb := jsonb_build_object('demo', true);
-  centre float8[];
   type_label text := replace(p_type, '_', ' ');
 BEGIN
   SELECT * INTO inc FROM incidents WHERE id = p_inc;
@@ -354,7 +335,6 @@ BEGIN
   END IF;
 
   IF p_type = 'SPOT_INVESTIGATION' THEN
-    centre := pg_temp.centre(mun_name);
     content := content || jsonb_build_object(
       'dateOfIncident', to_char(inc."dateOfIncident", 'YYYY-MM-DD'),
       'timeOfIncident', inc."timeOfIncident",
@@ -375,10 +355,6 @@ BEGIN
       'occupantName', '',
       'numberOfStoreys', CASE WHEN inc."generalCategory" IN ('RESIDENTIAL','NON_RESIDENTIAL') THEN pg_temp.rnd(1, 3) ELSE NULL END
     );
-    IF random() < 0.6 THEN
-      content := content || jsonb_build_object('latitude', round((centre[1] + (random() - 0.5) * 0.04)::numeric, 6),
-                                               'longitude', round((centre[2] + (random() - 0.5) * 0.04)::numeric, 6));
-    END IF;
   END IF;
   content := content || p_extra;
 

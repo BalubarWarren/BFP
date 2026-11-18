@@ -45,6 +45,3 @@ export function getIncidentDetailRows(content = {}) {
   ];
   return rows.filter(([, value]) => value !== null && value !== undefined && value !== '');
 }
-
-export const hasGps = (content = {}) =>
-  Number.isFinite(Number(content.latitude)) && Number.isFinite(Number(content.longitude)) && content.latitude !== undefined && content.longitude !== undefined;
