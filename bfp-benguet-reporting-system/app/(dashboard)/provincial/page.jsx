@@ -1233,27 +1233,6 @@ export default function ProvincialDashboard() {
         <StatCard icon={LifeBuoy} accent="navy" label="Rescue operations this year" value={kpis?.rescueOperationsThisYear || 0} />
       </div>
 
-      {/* Causes of fire (from the Final Investigation Reports) */}
-      {(charts.causesOfFire || []).length > 0 && (
-        <div className="mb-6 rounded-lg bg-white p-4 shadow-md sm:p-6">
-          <h2 className="text-xl font-semibold tracking-tight text-gray-900">Causes of Fire</h2>
-          <p className="mb-4 mt-1 text-sm text-gray-500">As found by the Final Investigation Reports, most common first.</p>
-          <ul className="space-y-2.5">
-            {charts.causesOfFire.map((item) => {
-              const max = charts.causesOfFire[0].count || 1;
-              return (
-                <li key={item.cause} className="grid grid-cols-[minmax(0,14rem)_1fr_3rem] items-center gap-3 text-sm">
-                  <span className="truncate text-gray-700" title={item.cause}>{item.cause}</span>
-                  <span className="h-2.5 overflow-hidden rounded-full bg-gray-100">
-                    <span className="block h-full rounded-full bg-bfp-red" style={{ width: `${Math.max(4, (item.count / max) * 100)}%` }} />
-                  </span>
-                  <span className="text-right font-semibold tabular-nums text-gray-900">{item.count}</span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
 
       {/* ── 2b. Municipality Fire Rate SVG Map ── */}
       <BenguetFireMap
