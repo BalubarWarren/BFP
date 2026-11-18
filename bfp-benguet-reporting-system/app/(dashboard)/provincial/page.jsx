@@ -332,6 +332,9 @@ export default function ProvincialDashboard() {
   const [histTotals, setHistTotals] = useState({});
   const [histLabel, setHistLabel] = useState('');
   const [histLoading, setHistLoading] = useState(false);
+  // Fire Incident Summary Report download in progress (declared with the other hooks: the page
+  // returns early while loading, so no hook may come after that).
+  const [summaryLoading, setSummaryLoading] = useState(false);
 
   // Clicking a category tile opens a drill-down modal: a per-municipality breakdown for just
   // that category, plus the individually filed Spot Investigation reports behind it (only reports
@@ -619,7 +622,6 @@ export default function ProvincialDashboard() {
     return { startDate: `${histYearNum}-01-01`, endDate: `${histYearNum}-12-31` };
   };
 
-  const [summaryLoading, setSummaryLoading] = useState(false);
   const handleSummaryReport = async () => {
     setSummaryLoading(true);
     try {
