@@ -147,7 +147,6 @@ export default function AdminDashboard() {
               <option value="SUBMITTED">Submitted</option>
               <option value="APPROVED">Approved</option>
               <option value="RETURNED">Returned</option>
-              <option value="DRAFT">Draft</option>
             </select>
           </div>
         </div>

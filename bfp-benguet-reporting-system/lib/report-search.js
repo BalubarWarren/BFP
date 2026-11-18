@@ -21,7 +21,6 @@ export const STATUS_OPTIONS = [
   { value: 'SUBMITTED', label: 'Submitted' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'RETURNED', label: 'Returned' },
-  { value: 'DRAFT', label: 'Draft' },
 ];
 
 export const hasActiveFilters = (filters) =>

@@ -210,12 +210,11 @@ export default function MunicipalReportsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {[
           ['Submitted', statusCounts.SUBMITTED || 0, 'bg-amber-500'],
           ['Approved', statusCounts.APPROVED || 0, 'bg-green-500'],
           ['Returned', statusCounts.RETURNED || 0, 'bg-red-500'],
-          ['Draft', statusCounts.DRAFT || 0, 'bg-gray-400'],
         ].map(([label, value, dotClass]) => (
           <div key={label} className="card p-4">
             <p className="flex items-center gap-2 text-sm font-medium text-gray-500">
@@ -243,7 +242,6 @@ export default function MunicipalReportsPage() {
               onChange={(e) => setFilterStatus(e.target.value)}
             >
               <option value="">All Statuses</option>
-              <option value="DRAFT">Draft</option>
               <option value="SUBMITTED">Submitted</option>
               <option value="APPROVED">Approved</option>
               <option value="RETURNED">Returned</option>

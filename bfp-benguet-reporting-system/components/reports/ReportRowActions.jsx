@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Eye, PencilLine, RotateCcw, Send } from 'lucide-react';
+import { Eye, RotateCcw, Send } from 'lucide-react';
 import CaseFollowUpCta from './CaseFollowUpCta';
 import { getCaseFollowUp } from '../../lib/report-workflow';
 import { getReportProgress } from './ReportProgressBar';
@@ -36,7 +36,6 @@ export function ReportNextStep({ report, allReports, onForward }) {
 }
 
 function getNextStepHint(report, allReports) {
-  if (report.status === 'DRAFT') return { label: 'Draft. Continue editing', tone: 'text-gray-600' };
   if (report.status === 'RETURNED') return { label: 'Returned. Needs revision', tone: 'text-bfp-red' };
   if (needsForwarding(report)) return { label: 'Ready for next level', tone: 'text-bfp-navy dark:text-blue-400' };
   if (['SPOT_INVESTIGATION', 'PROGRESS_INVESTIGATION'].includes(report.reportType) && isFinallyApproved(report)) {
@@ -48,17 +47,6 @@ function getNextStepHint(report, allReports) {
 }
 
 function getNextStep(report, allReports, onForward) {
-  if (report.status === 'DRAFT') {
-    return (
-      <Link
-        href={`/municipal/reports/${report.id}/edit`}
-        className="btn btn-primary text-sm py-1.5 px-3 inline-flex items-center gap-1.5 whitespace-nowrap"
-      >
-        <PencilLine className="h-3.5 w-3.5" /> Continue Editing
-      </Link>
-    );
-  }
-
   if (report.status === 'RETURNED') {
     return (
       <Link

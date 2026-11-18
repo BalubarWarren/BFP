@@ -321,12 +321,11 @@ export default function MunicipalDashboard() {
 
       {/* My Reports Section */}
       <div className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {[
             ['Submitted', 'SUBMITTED', statusCounts.SUBMITTED || 0, 'bg-amber-500'],
             ['Approved', 'APPROVED', statusCounts.APPROVED || 0, 'bg-green-500'],
             ['Returned', 'RETURNED', statusCounts.RETURNED || 0, 'bg-red-500'],
-            ['Draft', 'DRAFT', statusCounts.DRAFT || 0, 'bg-gray-400'],
           ].map(([label, status, value, dotClass]) => (
             <button
               key={label}
@@ -365,7 +364,6 @@ export default function MunicipalDashboard() {
                 <option value="SUBMITTED">Submitted</option>
                 <option value="APPROVED">Approved</option>
                 <option value="RETURNED">Returned</option>
-                <option value="DRAFT">Draft</option>
               </select>
             </div>
           </div>
