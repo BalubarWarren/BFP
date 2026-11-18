@@ -130,7 +130,7 @@ async function checkCaseFollowUps() {
         reportId: spotReport.id,
         userId: spotReport.submittedById,
         type: NOTIFICATION_TYPES.REPORT_PROGRESS_OVERDUE,
-        message: `No Progress or Final Investigation report has been submitted ${DEADLINES.PROGRESS_OVERDUE_DAYS} days after Spot Investigation report #${spotReport.id} was approved.`,
+        message: `No Progress or Final Investigation report has been submitted ${DEADLINES.PROGRESS_OVERDUE_DAYS} days after Spot Investigation report #${spotReport.id} was approved (due within ${DEADLINES.PROGRESS_DUE_DAYS} to ${DEADLINES.PROGRESS_OVERDUE_DAYS} days).`,
       });
       if (didCreate) progressOverdueCreated += 1;
     }

@@ -366,9 +366,13 @@ export const ONLINE_WINDOW_MS = 2 * 60 * 1000;
 
 // Follow-up SLA windows for the Spot -> Progress/Final case workflow.
 // See lib/check-overdue-reports.js for how these are applied.
+// Report periods. The Spot report is due within 24 hours of the fire. The Progress report is due
+// 7 to 15 days after the Spot report's final approval (delayed after 15); the Final report 30 to
+// 45 days after the Progress report's (or the Spot report's, when Progress was skipped).
 export const DEADLINES = {
   SPOT_OVERDUE_HOURS: 24,
-  PROGRESS_OVERDUE_DAYS: 7,
+  PROGRESS_DUE_DAYS: 7,
+  PROGRESS_OVERDUE_DAYS: 15,
   FINAL_WARNING_DAYS: 30,
   FINAL_OVERDUE_DAYS: 45,
 };

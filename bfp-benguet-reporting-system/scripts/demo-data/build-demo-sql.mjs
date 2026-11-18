@@ -541,9 +541,9 @@ BEGIN
     inc := pg_temp.mk_case(m.id, pg_temp.ph(5, 16, 0), pg_temp.cat(), inv);
     SELECT rid INTO r FROM pg_temp.mk_report(inc, 'SPOT_INVESTIGATION', 'AT_PROVINCIAL', inv, chief, marshal, prov, pg_temp.ph(5, 21, 0), interval '18 hours', '{}', NULL, true);
 
-    -- S10 Spot report finalized recently; Progress report not yet due.
-    inc := pg_temp.mk_case(m.id, pg_temp.ph(4, 10, 0), pg_temp.cat(), inv);
-    SELECT rid, done_at INTO r, t FROM pg_temp.mk_report(inc, 'SPOT_INVESTIGATION', 'FINAL', inv, chief, marshal, prov, pg_temp.ph(4, 15, 0), interval '14 hours', '{}', NULL, true);
+    -- S10 Spot report finalized 8 days ago: the Progress report is now due (7-15 day period).
+    inc := pg_temp.mk_case(m.id, pg_temp.ph(10, 10, 0), pg_temp.cat(), inv);
+    SELECT rid, done_at INTO r, t FROM pg_temp.mk_report(inc, 'SPOT_INVESTIGATION', 'FINAL', inv, chief, marshal, prov, pg_temp.ph(10, 15, 0), interval '14 hours', '{}', NULL, true);
 
     -- A new fire the Fire Marshal has just assigned for a Spot investigation (not started yet).
     ref := pg_temp.pick(pg_temp.barangays(m.name));
@@ -622,7 +622,7 @@ BEGIN
     PERFORM pg_temp.track('report_requests', r2);
     PERFORM pg_temp.notify(chief, r, 'REPORT_REQUEST', (SELECT name FROM users WHERE id = inv) || ' asks to reopen Final Investigation Report #' || r || ': The property owner submitted new CCTV footage that may change the established cause of fire.', now() - interval '2 days');
 
-    -- S19 Progress report submitted LATE (beyond 7 days of the Spot approval), with explanation.
+    -- S19 Progress report submitted LATE (beyond 15 days of the Spot approval), with explanation.
     inc := pg_temp.mk_case(m.id, pg_temp.ph(30, 10, 0), pg_temp.cat(), inv);
     SELECT rid INTO r FROM pg_temp.mk_report(inc, 'SPOT_INVESTIGATION', 'FINAL', inv, chief, marshal, prov, pg_temp.ph(30, 15, 0), d1, '{}', NULL, true);
     SELECT rid INTO r FROM pg_temp.mk_report(inc, 'PROGRESS_INVESTIGATION', 'AT_CHIEF', inv, chief, marshal, prov, pg_temp.ph(2, 9, 30), d1,
