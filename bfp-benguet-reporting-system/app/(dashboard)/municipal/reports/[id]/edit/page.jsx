@@ -5,8 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import axios from 'axios';
 import {
-  FileEdit, FileText, File as FileIcon, MessageSquare, Upload, Undo2, RotateCcw, Trash2, Plus, FolderArchive, Send, AlertTriangle,
-  Eye, ExternalLink, Download,
+  FileEdit, FileText, File as FileIcon, MessageSquare, Upload, Undo2, RotateCcw, Trash2, Plus, FolderArchive, Send,
+  Download,
 } from 'lucide-react';
 import StatusBadge from '../../../../../../components/common/StatusBadge';
 import BackButton from '../../../../../../components/common/BackButton';
@@ -202,12 +202,10 @@ export default function ReviseReturnedReportPage() {
       <section className="card space-y-3">
         <div>
           <h2 className="flex items-center gap-2 text-base font-semibold text-gray-900">
-            <Upload className="h-4 w-4 text-gray-400" /> 2. Open and replace files
+            <Upload className="h-4 w-4 text-gray-400" /> 2. Files
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            <strong>View</strong> shows the reviewer&apos;s comments on the page. <strong>Open file</strong> or <strong>Download</strong> gets
-            the file itself so you can correct it, then use <strong>Replace</strong> to upload your revised version.
-            When you resubmit, the old file moves to the <strong>Report Archive</strong> with the version that was returned.
+            Correct the file, then upload it with <strong>Replace</strong>. The old file is kept in the Report Archive.
           </p>
         </div>
 
@@ -216,15 +214,22 @@ export default function ReviseReturnedReportPage() {
             if (item.added) {
               const issue = getFileIssue(item.added);
               return (
-                <li key={`added-${index}`} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="flex items-center gap-2 text-sm font-medium text-gray-900">
-                      <Plus className="h-4 w-4 text-emerald-600" /> <span className="truncate">{item.added.name}</span>
-                    </p>
-                    <p className={`text-xs ${issue ? 'text-red-600' : 'text-emerald-700'}`}>{issue ? `Can't upload: ${issue}` : 'New file, will be added'}</p>
+                <li key={`added-${index}`} className="flex items-center gap-3 p-3">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-emerald-50 text-emerald-600">
+                    <Plus className="h-4 w-4" />
                   </div>
-                  <button type="button" onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))} className="btn btn-ghost px-2.5 py-1.5 text-xs">
-                    Remove
+                  <div className="min-w-0 flex-1">
+                    <p title={item.added.name} className="truncate text-sm font-medium text-gray-900">{item.added.name}</p>
+                    <p className={`mt-0.5 text-xs ${issue ? 'text-red-600' : 'text-emerald-700'}`}>{issue ? `Can't upload: ${issue}` : 'New file'}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setItems((prev) => prev.filter((_, i) => i !== index))}
+                    title="Remove"
+                    aria-label={`Remove ${item.added.name}`}
+                    className="btn btn-ghost p-1.5 text-gray-400 hover:text-red-600"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </li>
               );
@@ -234,52 +239,71 @@ export default function ReviseReturnedReportPage() {
             const comments = commentsByUrl.get(original.url) || [];
             const issue = replacement && getFileIssue(replacement);
             return (
-              <li key={original.url} className="space-y-2 p-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className={`flex items-center gap-2 text-sm font-medium ${removed || replacement ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                      {isPdf(original) ? <FileText className="h-4 w-4 flex-shrink-0" /> : <FileIcon className="h-4 w-4 flex-shrink-0" />}
-                      <span className="truncate">{original.name}</span>
-                      {original.kind === 'EMS' && <span className="badge bg-red-50 text-red-700 no-underline">EMS</span>}
-                      {original.kind === 'SUPPORTING' && <span className="badge bg-indigo-50 text-indigo-700 no-underline">{original.docType || 'Supporting'}</span>}
-                    </p>
-                    {replacement && !removed && (
-                      <p className={`mt-1 flex items-center gap-1.5 text-xs ${issue ? 'text-red-600' : 'text-emerald-700'}`}>
-                        {issue ? <AlertTriangle className="h-3.5 w-3.5" /> : <Upload className="h-3.5 w-3.5" />}
-                        {issue ? `${replacement.name}: ${issue}` : `Replaced with ${replacement.name} · old file goes to the Archive`}
-                      </p>
-                    )}
-                    {removed && <p className="mt-1 text-xs text-gray-500">Will be removed (kept in the Archive)</p>}
+              <li key={original.url} className="p-3">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                  <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-gray-100 text-gray-500">
+                    {isPdf(original) ? <FileText className="h-4 w-4" /> : <FileIcon className="h-4 w-4" />}
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {isPdf(original) && (
-                      <button type="button" onClick={() => setViewing(original)} className="btn btn-secondary px-2.5 py-1.5 text-xs">
-                        <Eye className="h-3.5 w-3.5" />
-                        {comments.length ? `View ${comments.length} comment${comments.length === 1 ? '' : 's'}` : 'View'}
+
+                  <div className="min-w-0 flex-1">
+                    <p
+                      title={original.name}
+                      className={`truncate text-sm font-medium ${removed || replacement ? 'text-gray-400 line-through' : 'text-gray-900'}`}
+                    >
+                      {original.name}
+                    </p>
+                    <p className="mt-0.5 truncate text-xs text-gray-500">
+                      {replacement && !removed ? (
+                        <span className={issue ? 'text-red-600' : 'text-emerald-700'}>
+                          {issue ? `${replacement.name}: ${issue}` : `Replaced with ${replacement.name}`}
+                        </span>
+                      ) : removed ? (
+                        'Will be removed'
+                      ) : (
+                        [
+                          original.kind === 'EMS' ? 'EMS report' : original.kind === 'SUPPORTING' ? original.docType || 'Supporting document' : 'Report file',
+                          comments.length ? `${comments.length} comment${comments.length === 1 ? '' : 's'}` : null,
+                        ].filter(Boolean).join(' · ')
+                      )}
+                    </p>
+                  </div>
+
+                  <div className="ml-auto flex flex-shrink-0 items-center gap-1">
+                    {isPdf(original) ? (
+                      <button type="button" onClick={() => setViewing(original)} className="btn btn-ghost px-2.5 py-1.5 text-xs">
+                        View
                       </button>
+                    ) : (
+                      <a href={original.url} target="_blank" rel="noopener noreferrer" className="btn btn-ghost px-2.5 py-1.5 text-xs no-underline">
+                        View
+                      </a>
                     )}
                     <a
                       href={original.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="btn btn-secondary px-2.5 py-1.5 text-xs no-underline"
+                      download={original.name}
+                      title="Download"
+                      aria-label={`Download ${original.name}`}
+                      className="btn btn-ghost p-1.5 text-gray-500 no-underline"
                     >
-                      <ExternalLink className="h-3.5 w-3.5" /> Open file
-                    </a>
-                    <a href={original.url} download={original.name} className="btn btn-secondary px-2.5 py-1.5 text-xs no-underline">
-                      <Download className="h-3.5 w-3.5" /> Download
+                      <Download className="h-4 w-4" />
                     </a>
                     {replacement || removed ? (
-                      <button type="button" onClick={() => updateItem(index, { replacement: null, removed: false })} className="btn btn-ghost px-2.5 py-1.5 text-xs">
+                      <button type="button" onClick={() => updateItem(index, { replacement: null, removed: false })} className="btn btn-secondary px-2.5 py-1.5 text-xs">
                         <RotateCcw className="h-3.5 w-3.5" /> Undo
                       </button>
                     ) : (
                       <>
-                        <button type="button" onClick={() => replaceInputs.current[index]?.click()} className="btn btn-primary px-2.5 py-1.5 text-xs">
-                          <Upload className="h-3.5 w-3.5" /> Replace
+                        <button type="button" onClick={() => replaceInputs.current[index]?.click()} className="btn btn-secondary px-2.5 py-1.5 text-xs">
+                          Replace
                         </button>
-                        <button type="button" onClick={() => updateItem(index, { removed: true })} className="btn btn-ghost px-2.5 py-1.5 text-xs text-gray-500" aria-label={`Remove ${original.name}`}>
-                          <Trash2 className="h-3.5 w-3.5" />
+                        <button
+                          type="button"
+                          onClick={() => updateItem(index, { removed: true })}
+                          title="Remove"
+                          aria-label={`Remove ${original.name}`}
+                          className="btn btn-ghost p-1.5 text-gray-400 hover:text-red-600"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       </>
                     )}
@@ -292,11 +316,11 @@ export default function ReviseReturnedReportPage() {
                     />
                   </div>
                 </div>
-                {comments.length > 0 && (
-                  <ul className="space-y-1 border-l-2 border-amber-300 pl-3">
+                {comments.length > 0 && !removed && (
+                  <ul className="mt-2 ml-12 space-y-1 border-l-2 border-amber-300 pl-3">
                     {comments.map((a) => (
-                      <li key={a.id} className="text-xs text-gray-700">
-                        <span className="font-medium">{a.author?.name || 'Reviewer'}:</span> {a.comment}
+                      <li key={a.id} className="text-xs text-gray-600">
+                        <span className="font-medium text-gray-800">{a.author?.name || 'Reviewer'}:</span> {a.comment}
                       </li>
                     ))}
                   </ul>
