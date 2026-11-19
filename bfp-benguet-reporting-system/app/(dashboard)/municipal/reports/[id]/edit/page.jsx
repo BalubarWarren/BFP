@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import axios from 'axios';
 import {
   FileEdit, FileText, File as FileIcon, MessageSquare, Upload, Undo2, RotateCcw, Trash2, Plus, FolderArchive, Send, AlertTriangle,
+  Eye, ExternalLink, Download,
 } from 'lucide-react';
 import StatusBadge from '../../../../../../components/common/StatusBadge';
 import BackButton from '../../../../../../components/common/BackButton';
@@ -204,8 +205,9 @@ export default function ReviseReturnedReportPage() {
             <Upload className="h-4 w-4 text-gray-400" /> 2. Open and replace files
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Open a file to see the reviewer&apos;s comments, then use <strong>Replace</strong> to upload your revised version.
-            Files you replace or remove are kept in the <strong>Archive</strong> with this version of the report.
+            <strong>View</strong> shows the reviewer&apos;s comments on the page. <strong>Open file</strong> or <strong>Download</strong> gets
+            the file itself so you can correct it, then use <strong>Replace</strong> to upload your revised version.
+            When you resubmit, the old file moves to the <strong>Report Archive</strong> with the version that was returned.
           </p>
         </div>
 
@@ -244,19 +246,29 @@ export default function ReviseReturnedReportPage() {
                     {replacement && !removed && (
                       <p className={`mt-1 flex items-center gap-1.5 text-xs ${issue ? 'text-red-600' : 'text-emerald-700'}`}>
                         {issue ? <AlertTriangle className="h-3.5 w-3.5" /> : <Upload className="h-3.5 w-3.5" />}
-                        {issue ? `${replacement.name}: ${issue}` : `Replaced with ${replacement.name}`}
+                        {issue ? `${replacement.name}: ${issue}` : `Replaced with ${replacement.name} · old file goes to the Archive`}
                       </p>
                     )}
                     {removed && <p className="mt-1 text-xs text-gray-500">Will be removed (kept in the Archive)</p>}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => (isPdf(original) ? setViewing(original) : window.open(original.url, '_blank', 'noopener'))}
-                      className="btn btn-secondary px-2.5 py-1.5 text-xs"
+                    {isPdf(original) && (
+                      <button type="button" onClick={() => setViewing(original)} className="btn btn-secondary px-2.5 py-1.5 text-xs">
+                        <Eye className="h-3.5 w-3.5" />
+                        {comments.length ? `View ${comments.length} comment${comments.length === 1 ? '' : 's'}` : 'View'}
+                      </button>
+                    )}
+                    <a
+                      href={original.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="btn btn-secondary px-2.5 py-1.5 text-xs no-underline"
                     >
-                      Open{comments.length ? ` (${comments.length} comment${comments.length === 1 ? '' : 's'})` : ''}
-                    </button>
+                      <ExternalLink className="h-3.5 w-3.5" /> Open file
+                    </a>
+                    <a href={original.url} download={original.name} className="btn btn-secondary px-2.5 py-1.5 text-xs no-underline">
+                      <Download className="h-3.5 w-3.5" /> Download
+                    </a>
                     {replacement || removed ? (
                       <button type="button" onClick={() => updateItem(index, { replacement: null, removed: false })} className="btn btn-ghost px-2.5 py-1.5 text-xs">
                         <RotateCcw className="h-3.5 w-3.5" /> Undo

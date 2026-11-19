@@ -8,7 +8,6 @@ import TimelinessBadge from '../../../../components/reports/TimelinessBadge';
 import ReportExtras from '../../../../components/reports/ReportExtras';
 import { useToast } from '../../../../components/common/ToastProvider';
 import { formatDateTime, parseJsonField } from '../../../../lib/utils';
-import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
 import AttachmentList from '../../../../components/reports/AttachmentList';
 import CaseChain from '../../../../components/reports/CaseChain';
 import { getReportTitle, getReportSubtitle } from '../../../../lib/report-title';
@@ -299,7 +298,6 @@ export default function MunicipalReportsPage() {
                     <td className="px-5 py-4 align-top">
                       <StatusBadge status={report.status} />
                       <TimelinessBadge report={report} className="mt-1" />
-                      <ReportProgressBar progress={getReportProgress(report)} compact />
                       {report.status === 'RETURNED' && report.remarks && (
                         <p className="mt-1 w-40 truncate text-xs text-gray-500" title={report.remarks}>
                           &ldquo;{report.remarks}&rdquo;

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import axios from 'axios';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, ExternalLink } from 'lucide-react';
 import {
   PdfLoader,
   PdfHighlighter,
@@ -140,9 +140,19 @@ export default function PdfAnnotator({ attachmentUrl, attachmentName, reportId, 
             </p>
             <h2 className="text-lg font-bold text-gray-900 truncate">{attachmentName}</h2>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="w-6 h-6" />
-          </button>
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <a
+              href={attachmentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary px-2.5 py-1.5 text-xs no-underline"
+            >
+              <ExternalLink className="h-3.5 w-3.5" /> Open in new tab
+            </a>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600" aria-label="Close">
+              <X className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -155,7 +165,14 @@ export default function PdfAnnotator({ attachmentUrl, attachmentName, reportId, 
               url={attachmentUrl}
               workerSrc={WORKER_SRC}
               beforeLoad={<div className="p-10 text-center text-gray-500">Loading PDF…</div>}
-              errorMessage={<div className="p-10 text-center text-red-600">Failed to load PDF.</div>}
+              errorMessage={
+                <div className="p-10 text-center text-sm text-red-600">
+                  This PDF couldn&apos;t be shown here.{' '}
+                  <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="font-medium underline">
+                    Open it in a new tab
+                  </a>
+                </div>
+              }
             >
               {(pdfDocument) => (
                 <PdfHighlighter

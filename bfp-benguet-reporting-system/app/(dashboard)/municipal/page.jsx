@@ -415,7 +415,6 @@ export default function MunicipalDashboard() {
                       <td className="px-5 py-4 align-top">
                         <StatusBadge status={report.status} />
                         <TimelinessBadge report={report} className="mt-1" />
-                        <ReportProgressBar progress={getReportProgress(report)} compact />
                         {report.status === 'RETURNED' && report.remarks && (
                           <p className="mt-1 w-40 truncate text-xs text-gray-500" title={report.remarks}>
                             &ldquo;{report.remarks}&rdquo;
