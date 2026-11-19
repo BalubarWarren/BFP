@@ -324,16 +324,7 @@ BEGIN
       'casualtiesInjured', inc."casualtiesInjured",
       'casualtiesFatalities', inc."casualtiesFatalities",
       'rescueOperations', CASE WHEN inc."casualtiesInjured" + inc."casualtiesFatalities" > 0 THEN pg_temp.rnd(1, 3)
-                               WHEN random() < 0.1 THEN 1 ELSE 0 END,
-      'propertyType', CASE inc."generalCategory" WHEN 'RESIDENTIAL' THEN 'Single-family house'
-                        WHEN 'NON_RESIDENTIAL' THEN 'Commercial establishment'
-                        WHEN 'TRANSPORT' THEN 'Vehicle' ELSE 'Grassland / Forest' END,
-      'establishmentName', CASE WHEN inc."generalCategory" = 'NON_RESIDENTIAL'
-                             THEN pg_temp.pick(ARRAY['Dela Cruz','Bautista','Kiwas','Bayang','Tamang','Lumbaya','Sacla','Dangwa']) || ' ' || inc."subCategory" ELSE '' END,
-      'ownerName', pg_temp.pick(ARRAY['Juan','Maria','Jose','Ana','Pedro','Rosa','Mark','Grace','Ramon','Liza','Carlo','Joy']) || ' ' ||
-                   pg_temp.pick(ARRAY['Dela Cruz','Bautista','Kiwas','Bayang','Tamang','Calpito','Dumalo','Lumbaya','Pacio','Sacla','Ayochok','Dangwa']),
-      'occupantName', '',
-      'numberOfStoreys', CASE WHEN inc."generalCategory" IN ('RESIDENTIAL','NON_RESIDENTIAL') THEN pg_temp.rnd(1, 3) ELSE NULL END
+                               WHEN random() < 0.1 THEN 1 ELSE 0 END
     );
   END IF;
   content := content || p_extra;

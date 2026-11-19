@@ -1,10 +1,9 @@
-import { AlertTriangle, Building2 } from 'lucide-react';
+import { AlertTriangle, Flame } from 'lucide-react';
 import { parseJsonField } from '../../lib/utils';
 import { getIncidentDetailRows } from '../../lib/incident-details';
 
 // Shared block for every report window: the Explanation Report for a late submission, the
-// property involved (establishment, owner, occupant, storeys...), rescue operations and cause of
-// fire — all recorded on the Spot/Final forms.
+// rescue operations and cause of fire — recorded on the Spot/Final forms.
 export default function ReportExtras({ report }) {
   if (!report) return null;
   const content = parseJsonField(report.content, {});
@@ -27,7 +26,7 @@ export default function ReportExtras({ report }) {
       {(rows.length > 0 || cause) && (
         <div className="rounded-lg border border-gray-200 p-4">
           <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-900">
-            <Building2 className="h-4 w-4 text-gray-400" /> Property Involved
+            <Flame className="h-4 w-4 text-gray-400" /> Fire Details
           </p>
           <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
             {cause && (

@@ -91,9 +91,8 @@ export async function GET(request, { params }) {
       ...rows,
       { heading: 'Certification' },
       {
-        paragraph: `This is to certify that a fire incident occurred at ${place} on ${fmtDate(incident.dateOfIncident)}. Based on the investigation conducted, the cause of the fire was determined to be: ${incident.causeOfFire || 'undetermined'}. This certification is issued upon request of the property owner for whatever legal purpose it may serve.`,
+        paragraph: `This is to certify that a fire incident occurred at ${place} on ${fmtDate(incident.dateOfIncident)}. Based on the investigation conducted, the cause of the fire was determined to be: ${incident.causeOfFire || 'undetermined'}. This certification is issued upon request for whatever legal purpose it may serve.`,
       },
-      { label: 'Owner', value: spotContent.ownerName || '-' },
     ];
   } else if (params.file === 'letter-of-order.pdf') {
     const order = await prisma.reportRequest
@@ -128,10 +127,6 @@ export async function GET(request, { params }) {
     blocks = [
       ...rows,
       ...(spec.type === 'FINAL_INVESTIGATION' ? [{ label: 'Cause of fire', value: incident.causeOfFire || 'Undetermined' }] : []),
-      ...(spotContent.propertyType ? [{ label: 'Property type', value: spotContent.propertyType }] : []),
-      ...(spotContent.establishmentName ? [{ label: 'Establishment', value: spotContent.establishmentName }] : []),
-      ...(spotContent.ownerName ? [{ label: 'Owner', value: spotContent.ownerName }] : []),
-      ...(spotContent.numberOfStoreys ? [{ label: 'Number of storeys', value: String(spotContent.numberOfStoreys) }] : []),
       { heading: 'Narrative' },
       { paragraph: incident.description || '-' },
       ...(spec.type === 'PROGRESS_INVESTIGATION'

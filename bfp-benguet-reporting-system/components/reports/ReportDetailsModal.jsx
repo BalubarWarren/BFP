@@ -22,10 +22,6 @@ const humanize = (value) =>
 
 // camelCase content keys (dateOfIncident) → "Date Of Incident"
 const CONTENT_LABELS = {
-  ownerName: 'Owner',
-  occupantName: 'Occupant',
-  establishmentName: 'Establishment / Property',
-  numberOfStoreys: 'Number of Storeys',
   casualtiesInjured: 'Injured',
   casualtiesFatalities: 'Fatalities',
 };
@@ -33,6 +29,7 @@ const labelForKey = (key) =>
   CONTENT_LABELS[key] || key.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/^./, (c) => c.toUpperCase());
 
 // Shown in their own blocks (ReportExtras) or internal flags, not in the plain field list.
+// Property/owner keys are confidential: kept hidden so older reports that still hold them never show them.
 const HIDDEN_CONTENT_KEYS = new Set([
   'lateExplanation', 'submittedLate', 'latitude', 'longitude', 'sample', 'demo', 'propertyType',
   'establishmentName', 'ownerName', 'occupantName', 'numberOfStoreys', 'rescueOperations', 'causeOfFire',

@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { Search, ClipboardList, Send, HeartPulse, Building2 } from 'lucide-react';
+import { Search, ClipboardList, Send, HeartPulse } from 'lucide-react';
 import { GENERAL_CATEGORIES, SUB_CATEGORIES } from '../../../../../lib/constants';
 import AttachmentInput, { hasInvalidAttachments } from '../../../../../components/reports/AttachmentInput';
 import RecipientSelect from '../../../../../components/reports/RecipientSelect';
@@ -18,7 +18,6 @@ import { getBarangays } from '../../../../../lib/barangays';
 import SupportingDocsInput from '../../../../../components/reports/SupportingDocsInput';
 import LateExplanationField from '../../../../../components/reports/LateExplanationField';
 import { getSubmissionDeadline } from '../../../../../lib/report-timeliness';
-import { PROPERTY_TYPES } from '../../../../../lib/incident-details';
 
 export default function SpotInvestigationForm() {
   const router = useRouter();
@@ -69,11 +68,6 @@ export default function SpotInvestigationForm() {
     casualtiesInjured: '0',
     casualtiesFatalities: '0',
     rescueOperations: '0',
-    propertyType: '',
-    establishmentName: '',
-    ownerName: '',
-    occupantName: '',
-    numberOfStoreys: '',
     lateExplanation: '',
     description: '',
   });
@@ -156,11 +150,6 @@ export default function SpotInvestigationForm() {
             casualtiesInjured: Number(formData.casualtiesInjured) || 0,
             casualtiesFatalities: Number(formData.casualtiesFatalities) || 0,
             rescueOperations: Number(formData.rescueOperations) || 0,
-            propertyType: formData.propertyType,
-            establishmentName: formData.establishmentName.trim(),
-            ownerName: formData.ownerName.trim(),
-            occupantName: formData.occupantName.trim(),
-            numberOfStoreys: formData.numberOfStoreys ? Number(formData.numberOfStoreys) : null,
             ...(isLate && { lateExplanation: formData.lateExplanation.trim() }),
           }),
           passedToRole: recipientRole,
@@ -286,39 +275,6 @@ export default function SpotInvestigationForm() {
             <div className="form-field-icon-wrap">
               <FieldIcon src="/icons/description.svg" />
               <textarea name="description" value={formData.description} onChange={handleChange} rows={3} className="form-textarea-icon" placeholder="Brief description of what happened..." />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-md p-4 sm:p-6">
-          <h2 className="flex items-center gap-2 text-lg font-semibold tracking-tight text-gray-900 mb-4">
-            <Building2 className="w-5 h-5" /> Property Involved
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="form-label">Property Type</label>
-              <select name="propertyType" value={formData.propertyType} onChange={handleChange} className="form-input">
-                <option value="">— Select —</option>
-                {PROPERTY_TYPES.map((type) => (
-                  <option key={type} value={type}>{type}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="form-label">Name of Establishment / Property</label>
-              <input type="text" name="establishmentName" value={formData.establishmentName} onChange={handleChange} className="form-input" maxLength={200} placeholder="e.g. Dela Cruz Sari-sari Store" />
-            </div>
-            <div>
-              <label className="form-label">Owner</label>
-              <input type="text" name="ownerName" value={formData.ownerName} onChange={handleChange} className="form-input" maxLength={200} placeholder="Full name" />
-            </div>
-            <div>
-              <label className="form-label">Occupant</label>
-              <input type="text" name="occupantName" value={formData.occupantName} onChange={handleChange} className="form-input" maxLength={200} placeholder="Full name (if different from the owner)" />
-            </div>
-            <div>
-              <label className="form-label">Number of Storeys</label>
-              <input type="number" name="numberOfStoreys" value={formData.numberOfStoreys} onChange={handleChange} className="form-input" min="0" max="200" step="1" inputMode="numeric" placeholder="e.g. 2" />
             </div>
           </div>
         </div>
