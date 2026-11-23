@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic';
 import axios from 'axios';
 import {
   FileEdit, FileText, File as FileIcon, MessageSquare, Upload, Undo2, RotateCcw, Trash2, Plus, FolderArchive, Send,
-  Download,
 } from 'lucide-react';
 import StatusBadge from '../../../../../../components/common/StatusBadge';
 import BackButton from '../../../../../../components/common/BackButton';
@@ -278,34 +277,14 @@ export default function ReviseReturnedReportPage() {
                         View
                       </a>
                     )}
-                    <a
-                      href={original.url}
-                      download={original.name}
-                      title="Download"
-                      aria-label={`Download ${original.name}`}
-                      className="btn btn-ghost p-1.5 text-gray-500 no-underline"
-                    >
-                      <Download className="h-4 w-4" />
-                    </a>
                     {replacement || removed ? (
                       <button type="button" onClick={() => updateItem(index, { replacement: null, removed: false })} className="btn btn-secondary px-2.5 py-1.5 text-xs">
                         <RotateCcw className="h-3.5 w-3.5" /> Undo
                       </button>
                     ) : (
-                      <>
-                        <button type="button" onClick={() => replaceInputs.current[index]?.click()} className="btn btn-secondary px-2.5 py-1.5 text-xs">
-                          Replace
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => updateItem(index, { removed: true })}
-                          title="Remove"
-                          aria-label={`Remove ${original.name}`}
-                          className="btn btn-ghost p-1.5 text-gray-400 hover:text-red-600"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </>
+                      <button type="button" onClick={() => replaceInputs.current[index]?.click()} className="btn btn-secondary px-2.5 py-1.5 text-xs">
+                        Replace
+                      </button>
                     )}
                     <input
                       ref={(el) => { replaceInputs.current[index] = el; }}
