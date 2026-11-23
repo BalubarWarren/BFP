@@ -16,6 +16,7 @@ import ReportRequestsPanel from '../../../../components/reports/ReportRequestsPa
 import SharedReportBadge from '../../../../components/reports/SharedReportBadge';
 import RevisionHistory from '../../../../components/reports/RevisionHistory';
 import ReportRowActions, { ReportNextStep } from '../../../../components/reports/ReportRowActions';
+import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
 import ForwardReportModal from '../../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
 import PageHeader from '../../../../components/common/PageHeader';
@@ -144,7 +145,10 @@ export default function MunicipalReportsPage() {
                     <div><p className="text-gray-500">Responding Units</p><p className="font-semibold">{reportDetail?.respondingUnits || selectedReport.respondingUnits}</p></div>
                   )}
                 </div>
-  
+
+                {/* Review Progress */}
+                <ReportProgressBar progress={getReportProgress(reportDetail || selectedReport)} />
+
                 {(reportDetail?.incident || selectedReport.incident) && (
                   <div className="rounded-lg bg-yellow-50 p-4">
                     <h3 className="mb-3 font-semibold tracking-tight text-gray-900">Incident Details</h3>
