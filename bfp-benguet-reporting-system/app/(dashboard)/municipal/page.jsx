@@ -381,9 +381,9 @@ export default function MunicipalDashboard() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="max-h-[70vh] overflow-auto">
               <table className="w-full border-collapse">
-                <thead className="bg-gray-50">
+                <thead className="sticky top-0 z-10 bg-gray-50 shadow-[inset_0_-1px_0_rgb(229,231,235)]">
                   <tr className="border-b border-gray-200">
                     <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Report</th>
                     <th className="px-5 py-3 text-left text-xs font-medium text-gray-500">Reference #</th>
@@ -401,7 +401,7 @@ export default function MunicipalDashboard() {
                     >
                       <td className="px-5 py-4">
                         <p className="font-semibold text-gray-900">{getReportTitle(report)}</p>
-                        <p className="text-xs text-gray-500">{getReportSubtitle(report)} · #{report.id}</p>
+                        <p className="text-xs text-gray-500">{getReportSubtitle(report)}</p>
                         <SharedReportBadge report={report} />
                       </td>
                       <td className="px-5 py-4 text-sm text-gray-700">
