@@ -70,7 +70,7 @@ export default function CaseChain({ reports, currentId, referenceNumber }) {
                 ? {
                     role: 'button',
                     tabIndex: 0,
-                    title: `Open ${step.label} #${latest.id}`,
+                    title: `Open the ${step.label}`,
                     onClick: () => openLinked(latest.id),
                     onKeyDown: (event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
@@ -95,13 +95,12 @@ export default function CaseChain({ reports, currentId, referenceNumber }) {
                 {latest ? (
                   <div className="space-y-1">
                     {done ? (
-                      <span className="badge bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">Final approval</span>
+                      <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Final approval</span>
                     ) : (
                       <StatusBadge status={latest.status} />
                     )}
                     <p>
-                      Report #{latest.id}
-                      {filed.length > 1 && ` · ${filed.length} filed`}
+                      {filed.length > 1 ? `${filed.length} filed` : 'Filed'}
                       {isCurrent && <span className="font-semibold text-bfp-navy dark:text-white"> · Viewing</span>}
                     </p>
                     {openable && (

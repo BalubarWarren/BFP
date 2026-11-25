@@ -211,8 +211,6 @@ export default function MunicipalDashboard() {
 
                 <ReportRequestsPanel key={selectedReport.id} report={reportDetail || selectedReport} />
   
-                <RevisionHistory report={reportDetail} />
-  
                 <ReportExtras report={reportDetail || selectedReport} />
   
                 {/* Attachments */}
@@ -228,6 +226,10 @@ export default function MunicipalDashboard() {
                     <p className="text-sm text-gray-500">No attachments uploaded.</p>
                   )}
                 </div>
+
+                {/* Files replaced during revisions stay linked here, right under the current files. */}
+                <RevisionHistory report={reportDetail} />
+  
   
                 {/* Reviewer remarks (if returned) */}
                 {(reportDetail?.remarks || selectedReport.remarks) && selectedReport.status === 'RETURNED' && (

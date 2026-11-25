@@ -171,8 +171,6 @@ export default function MunicipalReportsPage() {
 
                 <ReportRequestsPanel key={selectedReport.id} report={reportDetail || selectedReport} />
   
-                <RevisionHistory report={reportDetail} />
-  
                 <ReportExtras report={reportDetail || selectedReport} />
   
                 <div className="rounded-lg bg-gray-50 p-4">
@@ -187,6 +185,10 @@ export default function MunicipalReportsPage() {
                     <p className="text-sm text-gray-500">No attachments uploaded.</p>
                   )}
                 </div>
+
+                {/* Files replaced during revisions stay linked here, right under the current files. */}
+                <RevisionHistory report={reportDetail} />
+  
   
                 {(reportDetail?.remarks || selectedReport.remarks) && (
                   <div className="rounded border-l-4 border-red-500 bg-red-50 p-4">

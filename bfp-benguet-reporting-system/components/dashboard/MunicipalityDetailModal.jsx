@@ -40,7 +40,7 @@ function FiledReport({ report, onView, showCategory = false }) {
     <li className="space-y-2 px-4 py-3 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <span className="font-semibold text-gray-800">{report.referenceNumber || `#${report.id}`}</span>
+          <span className="font-semibold text-gray-800">{report.referenceNumber || '—'}</span>
           <span className="block text-xs text-gray-500">
             {humanize(report.reportType)} · {new Date(report.reportDate).toLocaleDateString()}
             {report.submittedBy ? ` · ${report.submittedBy}` : ''}

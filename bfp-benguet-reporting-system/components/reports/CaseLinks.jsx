@@ -22,7 +22,7 @@ export default function CaseLinks({ report, allReports, onOpen }) {
           className="rounded bg-gray-100 px-1.5 py-0.5 font-medium text-gray-700 hover:bg-bfp-navy/10 hover:text-bfp-navy dark:hover:text-blue-300"
           title={`Open the ${r.shortLabel} report of this case`}
         >
-          {r.shortLabel} #{r.id}
+          {r.shortLabel}
         </button>
       ))}
     </div>

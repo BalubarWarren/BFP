@@ -27,7 +27,7 @@ const buildVerifyUrl = (qrToken) => `${window.location.origin}/verify/${qrToken}
 export default function ReportQrModal({ report, onClose }) {
   const [copied, setCopied] = useState(false);
   const verifyUrl = buildVerifyUrl(report.qrToken);
-  const referenceLabel = report.incident?.referenceNumber || `Report #${report.id}`;
+  const referenceLabel = report.incident?.referenceNumber || 'This report';
   const canvasId = `report-qr-${report.qrToken}`;
 
   const [mounted, setMounted] = useState(false);

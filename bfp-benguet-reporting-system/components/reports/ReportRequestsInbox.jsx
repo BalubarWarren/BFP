@@ -61,10 +61,10 @@ export default function ReportRequestsInbox() {
       toast.success(
         action === 'APPROVE'
           ? req.type === 'REOPEN'
-            ? `Report #${req.reportId} reopened and returned to the investigator.`
-            : `${req.targetUser?.name} can now edit report #${req.reportId}.`
+            ? `${req.report?.incident?.referenceNumber || 'The report'} was reopened and returned to the investigator.`
+            : `${req.targetUser?.name} can now edit ${req.report?.incident?.referenceNumber || 'the report'}.`
           : action === 'REVOKE'
-          ? `${req.targetUser?.name} can no longer edit report #${req.reportId}.`
+          ? `${req.targetUser?.name} can no longer edit ${req.report?.incident?.referenceNumber || 'the report'}.`
           : 'Request declined.'
       );
       await load();
@@ -126,8 +126,7 @@ export default function ReportRequestsInbox() {
                       <span className={`badge ring-1 ring-inset ${STATUS_STYLES[req.status] || ''}`}>{req.status.toLowerCase()}</span>
                     </p>
                     <p className="mt-1 text-sm text-gray-600">
-                      Report #{req.reportId}
-                      {req.report?.incident?.referenceNumber && ` · ${req.report.incident.referenceNumber}`} · requested by{' '}
+                      {req.report?.incident?.referenceNumber || 'Report'} · requested by{' '}
                       <span className="font-medium text-gray-800">{req.requestedBy?.name}</span> · {formatDateTime(req.createdAt)}
                     </p>
                     {req.type === 'COLLABORATOR' && (

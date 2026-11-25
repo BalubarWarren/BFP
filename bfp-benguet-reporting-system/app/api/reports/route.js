@@ -525,14 +525,14 @@ export async function POST(request) {
       });
       if (reportType === 'PROGRESS_INVESTIGATION' && progressReports.length) {
         return NextResponse.json(
-          { error: `A Progress report (#${progressReports[0].id}) was already filed for this case. Continue from it with the Final report.` },
+          { error: `A Progress report was already filed for this case. Continue from it with the Final report.` },
           { status: 400 }
         );
       }
       const pendingProgress = progressReports.find((r) => !(r.status === REPORT_STATUS.APPROVED && !r.passedToId));
       if (reportType === 'FINAL_INVESTIGATION' && pendingProgress) {
         return NextResponse.json(
-          { error: `This case's Progress report (#${pendingProgress.id}) needs final approval before the Final report can be filed.` },
+          { error: `This case's Progress report needs final approval before the Final report can be filed.` },
           { status: 400 }
         );
       }

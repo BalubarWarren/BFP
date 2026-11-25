@@ -121,7 +121,7 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
           {/* Header */}
           <div className="flex items-start justify-between gap-4 border-b border-gray-200 p-4 sm:p-6">
             <div className="min-w-0">
-              <p className="text-xs font-bold uppercase tracking-wider text-bfp-red">Report Details · #{r.id}</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-bfp-red">Report Details</p>
               <h2 className="mt-0.5 text-xl font-semibold tracking-tight text-gray-900 sm:text-2xl">{humanize(r.reportType)}</h2>
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600">
                 <StatusBadge status={r.status} />
@@ -172,8 +172,6 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
   
             <CaseChain reports={r.caseReports} currentId={r.id} referenceNumber={incident.referenceNumber} />
   
-            {!report.isArchived && <RevisionHistory report={detail} />}
-
             <ReportExtras report={r} />
   
             {/* Report information */}
@@ -236,6 +234,10 @@ export default function ReportDetailsModal({ report, onClose, showHistory = fals
                 <AttachmentList attachments={attachments} reportId={r.id} />
               </Section>
             )}
+
+            {/* Files replaced during revisions stay linked here, right under the current files. */}
+            {!report.isArchived && <RevisionHistory report={detail} />}
+
   
             {/* Review history */}
             {showHistory && history.length > 0 && (

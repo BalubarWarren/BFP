@@ -1,3 +1,4 @@
+import { getReportLabel } from '../../../../../lib/report-label';
 import { NextResponse } from 'next/server';
 import prisma from '../../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../../lib/auth';
@@ -75,7 +76,7 @@ export async function POST(request, { params }) {
       const notified = await notifyDeciders({
         municipalityId: report.municipalityId,
         reportId: report.id,
-        message: `${user.name} asks to reopen Final Investigation Report #${report.id}: ${reason}`,
+        message: `${user.name} asks to reopen ${await getReportLabel(report.id, 'Final Investigation Report')}: ${reason}`,
       });
       return NextResponse.json({ request: created, notified }, { status: 201 });
     }
@@ -137,7 +138,7 @@ export async function POST(request, { params }) {
       const notified = await notifyDeciders({
         municipalityId: report.municipalityId,
         reportId: report.id,
-        message: `${user.name} asks to let ${target.name} co-edit report #${report.id} (Letter of Order attached).`,
+        message: `${user.name} asks to let ${target.name} co-edit ${await getReportLabel(report.id)} (Letter of Order attached).`,
       });
       return NextResponse.json({ request: created, notified }, { status: 201 });
     }

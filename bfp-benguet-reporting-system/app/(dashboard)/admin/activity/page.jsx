@@ -232,7 +232,7 @@ export default function ActivityLogPage() {
                             >
                               <p className="font-semibold text-gray-900 group-hover:text-bfp-red group-hover:underline">{formatReportType(entry.report.reportType)}</p>
                               <p className="text-xs text-gray-500">
-                                {entry.report.incident?.referenceNumber || `#${entry.report.id}`} · {entry.report.municipality?.name}
+                                {entry.report.incident?.referenceNumber || 'No reference'} · {entry.report.municipality?.name}
                               </p>
                             </button>
                           ) : (

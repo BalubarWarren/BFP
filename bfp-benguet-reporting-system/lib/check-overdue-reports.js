@@ -1,5 +1,6 @@
 import prisma from './prisma.js';
 import { NOTIFICATION_TYPES, DEADLINES } from './constants.js';
+import { getReportLabel } from './report-label.js';
 
 const hoursAgo = (hours) => new Date(Date.now() - hours * 60 * 60 * 1000);
 const daysAgo = (days) => new Date(Date.now() - days * 24 * 60 * 60 * 1000);
@@ -57,7 +58,7 @@ async function checkSpotApprovalSla() {
       reportId: report.id,
       userId: report.submittedById,
       type: NOTIFICATION_TYPES.REPORT_SPOT_OVERDUE,
-      message: `Spot Investigation report #${report.id} has not been fully approved within ${DEADLINES.SPOT_OVERDUE_HOURS} hours of submission.`,
+      message: `${await getReportLabel(report.id, 'Spot Investigation report')} has not been fully approved within ${DEADLINES.SPOT_OVERDUE_HOURS} hours of submission.`,
     });
     if (didCreate) created += 1;
   }
@@ -130,7 +131,7 @@ async function checkCaseFollowUps() {
         reportId: spotReport.id,
         userId: spotReport.submittedById,
         type: NOTIFICATION_TYPES.REPORT_PROGRESS_OVERDUE,
-        message: `No Progress or Final Investigation report has been submitted ${DEADLINES.PROGRESS_OVERDUE_DAYS} days after Spot Investigation report #${spotReport.id} was approved (due within ${DEADLINES.PROGRESS_DUE_DAYS} to ${DEADLINES.PROGRESS_OVERDUE_DAYS} days).`,
+        message: `No Progress or Final Investigation report has been submitted ${DEADLINES.PROGRESS_OVERDUE_DAYS} days after ${await getReportLabel(spotReport.id, 'Spot Investigation report')} was approved (due within ${DEADLINES.PROGRESS_DUE_DAYS} to ${DEADLINES.PROGRESS_OVERDUE_DAYS} days).`,
       });
       if (didCreate) progressOverdueCreated += 1;
     }
@@ -142,7 +143,7 @@ async function checkCaseFollowUps() {
         reportId: anchor.id,
         userId: anchor.submittedById,
         type: NOTIFICATION_TYPES.REPORT_OVERDUE,
-        message: `Final Investigation report is overdue — ${DEADLINES.FINAL_OVERDUE_DAYS} days have passed since report #${anchor.id} was approved.`,
+        message: `Final Investigation report is overdue — ${DEADLINES.FINAL_OVERDUE_DAYS} days have passed since ${await getReportLabel(anchor.id)} was approved.`,
       });
       if (didCreate) finalOverdueCreated += 1;
     } else if (anchor.reviewedAt <= daysAgo(DEADLINES.FINAL_WARNING_DAYS)) {
@@ -150,7 +151,7 @@ async function checkCaseFollowUps() {
         reportId: anchor.id,
         userId: anchor.submittedById,
         type: NOTIFICATION_TYPES.REPORT_DEADLINE_WARNING,
-        message: `Final Investigation report is due soon — ${DEADLINES.FINAL_WARNING_DAYS} days have passed since report #${anchor.id} was approved.`,
+        message: `Final Investigation report is due soon — ${DEADLINES.FINAL_WARNING_DAYS} days have passed since ${await getReportLabel(anchor.id)} was approved.`,
       });
       if (didCreate) finalWarningCreated += 1;
     }

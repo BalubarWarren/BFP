@@ -19,7 +19,7 @@ export default function CaseFollowUpCta({ report, allReports }) {
       const progress = getCaseProgressReport(report, allReports);
       return (
         <p className="max-w-[12rem] text-xs text-gray-500">
-          Progress report{progress ? ` #${progress.id}` : ''} filed. The Final report is started from there.
+          Progress report filed. The Final report is started from there.
         </p>
       );
     }

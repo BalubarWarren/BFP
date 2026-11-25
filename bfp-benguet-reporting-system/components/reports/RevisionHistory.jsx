@@ -105,7 +105,7 @@ export default function RevisionHistory({ report }) {
       {viewing && (
         <ReportDetailsModal
           report={viewing.report}
-          notice={`Earlier version ${viewing.version.version ?? '?'} of report #${report.id}, as it was before it was revised on ${formatDateTime(viewing.version.archivedAt)}. Read-only.`}
+          notice={`Earlier version ${viewing.version.version ?? '?'} of this report, as it was before it was revised on ${formatDateTime(viewing.version.archivedAt)}. Read-only.`}
           onClose={() => setViewing(null)}
         />
       )}

@@ -172,7 +172,7 @@ export default function ReviseReturnedReportPage() {
           icon={FileEdit}
           eyebrow="Returned for revision"
           title={`Revise ${humanize(report.reportType)}`}
-          description={`Report #${report.id}${report.incident?.referenceNumber ? ` · Ref. ${report.incident.referenceNumber}` : ''}`}
+          description={report.incident?.referenceNumber ? `Ref. ${report.incident.referenceNumber}` : undefined}
           border={false}
         />
       </div>

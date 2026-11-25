@@ -1170,7 +1170,7 @@ export default function ProvincialDashboard() {
                           <tbody>
                             {reports.map((report) => (
                               <tr key={report.id}>
-                                <td className="font-semibold">{report.referenceNumber || `#${report.id}`}</td>
+                                <td className="font-semibold">{report.referenceNumber || '—'}</td>
                                 <td>{report.municipality}</td>
                                 <td>{new Date(report.reportDate).toLocaleDateString()}</td>
                                 <td><StatusBadge status={report.status} /></td>

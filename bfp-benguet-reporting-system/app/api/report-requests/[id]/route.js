@@ -1,3 +1,4 @@
+import { getReportLabel } from '../../../../lib/report-label';
 import { NextResponse } from 'next/server';
 import prisma from '../../../../lib/prisma';
 import { getUserFromRequest } from '../../../../lib/auth';
@@ -31,7 +32,7 @@ export async function PATCH(request, { params }) {
   const body = await request.json().catch(() => ({}));
   const note = typeof body.note === 'string' ? body.note.trim().slice(0, 1000) : '';
   const isDecider = REQUEST_DECIDER_ROLES.includes(user.role) && user.municipalityId === req.municipalityId;
-  const reportLabel = `report #${req.reportId}`;
+  const reportLabel = await getReportLabel(req.reportId);
 
   try {
     if (body.action === 'APPROVE' || body.action === 'DECLINE') {
@@ -86,7 +87,7 @@ export async function PATCH(request, { params }) {
         ]);
         await notifyUsers([req.requestedById, report.submittedById], {
           reportId: report.id,
-          message: `Final Investigation Report #${report.id} was reopened. Revise it and resubmit it for review.`,
+          message: `${await getReportLabel(report.id, 'Final Investigation Report')} was reopened. Revise it and resubmit it for review.`,
         });
         return NextResponse.json({ ok: true });
       }

@@ -12,7 +12,7 @@ export default function SubmitSuccessModal({ message, onConfirm, report }) {
 
   const verifyUrl = report?.qrToken ? `${window.location.origin}/verify/${report.qrToken}` : null;
   const canvasId = 'submitted-report-qr';
-  const referenceLabel = report?.incident?.referenceNumber || (report ? `Report #${report.id}` : '');
+  const referenceLabel = report?.incident?.referenceNumber || (report ? 'Your report' : '');
 
   const handleDownload = () => {
     const canvas = document.getElementById(canvasId);

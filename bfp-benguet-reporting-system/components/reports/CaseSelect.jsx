@@ -8,10 +8,10 @@ import { getOpenCases } from '../../lib/report-workflow';
 const formatDate = (value) => (value ? new Date(value).toLocaleDateString() : '');
 
 const caseLabel = (c) => {
-  const ref = c.incident?.referenceNumber || `Case #${c.incidentId}`;
+  const ref = c.incident?.referenceNumber || 'Unreferenced case';
   const category = c.incident?.generalCategory || c.spot.category || 'Spot report';
   const date = formatDate(c.incident?.dateOfIncident || c.spot.reportDate);
-  return `${ref} — ${category}${date ? ` (${date})` : ''} · Spot report #${c.spot.id}`;
+  return `${ref} — ${category}${date ? ` (${date})` : ''}`;
 };
 
 // Picks the case (incident) a Progress or Final report continues. Only cases whose Spot report has
@@ -60,17 +60,16 @@ export default function CaseSelect({ value, onChange, reportType, locked = false
       <div className="rounded-md border border-bfp-navy/30 bg-bfp-navy/5 p-3 text-sm dark:bg-white/5">
         <p className="flex items-center gap-1.5 font-semibold text-gray-900">
           <Link2 className="h-4 w-4 text-bfp-navy dark:text-blue-400" />
-          Continues {selected.incident?.referenceNumber || `Case #${selected.incidentId}`}
+          Continues {selected.incident?.referenceNumber || 'this case'}
         </p>
         <p className="mt-1 flex items-center gap-1.5 text-gray-600">
           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-          Spot report #{selected.spot.id} · {selected.incident?.generalCategory || selected.spot.category || 'Spot report'}
+          Spot report · {selected.incident?.generalCategory || selected.spot.category || 'Spot report'}
           {selected.incident?.dateOfIncident ? ` · ${formatDate(selected.incident.dateOfIncident)}` : ''}
         </p>
         {selected.progressReports.length > 0 && (
           <p className="mt-1 text-xs text-gray-500">
-            Progress report{selected.progressReports.length > 1 ? 's' : ''} already filed:{' '}
-            {selected.progressReports.map((r) => `#${r.id}`).join(', ')}
+            {selected.progressReports.length} Progress report{selected.progressReports.length > 1 ? 's' : ''} already filed
           </p>
         )}
       </div>
