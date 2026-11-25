@@ -18,7 +18,7 @@ import CaseLinks from '../../../components/reports/CaseLinks';
 import ReportRequestsPanel from '../../../components/reports/ReportRequestsPanel';
 import SharedReportBadge from '../../../components/reports/SharedReportBadge';
 import RevisionHistory from '../../../components/reports/RevisionHistory';
-import ReportRowActions, { needsForwarding, ReportNextStep } from '../../../components/reports/ReportRowActions';
+import ReportRowActions, { needsForwarding, ReportNextStep, isFiledToArchive } from '../../../components/reports/ReportRowActions';
 import ForwardReportModal from '../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../components/common/TableSkeleton';
 import PageHeader from '../../../components/common/PageHeader';
@@ -136,7 +136,11 @@ export default function MunicipalDashboard() {
       .toLowerCase()
       .replace(/\b\w/g, (letter) => letter.toUpperCase()) || '-';
 
-  const statusCounts = reports.reduce(
+  // Finished reports (final approval, nothing left to do) live in the Archive, not in My Reports.
+  const activeReports = reports.filter((r) => !isFiledToArchive(r, reports));
+  const archivedCount = reports.length - activeReports.length;
+
+  const statusCounts = activeReports.reduce(
     (counts, report) => ({
       ...counts,
       [report.status]: (counts[report.status] || 0) + 1,
@@ -144,7 +148,7 @@ export default function MunicipalDashboard() {
     {}
   );
 
-  const filteredReports = reports
+  const filteredReports = activeReports
     .filter((r) => (filterStatus ? r.status === filterStatus : true))
     .filter((r) => matchesReportFilters(r, searchFilters));
 
@@ -349,6 +353,11 @@ export default function MunicipalDashboard() {
               <p className="text-sm text-gray-500">
                 {filterStatus ? `${formatReportType(filterStatus)} reports` : 'All statuses'}
               </p>
+              {archivedCount > 0 && (
+                <Link href="/archive" className="mt-1 inline-block text-xs font-medium text-bfp-navy hover:underline dark:text-blue-400">
+                  {archivedCount} finished report{archivedCount === 1 ? ' is' : 's are'} in the Archive →
+                </Link>
+              )}
             </div>
             <div className="w-full md:w-72">
               <label className="form-label">Status</label>

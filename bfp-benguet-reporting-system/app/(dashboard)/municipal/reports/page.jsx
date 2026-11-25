@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import Link from 'next/link';
 import { FileText } from 'lucide-react';
 import StatusBadge from '../../../../components/common/StatusBadge';
 import TimelinessBadge from '../../../../components/reports/TimelinessBadge';
@@ -15,7 +16,7 @@ import CaseLinks from '../../../../components/reports/CaseLinks';
 import ReportRequestsPanel from '../../../../components/reports/ReportRequestsPanel';
 import SharedReportBadge from '../../../../components/reports/SharedReportBadge';
 import RevisionHistory from '../../../../components/reports/RevisionHistory';
-import ReportRowActions, { ReportNextStep } from '../../../../components/reports/ReportRowActions';
+import ReportRowActions, { ReportNextStep, isFiledToArchive } from '../../../../components/reports/ReportRowActions';
 import ReportProgressBar, { getReportProgress } from '../../../../components/reports/ReportProgressBar';
 import ForwardReportModal from '../../../../components/reports/ForwardReportModal';
 import TableSkeleton from '../../../../components/common/TableSkeleton';
@@ -71,7 +72,9 @@ export default function MunicipalReportsPage() {
     {}
   );
 
-  const filteredReports = reports.filter((r) => matchesReportFilters(r, searchFilters));
+  // Finished reports (final approval, nothing left to do) live in the Archive, not here.
+  const archivedCount = reports.filter((r) => isFiledToArchive(r, reports)).length;
+  const filteredReports = reports.filter((r) => !isFiledToArchive(r, reports) && matchesReportFilters(r, searchFilters));
 
   const formatReportType = (type) =>
     type
@@ -236,6 +239,11 @@ export default function MunicipalReportsPage() {
             <p className="text-sm text-gray-500">
               {filterStatus ? `${formatReportType(filterStatus)} reports` : 'All statuses'}
             </p>
+            {archivedCount > 0 && (
+              <Link href="/archive" className="mt-1 inline-block text-xs font-medium text-bfp-navy hover:underline dark:text-blue-400">
+                {archivedCount} finished report{archivedCount === 1 ? ' is' : 's are'} in the Archive →
+              </Link>
+            )}
           </div>
           <div className="w-full md:w-72">
             <label className="form-label">Status</label>

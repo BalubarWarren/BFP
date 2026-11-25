@@ -95,9 +95,13 @@ const SECURITY_HEADERS = [
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // The Trash page became the Report Archive.
+  // The Trash page became the Report Archive, and the approved-reports page (/reports) was merged
+  // into it. Not permanent: browsers cache 308s, which would make /reports hard to reuse later.
   async redirects() {
-    return [{ source: '/trash', destination: '/archive', permanent: true }];
+    return [
+      { source: '/trash', destination: '/archive', permanent: true },
+      { source: '/reports', destination: '/archive', permanent: false },
+    ];
   },
   async headers() {
     return [

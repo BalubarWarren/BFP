@@ -1,4 +1,4 @@
-import { ROLES, REPORT_STATUS, APPROVED_REPORTS_ROLES } from './constants';
+import { ROLES, REPORT_STATUS, APPROVED_REPORTS_ROLES, canViewArchive } from './constants';
 
 // Shared across every report-related API route so a rule change (e.g. adding a new reviewer
 // role) only needs to happen in one place instead of being kept in sync across several files.
@@ -85,7 +85,10 @@ export const approvedArchiveWhere = (user) => {
 
 // Whether `user` may read a specific finished report through the archive.
 export const canViewReportViaArchive = (report, user) => {
-  if (!canViewApprovedArchive(user) || !isFinallyApprovedReport(report)) return false;
+  // Every Archive member except investigators, who open only their own reports (allowed by the
+  // normal submitter/co-investigator rules, not through the archive).
+  const isArchiveReader = canViewApprovedArchive(user) || (canViewArchive(user?.role) && user.role !== ROLES.INVESTIGATOR);
+  if (!isArchiveReader || !isFinallyApprovedReport(report)) return false;
   if (MUNICIPAL_REVIEWER_ROLES.includes(user.role)) {
     return report.municipalityId === user.municipalityId;
   }

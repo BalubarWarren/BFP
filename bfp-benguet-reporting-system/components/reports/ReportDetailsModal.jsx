@@ -41,7 +41,7 @@ const AUDIT_LABELS = {
   TEXT_BLAST_REPORT: 'Text blast sent',
   TRASH_REPORT: 'Moved to Trash',
   RESTORE_REPORT: 'Restored from Trash',
-  ARCHIVE_REPORT_VERSION: 'Revised (earlier version archived)',
+  ARCHIVE_REPORT_VERSION: 'Revised (earlier version kept in Revision history)',
 };
 
 function Field({ label, value, wide = false }) {

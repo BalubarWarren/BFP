@@ -9,6 +9,19 @@ import { getReportProgress } from './ReportProgressBar';
 const isFinallyApproved = (report) => report?.status === 'APPROVED' && !report?.passedToId;
 export const needsForwarding = (report) => report?.status === 'APPROVED' && !!report?.passedToId;
 
+// A report is "filed" (it leaves My Reports and lives in the Archive) once it has final approval
+// and the investigator has nothing left to do with it. A finalized Spot/Progress report whose
+// next report hasn't been started yet stays in My Reports, since that's where its
+// Start Progress/Final Report button is.
+export const isFiledToArchive = (report, allReports) => {
+  if (!isFinallyApproved(report)) return false;
+  if (['SPOT_INVESTIGATION', 'PROGRESS_INVESTIGATION'].includes(report.reportType)) {
+    const { showProgressCta, showFinalCta } = getCaseFollowUp(report, allReports);
+    if (showProgressCta || showFinalCta) return false;
+  }
+  return true;
+};
+
 // The "Actions" cell of an investigator's report table: just View, plus a one-line hint when the
 // report needs something from the investigator. The buttons for that next step (Revise &
 // Resubmit, Submit to Next Level, Start Progress/Final Report) and the QR code live inside the

@@ -3,7 +3,7 @@ import prisma from '../../../lib/prisma';
 import { getSubmissionTimeliness, getFollowUpDelay, getSubmissionDeadline, LATE_EXPLANATION_MIN_LENGTH } from '../../../lib/report-timeliness';
 import { getCollaboratingReportIds } from '../../../lib/report-requests';
 import { getUserFromRequest, PUBLIC_USER_SELECT } from '../../../lib/auth';
-import { ROLES, REPORT_STATUS, REPORT_TYPES, NOTIFICATION_TYPES, MAX_REPORT_ATTACHMENTS, attachmentKindFields, isMainAttachment, ASSIGNABLE_REPORT_TYPES, DIRECTIVE_KINDS, DIRECTIVE_STATUS } from '../../../lib/constants';
+import { ROLES, REPORT_STATUS, REPORT_TYPES, NOTIFICATION_TYPES, MAX_REPORT_ATTACHMENTS, attachmentKindFields, canViewArchive, isMainAttachment, ASSIGNABLE_REPORT_TYPES, DIRECTIVE_KINDS, DIRECTIVE_STATUS } from '../../../lib/constants';
 import { createIncidentWithReference } from '../../../lib/incident-reference';
 import { filterDemoReports, getDemoReportsForUser } from '../../../lib/demo-reports';
 import { saveAttachments, isStoredAttachmentUrl } from '../../../lib/storage';
@@ -14,6 +14,7 @@ import {
   PROVINCIAL_REVIEWER_ROLES,
   canViewApprovedArchive,
   approvedArchiveWhere,
+  FINALLY_APPROVED_WHERE,
 } from '../../../lib/report-access';
 
 // Safety cap on list results — orderBy is already createdAt desc, so this returns the most
@@ -133,10 +134,19 @@ export async function GET(request) {
     // the chain. This branch comes first because it deliberately ignores the per-role "is it
     // assigned to me" routing below — a finished report is assigned to nobody.
     if (view === 'approved') {
-      if (!canViewApprovedArchive(user)) {
+      // The Archive page (/archive). Investigators see their own finished reports (including ones
+      // they co-investigate); reviewers and admins as scoped by approvedArchiveWhere.
+      if (user.role === ROLES.INVESTIGATOR) {
+        const collaboratingIds = await getCollaboratingReportIds(user.id);
+        whereCondition = {
+          ...FINALLY_APPROVED_WHERE,
+          OR: [{ submittedById: user.id }, ...(collaboratingIds.length ? [{ id: { in: collaboratingIds } }] : [])],
+        };
+      } else if (canViewApprovedArchive(user) || canViewArchive(user.role)) {
+        whereCondition = approvedArchiveWhere(user);
+      } else {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
       }
-      whereCondition = approvedArchiveWhere(user);
     } else if (user.role === ROLES.INVESTIGATOR) {
       // RBAC: Investigators see their own reports, plus the ones they co-edit by approved Letter
       // of Order (lib/report-requests.js).
