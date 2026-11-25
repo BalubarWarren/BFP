@@ -186,16 +186,15 @@ export default function MunicipalReportsPage() {
                   )}
                 </div>
 
-                {/* Files replaced during revisions stay linked here, right under the current files. */}
-                <RevisionHistory report={reportDetail} />
-  
-  
                 {(reportDetail?.remarks || selectedReport.remarks) && (
                   <div className="rounded border-l-4 border-red-500 bg-red-50 p-4">
                     <p className="text-sm font-bold text-red-700">Reviewer Remarks</p>
                     <p className="mt-1 text-sm text-red-700">{reportDetail?.remarks || selectedReport.remarks}</p>
                   </div>
                 )}
+
+                {/* Files replaced during revisions stay linked to the report, below the remarks. */}
+                <RevisionHistory report={reportDetail} />
   
   
               </div>

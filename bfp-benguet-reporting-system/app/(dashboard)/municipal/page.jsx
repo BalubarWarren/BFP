@@ -227,10 +227,6 @@ export default function MunicipalDashboard() {
                   )}
                 </div>
 
-                {/* Files replaced during revisions stay linked here, right under the current files. */}
-                <RevisionHistory report={reportDetail} />
-  
-  
                 {/* Reviewer remarks (if returned) */}
                 {(reportDetail?.remarks || selectedReport.remarks) && selectedReport.status === 'RETURNED' && (
                   <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded">
@@ -240,6 +236,9 @@ export default function MunicipalDashboard() {
                     <p className="text-sm text-red-700">{reportDetail?.remarks || selectedReport.remarks}</p>
                   </div>
                 )}
+
+                {/* Files replaced during revisions stay linked to the report, below the remarks. */}
+                <RevisionHistory report={reportDetail} />
   
                 {/* APPROVED — still needs forwarding to the next level */}
                 {needsForwarding(selectedReport) && (
