@@ -204,7 +204,7 @@ export default function ReviseReturnedReportPage() {
             <Upload className="h-4 w-4 text-gray-400" /> 2. Files
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Correct the file, then upload it with <strong>Replace</strong>. The old file is kept in the Report Archive.
+            Correct the file, then upload it with <strong>Replace</strong>. The old file stays linked to this report under <strong>Revision history</strong>.
           </p>
         </div>
 
@@ -322,7 +322,7 @@ export default function ReviseReturnedReportPage() {
           {(replacedCount > 0 || removedCount > 0) && (
             <p className="flex items-center gap-1.5 text-xs text-gray-500">
               <FolderArchive className="h-3.5 w-3.5" />
-              {replacedCount + removedCount} old file{replacedCount + removedCount === 1 ? '' : 's'} will be kept in the Archive
+              {replacedCount + removedCount} old file{replacedCount + removedCount === 1 ? '' : 's'} will stay linked under Revision history
             </p>
           )}
         </div>

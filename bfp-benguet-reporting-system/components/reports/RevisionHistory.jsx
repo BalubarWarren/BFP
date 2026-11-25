@@ -4,6 +4,7 @@ import { useState } from 'react';
 import axios from 'axios';
 import { FolderArchive, Eye, PencilLine } from 'lucide-react';
 import ReportDetailsModal from './ReportDetailsModal';
+import AttachmentList from './AttachmentList';
 import { formatDateTime, parseJsonField } from '../../lib/utils';
 
 // Shown in a report's view when it has been returned and revised: the investigator's notes on
@@ -19,6 +20,14 @@ export default function RevisionHistory({ report }) {
   if (!versions.length) return null;
 
   const notes = parseJsonField(report.content, {}).corrections;
+
+  // Files each version had that the revision after it replaced or dropped. Versions are newest
+  // first, so the version after versions[i] is versions[i - 1] (or the live report for i = 0).
+  const urlsOf = (files) => new Set((files || []).map((f) => f?.url));
+  const replacedFiles = versions.map((version, i) => {
+    const nextUrls = urlsOf(i === 0 ? parseJsonField(report.attachments, []) : versions[i - 1].files);
+    return (version.files || []).filter((f) => f?.url && !nextUrls.has(f.url));
+  });
 
   const open = async (version) => {
     setOpening(version.id);
@@ -39,8 +48,9 @@ export default function RevisionHistory({ report }) {
     <section className="rounded-lg border border-amber-200 bg-amber-50/60 p-4 dark:border-amber-900 dark:bg-amber-950/20">
       <p className="flex items-center gap-1.5 text-sm font-semibold text-gray-900">
         <FolderArchive className="h-4 w-4 text-amber-600" />
-        Revised {versions.length} time{versions.length === 1 ? '' : 's'}
+        Revision history · revised {versions.length} time{versions.length === 1 ? '' : 's'}
       </p>
+      <p className="mt-0.5 text-xs text-gray-500">Files replaced during a revision stay linked to this report below.</p>
 
       {notes && (
         <div className="mt-3 rounded-md bg-white p-3 text-sm ring-1 ring-inset ring-amber-200 dark:bg-gray-900 dark:ring-amber-900">
@@ -52,30 +62,40 @@ export default function RevisionHistory({ report }) {
       )}
 
       <ol className="mt-3 space-y-2">
-        {versions.map((version) => (
+        {versions.map((version, i) => (
           <li
             key={version.id}
-            className="flex flex-col gap-2 rounded-md bg-white p-3 ring-1 ring-inset ring-gray-200 sm:flex-row sm:items-center sm:justify-between dark:bg-gray-900 dark:ring-gray-800"
+            className="rounded-md bg-white p-3 ring-1 ring-inset ring-gray-200 dark:bg-gray-900 dark:ring-gray-800"
           >
-            <div className="min-w-0 text-sm">
-              <p className="font-medium text-gray-900">
-                Version {version.version ?? '?'}
-                <span className="font-normal text-gray-500"> · replaced {formatDateTime(version.archivedAt)}</span>
-              </p>
-              {version.remarks && (
-                <p className="mt-0.5 line-clamp-2 text-xs text-red-700" title={version.remarks}>
-                  Returned with: {version.remarks}
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 text-sm">
+                <p className="font-medium text-gray-900">
+                  Version {version.version ?? '?'}
+                  <span className="font-normal text-gray-500"> · replaced {formatDateTime(version.archivedAt)}</span>
                 </p>
-              )}
+                {version.remarks && (
+                  <p className="mt-0.5 line-clamp-2 text-xs text-red-700" title={version.remarks}>
+                    Returned with: {version.remarks}
+                  </p>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => open(version)}
+                disabled={opening === version.id}
+                className="btn btn-secondary flex-shrink-0 px-2.5 py-1.5 text-xs"
+              >
+                <Eye className="h-3.5 w-3.5" /> {opening === version.id ? 'Opening…' : 'View full version'}
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => open(version)}
-              disabled={opening === version.id}
-              className="btn btn-secondary flex-shrink-0 px-2.5 py-1.5 text-xs"
-            >
-              <Eye className="h-3.5 w-3.5" /> {opening === version.id ? 'Opening…' : 'View'}
-            </button>
+            {replacedFiles[i].length > 0 && (
+              <div className="mt-3 border-t border-gray-100 pt-2 dark:border-gray-800">
+                <p className="mb-1.5 text-xs font-medium text-gray-500">
+                  Replaced file{replacedFiles[i].length === 1 ? '' : 's'} (old version)
+                </p>
+                <AttachmentList attachments={replacedFiles[i]} reportId={report.id} />
+              </div>
+            )}
           </li>
         ))}
       </ol>

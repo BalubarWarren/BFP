@@ -76,6 +76,8 @@ export async function listReportVersions(reportId) {
       archivedAt: item.deletedAt,
       archivedByName: item.deletedByName,
       remarks: report?.remarks || null,
+      // That version's files, so the report view can list the ones a revision replaced.
+      files: parseJsonField(report?.attachments, []),
     };
   });
 }
