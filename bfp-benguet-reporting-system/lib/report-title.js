@@ -1,7 +1,7 @@
 // Display title for a report, with its type (Spot / Progress / Final Investigation Report, ...)
 // shown underneath as the subtitle. Investigation reports take the title of their case
 // (incident), so a case's Spot, Progress and Final reports all carry the same title: the place of
-// the fire, e.g. "Purok 3, Brgy. Poblacion" (older cases without one: "Mercantile Fire — Nov 11, 2026").
+// the fire, e.g. "Purok 3, Brgy. Poblacion" (older cases without one: "Mercantile Fire").
 const CATEGORY_LABELS = {
   RESIDENTIAL: 'Residential',
   NON_RESIDENTIAL: 'Non-Residential',
@@ -15,13 +15,6 @@ const REPORT_TYPE_SUBTITLES = {
   FINAL_INVESTIGATION: 'Final Investigation Report',
   DAILY: 'Daily Report',
   MDFIR: 'MDFIR',
-};
-
-const formatDate = (value) => {
-  const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime())
-    ? date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
-    : '';
 };
 
 export function getReportSubtitle(report) {
@@ -43,15 +36,15 @@ export function getReportTitle(report) {
   const place = getIncidentPlace(incident);
   if (place) return place;
 
-  // Cases filed before the location was asked for: fire type and date instead.
+  // Cases filed before the location was asked for: the kind of fire, e.g. "Hotel Fire".
+  // No date in the title; the date has its own column.
   const kind =
     incident.subCategory ||
     CATEGORY_LABELS[incident.generalCategory] ||
     CATEGORY_LABELS[report?.category] ||
     (report?.category ? report.category.replace(/_/g, ' ') : '');
-  const when = formatDate(incident.dateOfIncident || report?.reportDate);
 
-  if (kind) return `${kind} Fire${when ? ` — ${when}` : ''}`;
-  // Not tied to an incident (e.g. a Daily report): name it by its date.
-  return `${getReportSubtitle(report)}${when ? ` — ${when}` : ''}`;
+  if (kind) return `${kind} Fire`;
+  // Not tied to an incident (e.g. a Daily report).
+  return 'Fire Incident';
 }
