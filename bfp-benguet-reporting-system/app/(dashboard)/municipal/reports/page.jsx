@@ -277,7 +277,7 @@ export default function MunicipalReportsPage() {
             </p>
           </div>
         ) : (
-          <div className="max-h-[70vh] overflow-auto">
+          <div className="relative max-h-[70vh] overflow-auto">
             <table className="w-full border-collapse">
               <thead className="sticky top-0 z-10 bg-gray-50 shadow-[inset_0_-1px_0_rgb(229,231,235)]">
                 <tr className="border-b border-gray-200">

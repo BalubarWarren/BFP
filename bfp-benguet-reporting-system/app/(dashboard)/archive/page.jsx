@@ -230,7 +230,7 @@ export default function ArchivePage() {
               : 'No finished reports match these filters.'}
           </p>
         ) : (
-          <div className="max-h-[70vh] overflow-auto">
+          <div className="relative max-h-[70vh] overflow-auto">
             <table className="data-table !overflow-visible [&_th]:sticky [&_th]:top-0 [&_th]:z-10 [&_th]:bg-gray-50 dark:[&_th]:bg-gray-900">
               <thead>
                 <tr>
